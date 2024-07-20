@@ -20,7 +20,7 @@ model User {
   email          String   @unique
   password       String
   phone_number   String?
-  user_type      String?
+  user_type      String
   wallet_address String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt

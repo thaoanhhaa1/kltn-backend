@@ -1,6 +1,7 @@
 import express from 'express';
 import router from './routes';
 import envConfig from './configs/env.config';
+import errorHandler from './middlewares/error.middleware';
 
 const app = express();
 
@@ -11,6 +12,8 @@ app.get('/health', (_req, res) => {
 });
 
 app.use(envConfig.PREFIX, router);
+
+app.use(errorHandler);
 
 const PORT = envConfig.PORT || 4001;
 app.listen(PORT, () => {

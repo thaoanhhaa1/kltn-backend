@@ -73,3 +73,9 @@ app.listen(PORT, () => {
     "start": "node dist/index.js"
 }
 ```
+
+## Create db by prisma
+
+```bash
+npx prisma migrate dev --name init
+```
