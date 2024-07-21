@@ -73,6 +73,7 @@ model Attribute {
   attribute_name String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+  deleted Boolean @default(false)
   PropertyAttributes PropertyAttribute[]
 }
 

@@ -19,7 +19,7 @@ app.use(
     }),
 );
 
-const { USER_PREFIX, USER_SERVICE_URL } = envConfig;
+const { USER_PREFIX, USER_SERVICE_URL, PROPERTY_PREFIX, PROPERTY_SERVICE_URL } = envConfig;
 
 app.use(
     USER_PREFIX,
@@ -30,7 +30,20 @@ app.use(
     }),
 );
 
+app.use(
+    PROPERTY_PREFIX,
+    createProxyMiddleware({
+        target: PROPERTY_SERVICE_URL,
+        changeOrigin: true,
+        logger: console,
+    }),
+);
+
 app.use(errorHandler);
+
+app.get('*', (_req, res) => {
+    res.status(404).json({ message: 'Not Found' });
+});
 
 const PORT = envConfig.PORT || 4000;
 app.use(express.json());
