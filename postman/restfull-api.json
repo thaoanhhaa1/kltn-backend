@@ -529,6 +529,133 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "address-service",
+			"item": [
+				{
+					"name": "get-cities",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://vietnam-addresses.vercel.app/api/v1/cities",
+							"protocol": "https",
+							"host": [
+								"vietnam-addresses",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"v1",
+								"cities"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get-all-districts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://vietnam-addresses.vercel.app/api/v1/districts",
+							"protocol": "https",
+							"host": [
+								"vietnam-addresses",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"v1",
+								"districts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get-all-wards",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://vietnam-addresses.vercel.app/api/v1/wards",
+							"protocol": "https",
+							"host": [
+								"vietnam-addresses",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"v1",
+								"wards"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get-wards-by-district",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://vietnam-addresses.vercel.app/api/v1/wards?districtId=106676863159856",
+							"protocol": "https",
+							"host": [
+								"vietnam-addresses",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"v1",
+								"wards"
+							],
+							"query": [
+								{
+									"key": "districtId",
+									"value": "106676863159856"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get-districts-by-city",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://vietnam-addresses.vercel.app/api/v1/districts?cityId=106169285912657",
+							"protocol": "https",
+							"host": [
+								"vietnam-addresses",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"v1",
+								"districts"
+							],
+							"query": [
+								{
+									"key": "cityId",
+									"value": "106169285912657"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
