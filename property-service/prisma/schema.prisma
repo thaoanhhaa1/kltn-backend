@@ -16,21 +16,22 @@ datasource db {
 model Address {
   address_id String @id @default(auto()) @map("_id") @db.ObjectId
   street String
+  ward String
+  district String
   city String
-  state String
-  country String
   Properties Property[]
 }
 
 model Property {
   property_id String @id @default(auto()) @map("_id") @db.ObjectId
-  owner_id String
+  owner_id Int
   title String
   description String
   address_id String @db.ObjectId
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   Address Address @relation(fields: [address_id], references: [address_id])
+  deleted Boolean @default(false)
   RentalConditions RentalCondition[]
   RentalPrices RentalPrice[]
   PropertyImages PropertyImage[]
@@ -51,8 +52,8 @@ model RentalPrice {
   price_id String @id @default(auto()) @map("_id") @db.ObjectId
   property_id String @db.ObjectId
   rental_price Float
-  start_date DateTime
-  end_date DateTime
+  start_date DateTime @default(now())
+  end_date DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   Property Property @relation(fields: [property_id], references: [property_id])
