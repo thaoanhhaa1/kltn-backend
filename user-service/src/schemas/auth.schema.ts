@@ -14,7 +14,7 @@ export const registerSchema = z.object({
         .regex(/^(?=.*[A-Za-z])(?=.*\d).{6,}$/, {
             message: 'Password must contain at least one letter, one number',
         }),
-    userType: z.enum(['admin', 'renter', 'owner'], { message: 'Invalid user type' }),
+    userType: z.enum(['renter', 'owner'], { message: 'User type must be "renter" or "owner"' }),
     name: z.string({
         required_error: 'Name is required',
     }),

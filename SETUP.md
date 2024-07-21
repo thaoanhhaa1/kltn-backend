@@ -9,8 +9,8 @@ npm init -y
 ## Install dependencies
 
 ```bash
-npm install express dotenv zod prisma @prisma/client
-npm install typescript @types/node @types/express ts-node-dev --save-dev
+npm install express dotenv zod prisma @prisma/client jsonwebtoken
+npm install typescript @types/node @types/express ts-node-dev @types/jsonwebtoken --save-dev
 ```
 
 ## Create tsconfig.json

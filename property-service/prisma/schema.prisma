@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Address {
+  address_id String @id @default(auto()) @map("_id") @db.ObjectId
+  street String
+  city String
+  state String
+  country String
+  Properties Property[]
+}
+
+model Property {
+  property_id String @id @default(auto()) @map("_id") @db.ObjectId
+  owner_id String
+  title String
+  description String
+  address_id String @db.ObjectId
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Address Address @relation(fields: [address_id], references: [address_id])
+  RentalConditions RentalCondition[]
+  RentalPrices RentalPrice[]
+  PropertyImages PropertyImage[]
+  PropertyAttributes PropertyAttribute[]
+}
+
+model RentalCondition {
+  condition_id String @id @default(auto()) @map("_id") @db.ObjectId
+  property_id String @db.ObjectId
+  condition_type String
+  condition_value String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Property Property @relation(fields: [property_id], references: [property_id])
+}
+
+model RentalPrice {
+  price_id String @id @default(auto()) @map("_id") @db.ObjectId
+  property_id String @db.ObjectId
+  rental_price Float
+  start_date DateTime
+  end_date DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Property Property @relation(fields: [property_id], references: [property_id])
+}
+
+model PropertyImage {
+  image_id String @id @default(auto()) @map("_id") @db.ObjectId
+  property_id String @db.ObjectId
+  image_url String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Property Property @relation(fields: [property_id], references: [property_id])
+}
+
+model Attribute {
+  attribute_id String @id @default(auto()) @map("_id") @db.ObjectId
+  attribute_type String
+  attribute_name String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  PropertyAttributes PropertyAttribute[]
+}
+
+model PropertyAttribute {
+  property_attribute_id String @id @default(auto()) @map("_id") @db.ObjectId
+  property_id String @db.ObjectId
+  attribute_id String @db.ObjectId
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Property Property @relation(fields: [property_id], references: [property_id])
+  Attribute Attribute @relation(fields: [attribute_id], references: [attribute_id])
+}
+

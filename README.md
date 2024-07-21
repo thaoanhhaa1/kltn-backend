@@ -1,3 +1,3 @@
 ## Architecture
 
-![Architecture diagram](./KLTN_Architecture.drawio.png)
+![Architecture diagram](./docs/KLTN_Architecture.drawio.png)
