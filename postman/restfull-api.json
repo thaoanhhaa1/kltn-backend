@@ -14,7 +14,7 @@
 					"name": "auth",
 					"item": [
 						{
-							"name": "register",
+							"name": "owner-register",
 							"event": [
 								{
 									"listen": "test",
@@ -55,7 +55,131 @@
 							"response": []
 						},
 						{
-							"name": "login",
+							"name": "renter-register",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const jsonData = pm.response.json();\r",
+											"pm.variables.set(\"authToken\", jsonData.token);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa2@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"renter\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/user-service/auth/register",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"user-service",
+										"auth",
+										"register"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "admin-register",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const jsonData = pm.response.json();\r",
+											"pm.variables.set(\"authToken\", jsonData.token);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"email\": \"admin@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"admin\",\r\n    \"name\": \"Admin\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/user-service/auth/register",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"user-service",
+										"auth",
+										"register"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "renter-login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const jsonData = pm.response.json();\r",
+											"\r",
+											"pm.collectionVariables.set(\"authToken\", jsonData.token);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa2@gmail.com\",\r\n    \"password\": \"12345Aa..\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/user-service/auth/login",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"user-service",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "owner-login",
 							"event": [
 								{
 									"listen": "test",
@@ -95,6 +219,48 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "admin-login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const jsonData = pm.response.json();\r",
+											"\r",
+											"pm.collectionVariables.set(\"authToken\", jsonData.token);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"email\": \"admin@gmail.com\",\r\n    \"password\": \"12345Aa..\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/user-service/auth/login",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"user-service",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -115,6 +281,246 @@
 										"user-service",
 										"users",
 										"me"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "property-service",
+			"item": [
+				{
+					"name": "attribute",
+					"item": [
+						{
+							"name": "get-all",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/attributes",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"attributes"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get-by-id",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/attributes/669cc2784a29879a45f8bdc0",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"attributes",
+										"669cc2784a29879a45f8bdc0"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"attribute_type\": \"Amenity\",\r\n    \"attribute_name\": \"Wifi\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/attributes/669cc28a4a29879a45f8bdc1",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"attributes",
+										"669cc28a4a29879a45f8bdc1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"attribute_type\": \"Amenity\",\r\n    \"attribute_name\": \"Bãi đỗ xe\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/attributes",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"attributes"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"attribute_type\": \"Amenity\",\r\n    \"attribute_name\": \"Wifi\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/attributes/669cc7404b175630c0f8387b",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"attributes",
+										"669cc7404b175630c0f8387b"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "property",
+					"item": [
+						{
+							"name": "get-all",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/properties",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"properties"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "images",
+											"type": "file",
+											"src": [
+												"/C:/Users/HaAnhThao/Downloads/KLTN.png",
+												"/C:/Users/HaAnhThao/Downloads/KLTN_Architecture.drawio.png"
+											]
+										},
+										{
+											"key": "title",
+											"value": "Phòng đầy đủ nội thất tại Vinhomes Q9, tiện nghi, có NV vệ sinh an ninh 24/24, cao cấp, 3tr2/phòng",
+											"type": "text"
+										},
+										{
+											"key": "description",
+											"value": "Giá phòng chỉ 3.500.000/ phòng với nội thất đầy đủ, tiện nghi cao cấp, an ninh 24/24.\nVị trí nằm tại Vinhome Grand Park Quận 9, Số 512 đường Nguyễn Xiển, phường Long Thạnh Mỹ, Quận 9.",
+											"type": "text"
+										},
+										{
+											"key": "city",
+											"value": "Hồ Chí Minh",
+											"type": "text"
+										},
+										{
+											"key": "district",
+											"value": "Gò Vấp",
+											"type": "text"
+										},
+										{
+											"key": "ward",
+											"value": "Phường 7",
+											"type": "text"
+										},
+										{
+											"key": "street",
+											"value": "178 Đường số 6",
+											"type": "text"
+										},
+										{
+											"key": "price",
+											"value": "2000000",
+											"type": "text"
+										},
+										{
+											"key": "startDate",
+											"value": "2024-07-25",
+											"type": "text"
+										},
+										{
+											"key": "attributeIds[]",
+											"value": "669cc7384b175630c0f8387a",
+											"type": "text"
+										},
+										{
+											"key": "conditions",
+											"value": "[{\"type\":\"Diện tích\",\"value\":\"30m2\"}]",
+											"type": "text"
+										},
+										{
+											"key": "",
+											"value": "",
+											"type": "text",
+											"disabled": true
+										}
+									]
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/properties",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"properties"
 									]
 								}
 							},
