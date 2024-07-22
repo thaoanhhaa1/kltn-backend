@@ -21,6 +21,7 @@ model User {
   phone_number String?
   user_types   String[]
   Properties  Property[]
+  UserProductInteractions UserPropertyInteractions[]
 }
 
 model Address {
@@ -102,3 +103,18 @@ model PropertyAttribute {
   Attribute Attribute @relation(fields: [attribute_id], references: [attribute_id])
 }
 
+enum UserInteractionType {
+  VIEWED
+  FAVORITED
+}
+
+model UserPropertyInteractions {
+  interaction_id    String      @id @default(auto()) @map("_id") @db.ObjectId
+  user_id           Int
+  property_id       String      @db.ObjectId
+  interaction_type  UserInteractionType
+  deleted           Boolean     @default(false)
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+  User User @relation(fields: [user_id], references: [user_id])
+}

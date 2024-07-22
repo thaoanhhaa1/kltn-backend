@@ -74,7 +74,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"thaoanhhaa6@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"renter\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa2@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"renter\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -368,7 +368,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"attribute_type\": \"Amenity\",\r\n    \"attribute_name\": \"Bãi đỗ xe\"\r\n}",
+									"raw": "{\r\n    \"attribute_type\": \"Amenity\",\r\n    \"attribute_name\": \"Wifi\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -542,6 +542,131 @@
 									"path": [
 										"property-service",
 										"properties"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "property-interaction",
+					"item": [
+						{
+							"name": "get-all",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/property-interactions",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"property-interactions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get-by-id",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/property-interactions/669e8fb13d5ed7f4376b727e",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"property-interactions",
+										"669e8fb13d5ed7f4376b727e"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"property_id\": \"669e762b4a26a49bf72f7172\",\r\n    \"interaction_type\": \"FAVORITED\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/property-interactions/669e8fb13d5ed7f4376b727e",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"property-interactions",
+										"669e8fb13d5ed7f4376b727e"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"property_id\": \"669e762b4a26a49bf72f7172\",\r\n    \"interaction_type\": \"VIEWED\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/property-interactions",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"property-interactions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"property_id\": \"669e762b4a26a49bf72f7172\",\r\n    \"interaction_type\": \"FAVORITED\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/property-interactions/669e8fb13d5ed7f4376b727e",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"property-interactions",
+										"669e8fb13d5ed7f4376b727e"
 									]
 								}
 							},
