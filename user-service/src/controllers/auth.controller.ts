@@ -1,4 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
+import RabbitMQ from '../configs/rabbitmq.config';
+import { USER_QUEUE } from '../constants/rabbitmq';
 import { loginSchema, registerSchema } from '../schemas/auth.schema';
 import { loginUser, registerUser } from '../services/auth.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
@@ -12,7 +14,13 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 issue: safeParse.error.issues,
             });
 
-        const token = await registerUser(safeParse.data);
+        const { token, user } = await registerUser(safeParse.data);
+
+        RabbitMQ.getInstance().publishInQueue({
+            data: user,
+            type: USER_QUEUE.type.CREATED,
+        });
+
         res.status(201).json({ token });
     } catch (error) {
         next(error);

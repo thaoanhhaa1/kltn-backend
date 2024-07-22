@@ -13,6 +13,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  user_id          Int  @id @map("_id")
+  name        String
+  email       String  @unique
+  avatar      String?
+  phone_number String?
+  user_types   String[]
+  Properties  Property[]
+}
+
 model Address {
   address_id String @id @default(auto()) @map("_id") @db.ObjectId
   street String
@@ -23,19 +33,20 @@ model Address {
 }
 
 model Property {
-  property_id String @id @default(auto()) @map("_id") @db.ObjectId
-  owner_id Int
-  title String
-  description String
-  address_id String @db.ObjectId
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  Address Address @relation(fields: [address_id], references: [address_id])
-  deleted Boolean @default(false)
+  property_id     String            @id @default(auto()) @map("_id") @db.ObjectId
+  owner_id        Int
+  title           String
+  description     String
+  address_id      String            @db.ObjectId
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  Address         Address           @relation(fields: [address_id], references: [address_id])
+  deleted         Boolean           @default(false)
   RentalConditions RentalCondition[]
-  RentalPrices RentalPrice[]
-  PropertyImages PropertyImage[]
+  RentalPrices    RentalPrice[]
+  PropertyImages  PropertyImage[]
   PropertyAttributes PropertyAttribute[]
+  Owner           User              @relation(fields: [owner_id], references: [user_id])
 }
 
 model RentalCondition {

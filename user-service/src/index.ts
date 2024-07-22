@@ -2,8 +2,11 @@ import express from 'express';
 import router from './routes';
 import envConfig from './configs/env.config';
 import errorHandler from './middlewares/error.middleware';
+import RabbitMQ from './configs/rabbitmq.config';
 
 const app = express();
+
+RabbitMQ.getInstance().connect();
 
 app.use(express.json());
 

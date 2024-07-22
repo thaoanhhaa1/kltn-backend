@@ -6,14 +6,14 @@ import { verifyToken } from '../utils/jwt.util';
 export interface JWTInput {
     id: number;
     email: string;
-    userType: string;
+    userTypes: string[];
 }
 
 export interface AuthenticatedRequest extends Request {
     user?: {
         id: number;
         email: string;
-        userType: string;
+        userTypes: string[];
     };
 }
 

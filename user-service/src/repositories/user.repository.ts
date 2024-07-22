@@ -12,7 +12,7 @@ export const findUserDTOByEmail = async (email: string) => {
             user_id: true,
             email: true,
             name: true,
-            user_type: true,
+            user_types: true,
             avatar: true,
             phone_number: true,
             wallet_address: true,
@@ -28,7 +28,15 @@ export const createUser = async ({ email, name, password, userType }: RegisterIn
             email,
             name,
             password,
-            user_type: userType,
+            user_types: [userType],
+        },
+        select: {
+            user_id: true,
+            email: true,
+            name: true,
+            user_types: true,
+            avatar: true,
+            phone_number: true,
         },
     });
 };

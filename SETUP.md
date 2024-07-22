@@ -79,3 +79,105 @@ app.listen(PORT, () => {
 ```bash
 npx prisma migrate dev --name init
 ```
+
+## Setup RabbitMQ
+
+## Install dependencies
+
+```bash
+npm i amqplib
+npm i @types/amqplib
+```
+
+## .env file
+
+```env
+RABBIT_MQ_URL=<URL>
+```
+
+## RabbitMQ class
+
+```typescript
+import amqp from 'amqplib/callback_api';
+
+import envConfig from './env.config';
+
+class RabbitMQ {
+    private static instance: RabbitMQ;
+    private connection?: amqp.Connection;
+    private channel?: amqp.Channel;
+
+    private constructor() {}
+
+    static getInstance(): RabbitMQ {
+        if (!this.instance) {
+            this.instance = new RabbitMQ();
+        }
+        return this.instance;
+    }
+
+    async connect(): Promise<amqp.Connection> {
+        return new Promise((resolve, reject) => {
+            amqp.connect(envConfig.RABBIT_MQ_URL, (err, connection) => {
+                if (err) return reject(err);
+
+                this.connection = connection;
+
+                console.log('RabbitMQ connected');
+                resolve(connection);
+            });
+        });
+    }
+
+    async createChannel() {
+        if (!this.connection) this.connection = await this.connect();
+
+        return new Promise((resolve, reject) => {
+            this.connection!.createChannel((err, channel) => {
+                if (err) return reject(err);
+
+                this.channel = channel;
+                resolve(channel);
+            });
+        });
+    }
+
+    async publishInQueue(
+        queue: string,
+        message: {
+            type: string;
+            data: any;
+        },
+    ) {
+        if (!this.channel) await this.createChannel();
+
+        this.channel!.assertQueue(queue, { durable: false });
+        this.channel!.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+    }
+
+    async consumeQueue(
+        queue: string,
+        callback: (message: amqp.Message | null) => void,
+    ) {
+        if (!this.channel) await this.createChannel();
+
+        this.channel!.assertQueue(queue, { durable: false });
+        this.channel!.consume(queue, callback, { noAck: true });
+    }
+}
+
+export default RabbitMQ;
+```
+
+## Constant
+
+```typescript
+export const USER_QUEUE = {
+    name: 'user-service-user-queue',
+    type: {
+        CREATED: 'USER_CREATED',
+        UPDATED: 'USER_UPDATED',
+        DELETED: 'USER_DELETED',
+    },
+};
+```

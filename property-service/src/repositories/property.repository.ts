@@ -50,16 +50,18 @@ export const createProperty = async ({
     street,
     startDate,
 }: ICreateProperty): Promise<IResRepositoryProperty> => {
+    const address = await prisma.address.create({
+        data: {
+            city,
+            district,
+            ward,
+            street,
+        },
+    });
+
     return prisma.property.create({
         data: {
-            Address: {
-                create: {
-                    city,
-                    district,
-                    ward,
-                    street,
-                },
-            },
+            address_id: address.address_id,
             ...(conditions.length && {
                 RentalConditions: {
                     createMany: {

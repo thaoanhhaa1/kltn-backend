@@ -16,11 +16,14 @@ export const registerUser = async ({ email, name, password, userType }: Register
         userType,
     });
 
-    return generateAccessToken({
-        id: newUser.user_id,
-        email: newUser.email,
-        userType: newUser.user_type,
-    });
+    return {
+        user: newUser,
+        token: generateAccessToken({
+            id: newUser.user_id,
+            email: newUser.email,
+            userTypes: newUser.user_types,
+        }),
+    };
 };
 
 export const loginUser = async ({ email, password }: LoginInput) => {
@@ -45,6 +48,6 @@ export const loginUser = async ({ email, password }: LoginInput) => {
     return generateAccessToken({
         id: user.user_id,
         email: user.email,
-        userType: user.user_type,
+        userTypes: user.user_types,
     });
 };
