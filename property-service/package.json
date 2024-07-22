@@ -17,6 +17,8 @@
         "@types/amqplib": "^0.10.5",
         "@types/jsonwebtoken": "^9.0.6",
         "@types/multer": "^1.4.11",
+        "@types/slug": "^5.0.8",
+        "@types/uuid": "^10.0.0",
         "amqplib": "^0.10.4",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
@@ -24,6 +26,8 @@
         "jsonwebtoken": "^9.0.2",
         "multer": "^1.4.5-lts.1",
         "prisma": "^5.17.0",
+        "slug": "^9.1.0",
+        "uuid": "^10.0.0",
         "zod": "^3.23.8"
     },
     "devDependencies": {

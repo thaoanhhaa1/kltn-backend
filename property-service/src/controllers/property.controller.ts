@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
-import { createPropertyService, getAllPropertiesService } from '../services/property.service';
+import { createPropertyService, getAllPropertiesService, getPropertyBySlugService } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
 
@@ -49,6 +49,18 @@ export const getAllProperties = async (_req: Request, res: Response, next: NextF
         const properties = await getAllPropertiesService();
 
         res.status(200).json(properties);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyBySlug = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { slug } = req.params;
+
+        const property = await getPropertyBySlugService(slug);
+
+        res.status(200).json(property);
     } catch (error) {
         next(error);
     }

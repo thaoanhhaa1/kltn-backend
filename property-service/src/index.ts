@@ -1,10 +1,10 @@
 import express from 'express';
 import envConfig from './configs/env.config';
-import router from './routes';
-import errorHandler from './middlewares/error.middleware';
 import RabbitMQ from './configs/rabbitmq.config';
 import { USER_QUEUE } from './constants/rabbitmq';
 import { ICreateUserReq } from './interfaces/user';
+import errorHandler from './middlewares/error.middleware';
+import router from './routes';
 import { createUser } from './services/user.service';
 
 const app = express();

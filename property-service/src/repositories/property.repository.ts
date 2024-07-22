@@ -1,6 +1,9 @@
+import slug from 'slug';
+import { v4 } from 'uuid';
 import { ICreateProperty, IResRepositoryProperty } from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 import { convertToISODate } from '../utils/convertToISODate.util';
+import { options } from '../utils/slug.util';
 
 const propertyInclude = {
     Address: true,
@@ -34,6 +37,52 @@ const propertyInclude = {
             updated_at: 'desc' as const,
         },
     },
+    Owner: true,
+};
+
+const propertiesInclude = {
+    Address: true,
+    PropertyAttributes: {
+        include: {
+            Attribute: {
+                select: {
+                    attribute_name: true,
+                    attribute_type: true,
+                },
+            },
+        },
+    },
+    PropertyImages: {
+        select: {
+            image_url: true,
+        },
+    },
+    RentalConditions: {
+        select: {
+            condition_type: true,
+            condition_value: true,
+        },
+    },
+    RentalPrices: {
+        select: {
+            rental_price: true,
+            start_date: true,
+        },
+        orderBy: {
+            updated_at: 'desc' as const,
+        },
+    },
+    Owner: {
+        select: {
+            user_id: true,
+            name: true,
+            phone_number: true,
+            avatar: true,
+            email: true,
+        },
+    },
+    latitude: false,
+    longitude: false,
 };
 
 export const createProperty = async ({
@@ -49,6 +98,8 @@ export const createProperty = async ({
     ward,
     street,
     startDate,
+    latitude,
+    longitude,
 }: ICreateProperty): Promise<IResRepositoryProperty> => {
     const address = await prisma.address.create({
         data: {
@@ -59,8 +110,13 @@ export const createProperty = async ({
         },
     });
 
+    const propertySlug = slug(title, options) + '-' + v4();
+
     return prisma.property.create({
         data: {
+            slug: propertySlug,
+            latitude,
+            longitude,
             address_id: address.address_id,
             ...(conditions.length && {
                 RentalConditions: {
@@ -106,11 +162,26 @@ export const createProperty = async ({
     });
 };
 
-export const getAllProperties = async () => {
+export const getAllProperties = async (): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
             deleted: false,
         },
+        include: propertiesInclude,
+    });
+};
+
+export const getPropertyBySlug = async (slug: string) => {
+    return prisma.property.findUnique({
+        where: {
+            slug,
+        },
         include: propertyInclude,
     });
 };
+
+// TODO: Detail: lịch sử giá(theo khu vục + theo quý)
+// TODO: so sánh(So sánh giá khu vực lân cận + Giá thuê phổ biến nhất: theo phường),
+// TODO: bản đồ
+// TODO: dành cho bạn (gợi ý)
+// TODO: tin đã xem

@@ -42,6 +42,9 @@ model Property {
   updated_at      DateTime          @updatedAt
   Address         Address           @relation(fields: [address_id], references: [address_id])
   deleted         Boolean           @default(false)
+  slug            String            @unique
+  latitude        Float?
+  longitude       Float?
   RentalConditions RentalCondition[]
   RentalPrices    RentalPrice[]
   PropertyImages  PropertyImage[]

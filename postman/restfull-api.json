@@ -33,7 +33,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"thaoanhhaa1@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"owner\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa8@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"owner\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -74,7 +74,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"thaoanhhaa2@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"renter\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa6@gmail.com\",\r\n    \"password\": \"12345Aa..\",\r\n    \"userType\": \"renter\",\r\n    \"name\": \"Hà Anh Thảo\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -199,7 +199,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"email\": \"thaoanhhaa1@gmail.com\",\r\n    \"password\": \"12345Aa..\"\r\n}",
+									"raw": "{\r\n    \"email\": \"thaoanhhaa8@gmail.com\",\r\n    \"password\": \"12345Aa..\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -440,6 +440,26 @@
 							"response": []
 						},
 						{
+							"name": "get-by-slug",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{ENDPOINT}}/property-service/properties/slug/phong-day-du-noi-that-tai-vinhomes-q9-tien-nghi-co-nv-ve-sinh-an-ninh-2424-cao-cap-3tr2phong-77ada6e4-1c89-4555-8494-f12f7d79f5b5",
+									"host": [
+										"{{ENDPOINT}}"
+									],
+									"path": [
+										"property-service",
+										"properties",
+										"slug",
+										"phong-day-du-noi-that-tai-vinhomes-q9-tien-nghi-co-nv-ve-sinh-an-ninh-2424-cao-cap-3tr2phong-77ada6e4-1c89-4555-8494-f12f7d79f5b5"
+									]
+								}
+							},
+							"response": []
+						},
+						{
 							"name": "create",
 							"request": {
 								"method": "POST",
@@ -450,10 +470,7 @@
 										{
 											"key": "images",
 											"type": "file",
-											"src": [
-												"/C:/Users/HaAnhThao/Downloads/KLTN.png",
-												"/C:/Users/HaAnhThao/Downloads/KLTN_Architecture.drawio.png"
-											]
+											"src": "postman-cloud:///1ef480ce-a1ea-48e0-a8dc-cb46a7d42008"
 										},
 										{
 											"key": "title",
@@ -497,7 +514,7 @@
 										},
 										{
 											"key": "attributeIds[]",
-											"value": "669cc7384b175630c0f8387a",
+											"value": "669e7304b8e8f4fc436295ca",
 											"type": "text"
 										},
 										{
@@ -506,10 +523,14 @@
 											"type": "text"
 										},
 										{
-											"key": "",
-											"value": "",
-											"type": "text",
-											"disabled": true
+											"key": "latitude",
+											"value": "123.1111",
+											"type": "text"
+										},
+										{
+											"key": "longitude",
+											"value": "123.1111",
+											"type": "text"
 										}
 									]
 								},
