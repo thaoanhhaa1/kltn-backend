@@ -19,7 +19,7 @@ export const getAllPropertyInteraction = async (userId: number): Promise<Array<I
 };
 
 export const getPropertyInteractionById = async (interaction_id: string): Promise<IPropertyInteractionRes | null> => {
-    return prisma.userPropertyInteractions.findUnique({ where: { interaction_id } });
+    return prisma.userPropertyInteractions.findUnique({ where: { interaction_id, deleted: false } });
 };
 
 export const updatePropertyInteraction = async ({
