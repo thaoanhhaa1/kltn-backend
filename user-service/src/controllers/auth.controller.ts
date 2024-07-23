@@ -5,6 +5,8 @@ import { loginSchema, registerSchema } from '../schemas/auth.schema';
 import { loginUser, registerUser } from '../services/auth.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 
+// FIXME Send OTP code
+
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const safeParse = registerSchema.safeParse(req.body);

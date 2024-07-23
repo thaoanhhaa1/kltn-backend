@@ -5,12 +5,9 @@ dotenv.config();
 
 const EnvSchema = z.object({
     PORT: z.coerce.number(),
-    USER_PREFIX: z.string(),
-    USER_SERVICE_URL: z.string().url(),
-    PROPERTY_PREFIX: z.string(),
-    PROPERTY_SERVICE_URL: z.string().url(),
-    CONTRACT_PREFIX: z.string(),
-    CONTRACT_SERVICE_URL: z.string().url(),
+    PREFIX: z.string(),
+    DATABASE_URL: z.string(),
+    JWT_ACCESS_SECRET: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
