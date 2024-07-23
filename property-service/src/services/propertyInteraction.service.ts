@@ -1,5 +1,10 @@
 import { UserInteractionType } from '@prisma/client';
-import { IPropertyInteractionReq, IPropertyInteractionRes } from '../interfaces/propertyInteraction';
+import {
+    IPropertyInteractionDeleteReq,
+    IPropertyInteractionReq,
+    IPropertyInteractionRes,
+    IPropertyInteractionUpdateReq,
+} from '../interfaces/propertyInteraction';
 import {
     createPropertyInteraction,
     deletePropertyInteraction,
@@ -25,22 +30,20 @@ export const getPropertyInteractionByIdService = async (
     return getPropertyInteractionById(interaction_id);
 };
 
-export const updatePropertyInteractionService = async ({
-    interaction_type,
-    interaction_id,
-}: {
-    interaction_type: UserInteractionType;
-    interaction_id: string;
-}): Promise<IPropertyInteractionRes> => {
-    return updatePropertyInteraction({ interaction_type, interaction_id });
+export const updatePropertyInteractionService = async (
+    params: IPropertyInteractionUpdateReq,
+): Promise<IPropertyInteractionRes> => {
+    return updatePropertyInteraction(params);
 };
 
 export const softDeletePropertyInteractionService = async (
-    interaction_id: string,
+    params: IPropertyInteractionDeleteReq,
 ): Promise<IPropertyInteractionRes> => {
-    return softDeletePropertyInteraction(interaction_id);
+    return softDeletePropertyInteraction(params);
 };
 
-export const deletePropertyInteractionService = async (interaction_id: string): Promise<IPropertyInteractionRes> => {
-    return deletePropertyInteraction(interaction_id);
+export const deletePropertyInteractionService = async (
+    params: IPropertyInteractionDeleteReq,
+): Promise<IPropertyInteractionRes> => {
+    return deletePropertyInteraction(params);
 };

@@ -19,6 +19,7 @@
         "@types/multer": "^1.4.11",
         "@types/slug": "^5.0.8",
         "@types/uuid": "^10.0.0",
+        "@vercel/kv": "^2.0.0",
         "amqplib": "^0.10.4",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",

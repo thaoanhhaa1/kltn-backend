@@ -15,6 +15,10 @@ const EnvSchema = z.object({
     FIREBASE_MEASUREMENT_ID: z.string(),
     JWT_ACCESS_SECRET: z.string(),
     RABBIT_MQ_URL: z.string(),
+    KV_URL: z.string(),
+    KV_REST_API_URL: z.string(),
+    KV_REST_API_TOKEN: z.string(),
+    KV_REST_API_READ_ONLY_TOKEN: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

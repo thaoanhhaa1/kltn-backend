@@ -111,7 +111,7 @@ enum UserInteractionType {
 model UserPropertyInteractions {
   interaction_id    String      @id @default(auto()) @map("_id") @db.ObjectId
   user_id           Int
-  property_id       String      @db.ObjectId
+  property_id       String      @db.ObjectId @unique
   interaction_type  UserInteractionType
   deleted           Boolean     @default(false)
   created_at        DateTime    @default(now())
