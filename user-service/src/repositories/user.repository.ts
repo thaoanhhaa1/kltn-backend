@@ -22,7 +22,7 @@ export const findUserDTOByEmail = async (email: string) => {
     });
 };
 
-export const createUser = async ({ email, name, password, userType }: RegisterInput) => {
+export const createUser = async ({ email, name, password, userType }: Omit<RegisterInput, 'otp'>) => {
     return await prisma.user.create({
         data: {
             email,

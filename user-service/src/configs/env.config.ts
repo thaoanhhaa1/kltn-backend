@@ -11,6 +11,12 @@ const EnvSchema = z.object({
     JWT_REFRESH_SECRET: z.string(),
     JWT_REFRESH_EXPIRATION: z.string(),
     RABBIT_MQ_URL: z.string(),
+    GMAIL_USER: z.string(),
+    GMAIL_PASSWORD: z.string(),
+    FE_URL: z.string().url(),
+    KV_REST_API_TOKEN: z.string(),
+    KV_REST_API_URL: z.string().url(),
+    OTP_EXPIRATION: z.coerce.number(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

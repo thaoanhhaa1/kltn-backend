@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { findUserDTOByEmail } from '../repositories/user.repository';
+import { getMyInfoService } from '../services/user.service';
 
 export const getMyInfo = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -8,7 +8,7 @@ export const getMyInfo = async (req: Request, res: Response, next: NextFunction)
 
         const { email } = reqAuth.user!;
 
-        const user = await findUserDTOByEmail(email);
+        const user = await getMyInfoService(email);
 
         res.json(user);
     } catch (error) {

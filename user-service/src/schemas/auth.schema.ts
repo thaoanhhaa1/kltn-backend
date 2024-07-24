@@ -18,6 +18,11 @@ export const registerSchema = z.object({
     name: z.string({
         required_error: 'Name is required',
     }),
+    otp: z
+        .string({
+            required_error: 'OTP is required',
+        })
+        .length(6, { message: 'OTP must be 6 characters long' }),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

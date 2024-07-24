@@ -80,7 +80,7 @@ app.listen(PORT, () => {
 npx prisma migrate dev --name init
 ```
 
-## Setup RabbitMQ
+# Setup RabbitMQ
 
 ## Install dependencies
 
@@ -180,4 +180,50 @@ export const USER_QUEUE = {
         DELETED: 'USER_DELETED',
     },
 };
+```
+
+# Setup Redis
+
+## Install dependencies
+
+```bash
+npm i @vercel/kv
+```
+
+## .env file
+
+```env
+KV_REST_API_URL=<KV_REST_API_URL>
+KV_REST_API_TOKEN=<KV_REST_API_TOKEN>
+```
+
+## config/redis.config.ts
+
+```typescript
+import envConfig from './env.config';
+import { createClient } from '@vercel/kv';
+
+class Redis {
+    private static instance: Redis;
+    private client: any;
+
+    private constructor() {
+        this.client = createClient({
+            url: envConfig.KV_REST_API_URL,
+            token: envConfig.KV_REST_API_TOKEN,
+        });
+    }
+
+    public getClient() {
+        return this.client;
+    }
+
+    public static getInstance() {
+        if (!Redis.instance) Redis.instance = new Redis();
+
+        return Redis.instance;
+    }
+}
+
+export default Redis;
 ```

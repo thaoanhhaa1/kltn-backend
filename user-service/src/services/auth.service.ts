@@ -4,7 +4,7 @@ import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import CustomError, { EntryError } from '../utils/error.util';
 import { generateAccessToken } from '../utils/jwt.util';
 
-export const registerUser = async ({ email, name, password, userType }: RegisterInput) => {
+export const registerUser = async ({ email, name, password, userType }: Omit<RegisterInput, 'otp'>) => {
     const existingUser = await findUserByEmail(email);
     if (existingUser) throw new CustomError(400, 'User already exists');
 
