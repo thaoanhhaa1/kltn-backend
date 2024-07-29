@@ -227,3 +227,65 @@ class Redis {
 
 export default Redis;
 ```
+
+# Elasticsearch
+
+## Docs
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html
+
+## Run Elasticsearch
+
+```bash
+docker compose -f .\docker-compose.yml up
+```
+
+## Get http_ca.crt file to connect to Elasticsearch
+
+```bash
+docker cp elasticsearch:/usr/share/elasticsearch/config/certs/http_ca.crt .
+```
+
+## Copy file to service use Elasticsearch
+
+```bash
+cp .\http_ca.crt .\<Service>\src\configs\
+```
+
+## Use Kibana
+
+-   Delete network
+
+```bash
+docker network rm <NameOfCompose>_elastic
+```
+
+-   Delete container
+
+```bash
+docker rm elasticsearch kib01
+```
+
+-   Delete volume
+
+```bash
+docker volume rm <NameOfCompose>_elasticsearch-data
+```
+
+-   Run Kibana
+
+```bash
+docker run --name kib01 --net <NameOfCompose>_elastic -p 5601:5601 docker.elastic.co/kibana/kibana:8.14.3
+```
+
+-   Create token
+
+```bash
+docker exec -it elasticsearch /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
+```
+
+-   Access to Kibana with created token (Code in terminal of kibana)
+
+```bash
+    http://localhost:5601/
+```

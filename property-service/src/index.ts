@@ -6,6 +6,8 @@ import { ICreateUserReq } from './interfaces/user';
 import errorHandler from './middlewares/error.middleware';
 import router from './routes';
 import { createUser } from './services/user.service';
+import elasticClient from './configs/elastic.config';
+import { getAllPropertiesService } from './services/property.service';
 
 const app = express();
 
@@ -31,6 +33,32 @@ RabbitMQ.getInstance().consumeQueue(async (message) => {
         }
     }
 });
+
+elasticClient
+    .info()
+    .then(async () => {
+        console.log('Elasticsearch is connected');
+
+        try {
+            await elasticClient.delete({
+                index: 'properties',
+                id: '1',
+            });
+        } catch (error) {
+        } finally {
+            const properties = await getAllPropertiesService();
+
+            await elasticClient.bulk({
+                index: 'properties',
+                body: properties.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
+            });
+
+            console.log('Properties added to ElasticSearch');
+        }
+    })
+    .catch((err) => {
+        console.error('Elasticsearch connection error:', err);
+    });
 
 const PORT = envConfig.PORT || 4003;
 app.listen(PORT, () => {

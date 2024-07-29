@@ -84,14 +84,14 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 },
             ]);
 
-        const { token, user } = await registerUser(safeParse.data);
+        const { accessToken, freshToken, user } = await registerUser(safeParse.data);
 
         RabbitMQ.getInstance().publishInQueue({
             data: user,
             type: USER_QUEUE.type.CREATED,
         });
 
-        res.status(201).json({ token });
+        res.status(201).json({ accessToken, freshToken });
     } catch (error) {
         next(error);
     }

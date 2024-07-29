@@ -2,7 +2,22 @@ import bcrypt from 'bcryptjs';
 import { createUser, findUserByEmail } from '../repositories/user.repository';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import CustomError, { EntryError } from '../utils/error.util';
-import { generateAccessToken } from '../utils/jwt.util';
+import { generateAccessToken, generateRefreshToken } from '../utils/jwt.util';
+import envConfig from '../configs/env.config';
+import { JWTInput } from '../middlewares/auth.middleware';
+
+const getTokens = (user: JWTInput) => {
+    return {
+        accessToken: {
+            token: generateAccessToken(user),
+            expiresIn: envConfig.JWT_ACCESS_EXPIRATION,
+        },
+        freshToken: {
+            token: generateRefreshToken(user),
+            expiresIn: envConfig.JWT_REFRESH_EXPIRATION,
+        },
+    };
+};
 
 export const registerUser = async ({ email, name, password, userType }: Omit<RegisterInput, 'otp'>) => {
     const existingUser = await findUserByEmail(email);
@@ -18,7 +33,7 @@ export const registerUser = async ({ email, name, password, userType }: Omit<Reg
 
     return {
         user: newUser,
-        token: generateAccessToken({
+        ...getTokens({
             id: newUser.user_id,
             email: newUser.email,
             userTypes: newUser.user_types,
@@ -45,7 +60,7 @@ export const loginUser = async ({ email, password }: LoginInput) => {
             },
         ]);
 
-    return generateAccessToken({
+    return getTokens({
         id: user.user_id,
         email: user.email,
         userTypes: user.user_types,
