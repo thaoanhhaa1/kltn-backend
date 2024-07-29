@@ -17,22 +17,26 @@ class RabbitMQ {
         return this.instance;
     }
 
-    async connect(): Promise<amqp.Connection> {
-        return new Promise((resolve, reject) => {
-            amqp.connect(envConfig.RABBIT_MQ_URL, (err, connection) => {
-                if (err) return reject(err);
+    async connect() {
+        try {
+            await new Promise((resolve, reject) => {
+                amqp.connect('envConfig.RABBIT_MQ_URL', (err, connection) => {
+                    if (err) return reject(err);
 
-                this.connection = connection;
+                    this.connection = connection;
 
-                // FIXME: Remove this console.log
-                console.log('RabbitMQ connected');
-                resolve(connection);
+                    // FIXME: Remove this console.log
+                    console.log('RabbitMQ connected');
+                    resolve(connection);
+                });
             });
-        });
+        } catch (error) {
+            console.error('Error while connecting to RabbitMQ', error);
+        }
     }
 
     async createChannel() {
-        if (!this.connection) this.connection = await this.connect();
+        if (!this.connection) await this.connect();
 
         return new Promise((resolve, reject) => {
             this.connection!.createChannel((err, channel) => {
