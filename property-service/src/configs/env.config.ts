@@ -19,6 +19,9 @@ const EnvSchema = z.object({
     KV_REST_API_URL: z.string(),
     KV_REST_API_TOKEN: z.string(),
     KV_REST_API_READ_ONLY_TOKEN: z.string(),
+    ELASTICSEARCH_URL: z.string().url(),
+    ELASTICSEARCH_USERNAME: z.string(),
+    ELASTICSEARCH_PASSWORD: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -5,6 +5,7 @@ import { createPropertyService, getAllPropertiesService, getPropertyBySlugServic
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
 import Redis from '../configs/redis.config';
+import elasticClient from '../configs/elastic.config';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -45,6 +46,14 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
         });
 
         Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
+
+        elasticClient
+            .index({
+                index: 'properties',
+                body: property,
+            })
+            .then(() => console.log('Property added to ElasticSearch'))
+            .catch((err) => console.error('ElasticSearch error:', err));
 
         res.status(201).json(property);
     } catch (error) {
@@ -98,6 +107,21 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: NextF
             .then(() => console.log('Property cached'));
 
         res.status(200).json(property);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const searchProperties = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { q } = req.query;
+
+        const searchResult = await elasticClient.search({
+            index: 'properties',
+            q: String(q),
+        });
+
+        res.status(200).json(searchResult);
     } catch (error) {
         next(error);
     }
