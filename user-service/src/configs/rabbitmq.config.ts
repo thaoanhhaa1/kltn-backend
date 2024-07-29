@@ -20,7 +20,7 @@ class RabbitMQ {
     async connect() {
         try {
             await new Promise((resolve, reject) => {
-                amqp.connect('envConfig.RABBIT_MQ_URL', (err, connection) => {
+                amqp.connect(envConfig.RABBIT_MQ_URL, (err, connection) => {
                     if (err) return reject(err);
 
                     this.connection = connection;
