@@ -52,7 +52,7 @@ app.use(
 app.use(errorHandler);
 
 app.get('*', (_req, res) => {
-    res.status(404).json({ message: 'Not Found' });
+    res.status(404).json({ message: 'Not Found Resource' });
 });
 
 const PORT = envConfig.PORT || 4000;
@@ -60,3 +60,5 @@ app.use(express.json());
 app.listen(PORT, () => {
     console.log(`API Gateway running on port ${PORT}`);
 });
+
+export default app;
