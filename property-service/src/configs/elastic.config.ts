@@ -10,7 +10,9 @@ const elasticClient = new Client({
         password: envConfig.ELASTICSEARCH_PASSWORD,
     },
     tls: {
-        ca: fs.readFileSync(path.join(__dirname.replace('build\\src\\configs', ''), 'http_ca.crt')),
+        ca: fs.readFileSync(
+            path.join(__dirname.replace('build\\src\\configs', '').replace('build/src/configs', ''), 'http_ca.crt'),
+        ),
         rejectUnauthorized: false,
     },
 });
