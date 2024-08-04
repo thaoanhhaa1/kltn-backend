@@ -114,6 +114,7 @@ export const createProperty = async ({
 
     return prisma.property.create({
         data: {
+            property_id: v4(),
             slug: propertySlug,
             latitude,
             longitude,

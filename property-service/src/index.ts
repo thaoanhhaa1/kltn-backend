@@ -21,7 +21,7 @@ app.use(envConfig.PREFIX, router);
 
 app.use(errorHandler);
 
-RabbitMQ.getInstance().consumeQueue(async (message) => {
+RabbitMQ.getInstance().consumeQueue(USER_QUEUE.name, async (message) => {
     if (message) {
         const { type, data } = JSON.parse(message.content.toString());
         const user: ICreateUserReq = data;
@@ -47,6 +47,8 @@ elasticClient
         } catch (error) {
         } finally {
             const properties = await getAllPropertiesService();
+
+            if (!properties.length) return;
 
             await elasticClient.bulk({
                 index: 'properties',

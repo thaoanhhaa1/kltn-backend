@@ -1,11 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
+import elasticClient from '../configs/elastic.config';
+import RabbitMQ from '../configs/rabbitmq.config';
+import Redis from '../configs/redis.config';
+import { PROPERTY_QUEUE } from '../constants/rabbitmq';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
 import { createPropertyService, getAllPropertiesService, getPropertyBySlugService } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
-import Redis from '../configs/redis.config';
-import elasticClient from '../configs/elastic.config';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -54,6 +56,11 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
             })
             .then(() => console.log('Property added to ElasticSearch'))
             .catch((err) => console.error('ElasticSearch error:', err));
+
+        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+            type: PROPERTY_QUEUE.type.CREATED,
+            data: property,
+        });
 
         res.status(201).json(property);
     } catch (error) {
