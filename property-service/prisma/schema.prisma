@@ -34,7 +34,7 @@ model Address {
 }
 
 model Property {
-  property_id     String            @id @default(auto()) @map("_id") @db.ObjectId
+  property_id     String            @id @map("_id")
   owner_id        Int
   title           String
   description     String
@@ -55,7 +55,7 @@ model Property {
 
 model RentalCondition {
   condition_id String @id @default(auto()) @map("_id") @db.ObjectId
-  property_id String @db.ObjectId
+  property_id String
   condition_type String
   condition_value String
   created_at DateTime @default(now())
@@ -65,7 +65,7 @@ model RentalCondition {
 
 model RentalPrice {
   price_id String @id @default(auto()) @map("_id") @db.ObjectId
-  property_id String @db.ObjectId
+  property_id String
   rental_price Float
   start_date DateTime @default(now())
   end_date DateTime?
@@ -76,7 +76,7 @@ model RentalPrice {
 
 model PropertyImage {
   image_id String @id @default(auto()) @map("_id") @db.ObjectId
-  property_id String @db.ObjectId
+  property_id String
   image_url String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -95,7 +95,7 @@ model Attribute {
 
 model PropertyAttribute {
   property_attribute_id String @id @default(auto()) @map("_id") @db.ObjectId
-  property_id String @db.ObjectId
+  property_id String
   attribute_id String @db.ObjectId
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -111,7 +111,7 @@ enum UserInteractionType {
 model UserPropertyInteractions {
   interaction_id    String      @id @default(auto()) @map("_id") @db.ObjectId
   user_id           Int
-  property_id       String      @db.ObjectId @unique
+  property_id       String      @unique
   interaction_type  UserInteractionType
   deleted           Boolean     @default(false)
   created_at        DateTime    @default(now())
