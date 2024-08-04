@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from app.services.rag_service import RagService
 from app.repositories.qdrant_repository import QdrantRepository
 from app.services.rabbitmq_service import RabbitMQService
@@ -12,19 +12,22 @@ import threading
 
 dotenv.load_dotenv()
 
+property_collection = os.getenv("QDRANT_PROPERTY_COLLECTION")
+
 app = FastAPI()
 
 qdrant_repo = QdrantRepository()
-rag_service = RagService(qdrant_repo=qdrant_repo, collection_names=["property-collection"])
+rag_service = RagService(qdrant_repo=qdrant_repo, collection_names=[property_collection])
 rabbitmq_service = RabbitMQService()
-
-property_collection = os.getenv("QDRANT_PROPERTY_COLLECTION")
 
 qdrant_repo.create_collection(collection_name=property_collection)
 
 @app.post("/api/v1/chat-service/generate")
-async def generate_response(query: str):
-    response = rag_service.generate_response(query)
+async def generate_response(request: Request):
+    data = await request.json()
+    query = data["query"]
+
+    response = rag_service.generate_response(collection_name=property_collection, query=query)
     return {"response": response}
 
 @app.delete("/api/v1/chat-service/{collection_name}/{document_id}")

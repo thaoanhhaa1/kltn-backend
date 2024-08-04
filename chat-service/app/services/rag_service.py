@@ -57,10 +57,14 @@ class RagService:
                 chain_type_kwargs={"prompt":QA_prompt}
             )
 
-    def generate_response(self, collection_name: str, query: str) -> str:
+    def generate_response(self, collection_name: str, query: str):
         llm_res = self.qa_chains[collection_name].invoke(query)
 
         if llm_res:
-            return llm_res["result"]
+            return llm_res
 
-        return "Tôi không biết câu trả lời cho câu hỏi của bạn. Bạn có thể thử lại với câu hỏi khác hoặc liên hệ với bộ phận hỗ trợ của chúng tôi."
+        return {
+            "query": query,
+            "result": "Tôi không biết câu trả lời cho câu hỏi của bạn. Bạn có thể thử lại với câu hỏi khác hoặc liên hệ với bộ phận hỗ trợ của chúng tôi.",
+            "source_documents": []
+        }
