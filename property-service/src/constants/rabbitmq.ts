@@ -10,3 +10,16 @@ export const USER_QUEUE = {
         DELETED: 'USER_DELETED',
     },
 };
+
+export const PROPERTY_QUEUE = {
+    name: 'property-service-property-queue',
+    exchange: {
+        name: 'property-service-exchange',
+        type: 'fanout',
+    },
+    type: {
+        CREATED: 'PROPERTY_CREATED',
+        UPDATED: 'PROPERTY_UPDATED',
+        DELETED: 'PROPERTY_DELETED',
+    },
+};

@@ -19,8 +19,16 @@ app.use(
     }),
 );
 
-const { USER_PREFIX, USER_SERVICE_URL, PROPERTY_PREFIX, PROPERTY_SERVICE_URL, CONTRACT_PREFIX, CONTRACT_SERVICE_URL } =
-    envConfig;
+const {
+    USER_PREFIX,
+    USER_SERVICE_URL,
+    PROPERTY_PREFIX,
+    PROPERTY_SERVICE_URL,
+    CONTRACT_PREFIX,
+    CONTRACT_SERVICE_URL,
+    CHAT_PREFIX,
+    CHAT_SERVICE_URL,
+} = envConfig;
 
 app.use(
     USER_PREFIX,
@@ -44,6 +52,15 @@ app.use(
     CONTRACT_PREFIX,
     createProxyMiddleware({
         target: CONTRACT_SERVICE_URL,
+        changeOrigin: true,
+        logger: console,
+    }),
+);
+
+app.use(
+    CHAT_PREFIX,
+    createProxyMiddleware({
+        target: CHAT_SERVICE_URL,
         changeOrigin: true,
         logger: console,
     }),

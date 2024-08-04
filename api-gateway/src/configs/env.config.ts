@@ -11,6 +11,8 @@ const EnvSchema = z.object({
     PROPERTY_SERVICE_URL: z.string().url(),
     CONTRACT_PREFIX: z.string(),
     CONTRACT_SERVICE_URL: z.string().url(),
+    CHAT_PREFIX: z.string(),
+    CHAT_SERVICE_URL: z.string().url(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -1,14 +1,17 @@
 import amqp from 'amqplib/callback_api';
 
 import envConfig from './env.config';
-import { USER_QUEUE } from '../constants/rabbitmq';
 
 class RabbitMQ {
     private static instance: RabbitMQ;
     private connection?: amqp.Connection;
-    private channel?: amqp.Channel;
+    private channels: {
+        [key: string]: amqp.Channel;
+    };
 
-    private constructor() {}
+    private constructor() {
+        this.channels = {};
+    }
 
     static getInstance(): RabbitMQ {
         if (!this.instance) {
@@ -17,56 +20,97 @@ class RabbitMQ {
         return this.instance;
     }
 
-    async connect() {
-        try {
-            await new Promise((resolve, reject) => {
-                amqp.connect(envConfig.RABBIT_MQ_URL, (err, connection) => {
-                    if (err) return reject(err);
+    async connect(): Promise<amqp.Connection> {
+        return new Promise((resolve, reject) => {
+            amqp.connect(envConfig.RABBIT_MQ_URL, (err, connection) => {
+                if (err) return reject(err);
 
-                    this.connection = connection;
+                this.connection = connection;
 
-                    // FIXME: Remove this console.log
-                    console.log('RabbitMQ connected');
-                    resolve(connection);
-                });
+                // FIXME: Remove this console.log
+                console.log('RabbitMQ connected');
+                resolve(connection);
             });
-        } catch (error) {
-            console.error('Error while connecting to RabbitMQ', error);
-        }
+        });
     }
 
-    async createChannel() {
-        if (!this.connection) await this.connect();
+    async createChannel({ exchange, name }: { name: string; exchange?: { name: string; type: string } }) {
+        if (!this.connection) this.connection = await this.connect();
 
         return new Promise((resolve, reject) => {
             this.connection!.createChannel((err, channel) => {
                 if (err) return reject(err);
 
-                channel.assertExchange(USER_QUEUE.exchange.name, USER_QUEUE.exchange.type, {
-                    durable: false,
-                });
+                if (exchange) {
+                    channel.assertExchange(exchange.name, exchange.type, {
+                        durable: false,
+                    });
+                } else {
+                    channel.assertQueue(name, { durable: false });
+                }
 
-                this.channel = channel;
+                this.channels[name] = channel;
                 resolve(channel);
             });
         });
     }
 
-    async publishInQueue(message: { type: string; data: any }) {
-        if (!this.channel) await this.createChannel();
+    async sendToQueue(queue: string, message: { type: string; data: any }) {
+        if (!this.channels[queue]) await this.createChannel({ name: queue });
 
-        this.channel!.publish(USER_QUEUE.exchange.name, '', Buffer.from(JSON.stringify(message)));
+        console.log('Sending to queue:', queue);
+        console.log('Message:', message);
+
+        this.channels[queue]!.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
     }
 
-    async consumeQueue(callback: (message: amqp.Message | null) => void) {
-        if (!this.channel) await this.createChannel();
+    async consumeQueue(queue: string, callback: (message: amqp.Message | null) => void) {
+        if (!this.channels[queue]) await this.createChannel({ name: queue });
 
-        this.channel!.assertQueue('', { exclusive: true }, (error, q) => {
+        this.channels[queue]!.consume(queue, callback, {
+            noAck: true,
+        });
+    }
+
+    async publishInQueue({
+        exchange,
+        message,
+        name,
+    }: {
+        message: { type: string; data: any };
+        name: string;
+        exchange: { name: string; type: string };
+    }) {
+        if (!this.channels[name])
+            await this.createChannel({
+                name,
+                exchange,
+            });
+
+        this.channels[name]!.publish(exchange.name, '', Buffer.from(JSON.stringify(message)));
+    }
+
+    async subscribeToQueue({
+        exchange,
+        name,
+        callback,
+    }: {
+        name: string;
+        exchange: { name: string; type: string };
+        callback: (message: amqp.Message | null) => void;
+    }) {
+        if (!this.channels[name])
+            await this.createChannel({
+                name,
+                exchange,
+            });
+
+        this.channels[name]!.assertQueue('', { exclusive: true }, (error, q) => {
             if (error) throw error;
 
-            this.channel!.bindQueue(q.queue, USER_QUEUE.exchange.name, '');
+            this.channels[name]!.bindQueue(q.queue, exchange.name, '');
 
-            this.channel!.consume(q.queue, callback, {
+            this.channels[name]!.consume(q.queue, callback, {
                 noAck: true,
             });
         });

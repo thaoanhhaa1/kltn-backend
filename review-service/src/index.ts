@@ -1,5 +1,6 @@
 import express from 'express';
 import RabbitMQ from './config/rabbitmq.config';
+import { USER_QUEUE } from './constants/rabbitmq';
 
 const app = express();
 
@@ -9,8 +10,14 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
-RabbitMQ.getInstance().consumeQueue((message) => {
-    console.log('Message received:', message?.content.toString());
+RabbitMQ.getInstance().subscribeToQueue({
+    exchange: USER_QUEUE.exchange,
+    name: USER_QUEUE.name,
+    callback: (msg) => {
+        if (!msg) return;
+
+        console.log('Received message:', msg.content.toString());
+    },
 });
 
 const PORT = process.env.PORT || 3000;

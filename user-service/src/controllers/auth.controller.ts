@@ -87,8 +87,12 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         const { accessToken, freshToken, user } = await registerUser(safeParse.data);
 
         RabbitMQ.getInstance().publishInQueue({
-            data: user,
-            type: USER_QUEUE.type.CREATED,
+            message: {
+                data: user,
+                type: USER_QUEUE.type.CREATED,
+            },
+            exchange: USER_QUEUE.exchange,
+            name: USER_QUEUE.name,
         });
 
         res.status(201).json({ accessToken, freshToken });
