@@ -12,7 +12,7 @@ const getTokens = (user: JWTInput) => {
             token: generateAccessToken(user),
             expiresIn: envConfig.JWT_ACCESS_EXPIRATION,
         },
-        freshToken: {
+        refreshToken: {
             token: generateRefreshToken(user),
             expiresIn: envConfig.JWT_REFRESH_EXPIRATION,
         },

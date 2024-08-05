@@ -17,11 +17,6 @@ RUN npm install
 # Sao chép toàn bộ mã nguồn vào container
 COPY . .
 
-# Biên dịch TypeScript sang JavaScript
-RUN npm run build
-# Nếu bạn dùng yarn, hãy dùng lệnh sau
-# RUN yarn build
-
 # Cài đặt Prisma và chạy các lệnh di chuyển cơ sở dữ liệu
 # RUN npm install -g prisma
 RUN npx prisma generate
@@ -30,6 +25,11 @@ RUN npx prisma generate
 # RUN yarn global add prisma
 # RUN yarn prisma generate
 # RUN yarn prisma migrate deploy
+
+# Biên dịch TypeScript sang JavaScript
+RUN npm run build
+# Nếu bạn dùng yarn, hãy dùng lệnh sau
+# RUN yarn build
 
 # Mở cổng mà ứng dụng sẽ chạy
 EXPOSE 3000
