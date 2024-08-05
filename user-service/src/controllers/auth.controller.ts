@@ -84,7 +84,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 },
             ]);
 
-        const { accessToken, freshToken, user } = await registerUser(safeParse.data);
+        const { accessToken, refreshToken, user } = await registerUser(safeParse.data);
 
         RabbitMQ.getInstance().publishInQueue({
             message: {
@@ -95,7 +95,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             name: USER_QUEUE.name,
         });
 
-        res.status(201).json({ accessToken, freshToken });
+        res.status(201).json({ accessToken, refreshToken });
     } catch (error) {
         next(error);
     }
