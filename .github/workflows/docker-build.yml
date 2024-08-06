@@ -31,7 +31,7 @@ jobs:
                   curl -X POST "https://api.render.com/v1/services/$RENDER_USER_SERVICE/deploys" \
                        -H "Authorization: Bearer $RENDER_API_KEY" \
                        -H "Content-Type: application/json" \
-                       -d '{"branch": "main", "image": "your-image-name:latest"}'
+                       -d '{"image": "${{ secrets.DOCKER_USERNAME }}/ikltnuserservice:latest"}'
 
     build-property-service:
         runs-on: ubuntu-latest
@@ -49,6 +49,15 @@ jobs:
 
             - name: Push Docker image to Docker Hub
               run: docker push ${{ secrets.DOCKER_USERNAME }}/ikltnpropertyservice:latest
+
+            - name: Push Docker image to Koyeb
+              env:
+                  KOYEB_API_KEY: ${{ secrets.KOYEB_API_KEY }}
+              run: |
+                  curl -X POST "https://api.koyeb.com/v1/apps/93770768-2739-4a5a-8623-2bfdae5836bc/deployments" \
+                       -H "Authorization: Bearer $KOYEB_API_KEY" \
+                       -H "Content-Type: application/json" \
+                       -d '{"image": "${{ secrets.DOCKER_USERNAME }}/ikltnpropertyservice:latest"}'
 
     build-contract-service:
         runs-on: ubuntu-latest
