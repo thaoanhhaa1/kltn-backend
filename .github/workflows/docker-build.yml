@@ -55,7 +55,7 @@ jobs:
               with:
                   api_token: "${{ secrets.KOYEB_TOKEN }}"
             - name: Deploy to Koyeb
-              run: koyeb service redeploy kltn-property-service/ikltnpropertyservice
+              run: koyeb service redeploy 93770768-2739-4a5a-8623-2bfdae5836bc
               
     build-contract-service:
         runs-on: ubuntu-latest
