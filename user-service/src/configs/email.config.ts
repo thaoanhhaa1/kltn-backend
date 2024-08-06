@@ -15,6 +15,9 @@ const emailTemplates = async (template: string, receiver: string, subject: strin
                 pass: envConfig.GMAIL_PASSWORD,
             },
         });
+
+        const dirname = __dirname.replace('\\build\\src\\configs', '').replace('\\src\\configs', '');
+
         const email = new Email({
             message: {
                 from: `Admin <${envConfig.GMAIL_USER}>`,
@@ -32,13 +35,13 @@ const emailTemplates = async (template: string, receiver: string, subject: strin
             juiceResources: {
                 preserveImportant: true,
                 webResources: {
-                    relativeTo: path.join(__dirname, '../src'),
+                    relativeTo: `${dirname}\\templates`,
                 },
             },
         });
 
         await email.send({
-            template: path.join(__dirname, '..', 'emails', template),
+            template: path.join(dirname, 'templates', 'emails', template),
             message: { to: receiver },
             locals,
         });
