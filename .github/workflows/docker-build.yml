@@ -22,6 +22,17 @@ jobs:
             - name: Push Docker image to Docker Hub
               run: docker push ${{ secrets.DOCKER_USERNAME }}/ikltnuserservice:latest
 
+            # Test
+            - name: Push Docker image to Render
+              env:
+                  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+                  RENDER_USER_SERVICE: ${{ secrets.RENDER_USER_SERVICE }}
+              run: |
+                  curl -X POST "https://api.render.com/v1/services/$RENDER_USER_SERVICE/deploys" \
+                       -H "Authorization: Bearer $RENDER_API_KEY" \
+                       -H "Content-Type: application/json" \
+                       -d '{"branch": "main", "image": "your-image-name:latest"}'
+
     build-property-service:
         runs-on: ubuntu-latest
         # needs: build-user-service # Ensures this job runs after 'build-user-service'
