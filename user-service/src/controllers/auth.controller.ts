@@ -26,10 +26,10 @@ export const otpRegister = async (req: Request, res: Response, next: NextFunctio
         const existingUser = await isExistingUser(email);
 
         if (existingUser)
-            throw new EntryError(400, 'User already exists', [
+            throw new EntryError(401, 'Bad request', [
                 {
                     field: 'email',
-                    error: 'User already exists',
+                    error: 'Email already in use',
                 },
             ]);
 
