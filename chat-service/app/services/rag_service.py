@@ -24,11 +24,26 @@ llm = ChatGoogleGenerativeAI(
     convert_system_message_to_human=True
 )
 
+# FIXME Change tên web
 sys_prompt = """
-    You are a helpful assistant to answer and guide for Gigalogy Company. Always answer as helpful and as relevant
-    as possible, while being informative. Keep answer length about 100-200 words.
-    
-    If you don't know the answer to a question, please don't share false information.    
+Bạn là một trợ lý đắc lực của Công ty Gigalogy, chuyên cung cấp thông tin và hỗ trợ về các vấn đề liên quan đến bất động sản và hợp đồng cho thuê. 
+
+Nhiệm vụ chính của bạn là:
+
+* **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê...
+* **Đưa ra thông tin chi tiết:** Cung cấp thông tin chi tiết về các bất động sản (tiêu đề, mô tả, giá, địa chỉ, tiện ích...), các điều khoản trong hợp đồng thuê.
+* **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán,...
+* **Lưu ý:** 
+    * Luôn trả lời một cách hữu ích và chính xác nhất có thể, đồng thời cung cấp thông tin đầy đủ.
+    * Độ dài câu trả lời nên nằm trong khoảng 100-200 từ.
+    * Nếu không biết câu trả lời, hãy trung thực và đừng đưa ra thông tin sai lệch.
+
+**Ví dụ về các câu hỏi bạn có thể nhận được:**
+
+* "Tôi muốn tìm căn hộ 2 phòng ngủ ở Quận 1, giá dưới 10 triệu."
+* "Các bước để ký hợp đồng thuê nhà thông qua ứng dụng là gì?"
+* "Nhà này có bao gồm nội thất không?" 
+* "Khi nào thì tôi cần thanh toán tiền thuê nhà?"
 """
 
 instruction = """CONTEXT:\n\n {context}\n\nQuery: {question}\n"""
@@ -58,48 +73,82 @@ class RagService:
                 chain_type_kwargs={"prompt":QA_prompt}
             )
 
-    # def generate_response(self, collection_name: str, query: str):
-    #     llm_res = self.qa_chains[collection_name].invoke(query)
-
-    #     if llm_res:
-    #         return llm_res
-
-    #     return {
-    #         "query": query,
-    #         "result": "Tôi không biết câu trả lời cho câu hỏi của bạn. Bạn có thể thử lại với câu hỏi khác hoặc liên hệ với bộ phận hỗ trợ của chúng tôi.",
-    #         "source_documents": []
-    #     }
-
     def generate_response(self, collection_name: str, query: str):
-        # 1. Tìm kiếm sản phẩm phù hợp
-        retriever = self.vector_stores[collection_name].as_retriever(search_kwargs={"k": 5}) # Giả sử lấy top 5 kết quả
-        docs = retriever.get_relevant_documents(query)
+        retriever = self.vector_stores[collection_name].as_retriever(search_kwargs={"k": 5})
+        # docs = retriever.get_relevant_documents(query)
+        docs = retriever.invoke(query)
 
-        # 2. Xây dựng thông tin sản phẩm (nếu có)
         product_info = []
+        relevant_data = []  
+
         for doc in docs:
             product = doc.metadata
-            if product: # Kiểm tra xem có thông tin sản phẩm không
-                product_str = f"Tiêu đề: {product.get('title', '')}, Mô tả: {product.get('description', '')}, Giá: {product.get('prices', '')}"
+            if product:
+                # Thêm slug vào thông tin sản phẩm
+                product_str = f"Tiêu đề: {product.get('title', '')}, Mô tả: {product.get('description', '')}, Giá: {product.get('prices', '')}, Slug: {product.get('slug', '')}"  
                 product_info.append(product_str)
+
+                if self._is_relevant(product, query):
+                    relevant_data.append(doc)
 
         messages = [
             SystemMessage(content=sys_prompt + "\n\n\n".join(product_info)),
             HumanMessage(content=query),
         ]
 
-        # 4. Gọi LLM để tạo câu trả lời
-        llm_res = llm(messages)
+        # llm_res = llm(messages)
+        llm_res = llm.invoke(messages) 
 
-        if llm_res:
+        # Trích xuất slug từ relevant_data
+        slugs = [doc.metadata.get('slug', '') for doc in relevant_data]
+
+        if llm_res and relevant_data:
             return {
                 "query": query,
-                "result": llm_res.content, 
-                "source_documents": docs 
+                "result": llm_res.content,
+                "source_documents": relevant_data,
+                "slugs": slugs  # Thêm danh sách slug vào kết quả trả về
             }
         else:
             return {
                 "query": query,
                 "result": "Tôi không tìm thấy sản phẩm phù hợp.",
-                "source_documents": []
+                "source_documents": [],
+                "slugs": []
             }
+
+    def _is_relevant(self, product: dict, query: str) -> bool:
+        query_lower = query.lower()
+        title_lower = product.get('title', '').lower()
+        description_lower = product.get('description', '').lower()
+
+        real_estate_keywords = ["nhà", "căn hộ", "phòng trọ", "cho thuê", "mặt bằng", "chung cư", "biệt thự", "villa"]
+
+        # Lấy thông tin vị trí từ địa chỉ
+        locations = [product['address']['city'], product['address']['district'], product['address']['ward']]
+        location_match = any(location.lower() in query_lower for location in locations)
+
+        price_match = False
+        if any(price_keyword in query_lower for price_keyword in ["giá", "tiền thuê", "ngân sách"]):
+            try:
+                query_price = int(''.join(filter(str.isdigit, query)))
+                price_match = product.get('prices') and query_price <= product.get('prices')
+            except ValueError:
+                pass
+
+        # Lấy thông tin tiện ích từ thuộc tính (attributes)
+        amenities = [attr['attribute_name'] for attr in product.get('attributes', []) if attr['attribute_type'] == 'Amenity']
+        amenity_match = any(amenity.lower() in query_lower for amenity in amenities)
+
+        # Lấy thông tin điều kiện từ conditions
+        conditions = [f"{cond['condition_type']}: {cond['condition_value']}" for cond in product.get('conditions', [])]
+        condition_match = any(cond.lower() in query_lower for cond in conditions)
+
+        keyword_match = any(keyword in query_lower for keyword in real_estate_keywords)
+        content_match = query_lower in title_lower or query_lower in description_lower
+
+        matching_criteria_count = sum([location_match, price_match, amenity_match, condition_match])
+
+        if matching_criteria_count > 1:
+            return location_match and price_match and (amenity_match or condition_match)
+        return location_match or price_match or amenity_match or condition_match or keyword_match or content_match
