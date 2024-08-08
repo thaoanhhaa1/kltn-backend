@@ -33,7 +33,7 @@ export const registerUser = async ({ email, name, password, userType }: Omit<Reg
 
     return {
         user: newUser,
-        ...getTokens({
+        token: getTokens({
             id: newUser.user_id,
             email: newUser.email,
             userTypes: newUser.user_types,

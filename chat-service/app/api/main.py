@@ -36,8 +36,6 @@ async def generate_response(request: Request):
 
     response = rag_service.generate_response(collection_name=property_collection, query=query)
 
-    print(response["source_documents"])
-
     chat_res = Chat(
         user_id=int(user["id"]), 
         request=query, 
