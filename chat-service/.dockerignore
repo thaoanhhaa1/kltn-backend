@@ -1,0 +1,5 @@
+.env
+.vscode
+.prettierrc
+.venv
+__pycache__

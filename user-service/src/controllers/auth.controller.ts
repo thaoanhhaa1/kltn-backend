@@ -26,7 +26,7 @@ export const otpRegister = async (req: Request, res: Response, next: NextFunctio
         const existingUser = await isExistingUser(email);
 
         if (existingUser)
-            throw new EntryError(401, 'Bad request', [
+            throw new EntryError(400, 'Bad request', [
                 {
                     field: 'email',
                     error: 'Email already in use',
@@ -84,7 +84,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
                 },
             ]);
 
-        const { accessToken, refreshToken, user } = await registerUser(safeParse.data);
+        const { token, user } = await registerUser(safeParse.data);
 
         RabbitMQ.getInstance().publishInQueue({
             message: {
@@ -95,7 +95,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             name: USER_QUEUE.name,
         });
 
-        res.status(201).json({ accessToken, refreshToken });
+        res.status(201).json({ token });
     } catch (error) {
         next(error);
     }
