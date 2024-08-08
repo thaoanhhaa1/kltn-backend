@@ -38,7 +38,7 @@ const emailTemplates = async (template: string, receiver: string, subject: strin
             juiceResources: {
                 preserveImportant: true,
                 webResources: {
-                    relativeTo: `${dirname}\\templates`,
+                    relativeTo: path.join(dirname, 'templates'),
                 },
             },
         });
