@@ -1,10 +1,13 @@
 from fastapi import FastAPI, Request
 from app.services.rag_service import RagService
+from app.services.chat_service import create_item
 from app.repositories.qdrant_repository import QdrantRepository
 from app.services.rabbitmq_service import RabbitMQService
 from app.utils.document import to_document
 from app.utils.splitter import split_document
 from app.utils.embedding import from_documents
+from app.middlewares.auth_middleware import JWTMiddleware
+from app.models.chat_model import Chat
 import os
 import dotenv
 import json
@@ -22,12 +25,27 @@ rabbitmq_service = RabbitMQService()
 
 qdrant_repo.create_collection(collection_name=property_collection)
 
+app.add_middleware(JWTMiddleware)
+
 @app.post("/api/v1/chat-service/generate")
 async def generate_response(request: Request):
     data = await request.json()
     query = data["query"]
 
+    user = request.state.user
+
     response = rag_service.generate_response(collection_name=property_collection, query=query)
+
+    print(response["source_documents"])
+
+    chat_res = Chat(
+        user_id=int(user["id"]), 
+        request=query, 
+        response=response["result"], 
+        source_documents=[document.metadata for document in response["source_documents"]]
+    )
+    create_item(item=chat_res)
+
     return {"response": response}
 
 @app.delete("/api/v1/chat-service/{collection_name}/{document_id}")
@@ -61,7 +79,7 @@ def property_callback(message):
 
         property_doc = to_document(data=data_dict, content=content, field_names=[
             "id", "title", "description", "latitude", "longitude", "address", "attributes",
-            "images", "conditions", "prices", "owner"
+            "images", "conditions", "prices", "owner", "slug"
         ])
 
         property_split_docs = split_document(property_doc)
