@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from app.services.rag_service import RagService
-from app.services.chat_service import create_item
+from app.services.chat_service import create_item, get_chats_by_user_id
 from app.repositories.qdrant_repository import QdrantRepository
 from app.services.rabbitmq_service import RabbitMQService
 from app.utils.document import to_document
@@ -33,11 +33,22 @@ async def generate_response(request: Request):
     query = data["query"]
 
     user = request.state.user
+    user_id = int(user["id"])
 
-    response = rag_service.generate_response(collection_name=property_collection, query=query)
+    chats = get_chats_by_user_id(user_id=user_id)
+
+    chat_history = []
+
+    for chat in chats:
+        chat_history.append({
+            "human": chat["request"],
+            "ai": chat["response"]
+        })
+
+    response = rag_service.generate_response(collection_name=property_collection, query=query, chat_history=chat_history)
 
     chat_res = Chat(
-        user_id=int(user["id"]), 
+        user_id=user_id, 
         request=query, 
         response=response["result"], 
         source_documents=[document.metadata for document in response["source_documents"]]
