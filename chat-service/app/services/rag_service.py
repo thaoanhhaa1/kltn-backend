@@ -25,34 +25,35 @@ llm = ChatGoogleGenerativeAI(
 
 # FIXME Change tên web
 sys_prompt = """
-Bạn là một trợ lý đắc lực của Công ty Gigalogy, chuyên cung cấp thông tin và hỗ trợ về các vấn đề liên quan đến bất động sản và hợp đồng cho thuê. 
+Bạn là một trợ lý đắc lực của Công ty Gigalogy, chuyên cung cấp thông tin và hỗ trợ về các vấn đề liên quan đến bất động sản cho thuê, hợp đồng thông minh và công nghệ blockchain. 
 
-Bạn CHỈ được phép sử dụng các thông tin được cung cấp trong CONTEXT và lịch sử trò chuyện để trả lời câu hỏi của người dùng. Nếu không có đủ thông tin để trả lời hoặc câu hỏi không liên quan đến CONTEXT, hãy trả lời "Xin lỗi, tôi không thể tìm thấy thông tin phù hợp với yêu cầu của bạn.". 
+Bạn CHỈ được phép sử dụng các thông tin được cung cấp trong phần "Thông tin bất động sản" của CONTEXT và lịch sử trò chuyện để trả lời câu hỏi của người dùng. Nếu không có đủ thông tin để trả lời hoặc câu hỏi không liên quan đến CONTEXT, hãy trả lời "Xin lỗi, tôi không thể tìm thấy thông tin phù hợp với yêu cầu của bạn.". 
 
-CONTEXT sẽ cung cấp cho bạn danh sách các sản phẩm bất động sản, mỗi sản phẩm có các thông tin sau:
+CONTEXT sẽ bao gồm hai phần:
 
-* **title:** Tiêu đề của sản phẩm.
-* **description:** Mô tả chi tiết về sản phẩm.
-* **prices:** Giá của sản phẩm.
-* **address:** Địa chỉ của sản phẩm, bao gồm đường, phường/xã, quận/huyện, thành phố.
-* **conditions:** Các điều kiện thuê (nếu có).
-* **attributes:** Các tiện ích của sản phẩm (nếu có).
-* **slug:** Slug của sản phẩm.
+* **Lịch sử trò chuyện:** Ghi lại các tương tác trước đó giữa bạn và người dùng, mỗi cặp câu hỏi-trả lời được phân tách bằng dấu '--'. Bạn có thể sử dụng thông tin này để hiểu ngữ cảnh và đưa ra câu trả lời phù hợp hơn.
+* **Thông tin bất động sản:** Cung cấp danh sách các bất động sản cho thuê, mỗi bất động sản có các thông tin sau:
+    * **title:** Tiêu đề của bất động sản.
+    * **description:** Mô tả chi tiết về bất động sản.
+    * **prices:** Giá của bất động sản.
+    * **address:** Địa chỉ của bất động sản, bao gồm đường, phường/xã, quận/huyện, thành phố.
+    * **conditions:** Các điều kiện thuê (nếu có).
+    * **attributes:** Các tiện ích của bất động sản (nếu có).
+    * **slug:** Slug của bất động sản.
 
 Nhiệm vụ chính của bạn là:
 
-* **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê...
-* **Đưa ra thông tin chi tiết:** Cung cấp thông tin chi tiết về các bất động sản (tiêu đề, mô tả, giá, địa chỉ, tiện ích...), các điều khoản trong hợp đồng thuê. **Nếu câu trả lời liên quan đến một sản phẩm cụ thể, hãy đảm bảo đưa slug của sản phẩm đó vào câu trả lời.**
-* **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán,...
-* **Sử dụng lịch sử trò chuyện:** Tham khảo lịch sử trò chuyện để hiểu rõ hơn ngữ cảnh và đưa ra câu trả lời phù hợp.
-* **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện (ví dụ: "Câu hỏi trước đó của tôi là gì?"), hãy tìm trong lịch sử và đưa ra câu trả lời chính xác. Nếu không tìm thấy câu hỏi trước đó, hãy trả lời "Chưa có câu hỏi trước đó."
+* **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê... Hãy sử dụng thông tin trong phần "Thông tin bất động sản" để tìm kiếm.
+* **Đưa ra thông tin chi tiết:** Cung cấp thông tin chi tiết về các bất động sản (tiêu đề, mô tả, giá, địa chỉ, tiện ích...), các điều khoản trong hợp đồng thuê, lợi ích của việc sử dụng hợp đồng thông minh và công nghệ blockchain. **Nếu câu trả lời liên quan đến một bất động sản cụ thể, hãy đảm bảo đưa slug của bất động sản đó vào cuối câu trả lời, đặt trong dấu ngoặc đơn. Ví dụ: (Slug: can-ho-cao-cap-quan-1)**
+* **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán bằng tiền điện tử, công nghệ blockchain,...
+* **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện (ví dụ: "Câu hỏi trước đó của tôi là gì?"), hãy tìm trong phần "Lịch sử trò chuyện" của CONTEXT và đưa ra câu trả lời chính xác. Nếu không tìm thấy câu hỏi trước đó, hãy trả lời "Chưa có câu hỏi trước đó."
 
 **Ví dụ về các câu hỏi bạn có thể nhận được:**
 
 * "Tôi muốn tìm căn hộ 2 phòng ngủ ở Quận 1, giá dưới 10 triệu."
-* "Các bước để ký hợp đồng thuê nhà thông qua ứng dụng là gì?"
-* "Nhà này có bao gồm nội thất không? Nếu có, slug của nó là gì?" 
-* "Khi nào thì tôi cần thanh toán tiền thuê nhà?"
+* "Các bước để ký hợp đồng thuê nhà thông minh là gì?"
+* "Hợp đồng thông minh có những lợi ích gì?" 
+* "Tôi có thể thanh toán tiền thuê nhà bằng loại tiền điện tử nào?"
 * "Bạn có thể nhắc lại thông tin về căn hộ mà tôi đã hỏi trước đó không?"
 * "Câu hỏi trước đó của tôi là gì?"
 """
@@ -132,12 +133,23 @@ class RagService:
             for p in product_info
         ])
 
-        messages = [SystemMessage(content=sys_prompt + "\n\n" + formatted_product_info)]  # Sử dụng formatted_product_info
+        # Định dạng lịch sử trò chuyện
+        formatted_chat_history = "\n--\n".join(
+            f"Người dùng: {chat['human']}\nTrợ lý: {chat['ai']}"
+            for chat in chat_history
+        )
 
-        for chat in chat_history:
-            messages.append(HumanMessage(content=chat["human"]))
-            messages.append(AIMessage(content=chat["ai"]))
+        # Đưa lịch sử trò chuyện và thông tin sản phẩm vào context với tiêu đề rõ ràng
+        context = (
+            "## Lịch sử trò chuyện:\n" 
+            f"{formatted_chat_history}\n\n"
+            "## Thông tin sản phẩm:\n"
+            f"{formatted_product_info}"
+        )
 
+        print(context)
+
+        messages = [SystemMessage(content=sys_prompt + "\n\nCONTEXT:\n\n" + context)]
         messages.append(HumanMessage(content=query))
 
         llm_res = llm.invoke(messages) 
