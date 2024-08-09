@@ -1,0 +1,111 @@
+[
+    {
+        "title": "Cho Thuê Căn hộ 1 PN Masteri Thao Dien - View Nội Khu Yên Tĩnh",
+        "description": "Chúng tôi hiểu được tầm quan trọng của việc cảm thấy thoải mái và thư giãn khi bạn về đến nhà sau một ngày dài làm việc. Điều đó đã truyền cảm hứng để chúng tôi tạo nên một không gian phù hợp cho tất cả mọi người để nạp năng lượng, thư giãn và tận hưởng.\nĐịa chỉ: Xa lộ Hà Nội, Phường Thảo Điền, Quận 2\nMasteri Thảo Điền là dự án khu căn hộ cao cấp kết hợp Trung tâm thương mại, dịch vụ văn phòng và khách sạn, được triển khai trên diện tích 8ha có mặt tiền dọc theo đường Xa lộ Hà Nội, thuộc khu Thảo Điền.\nTổng quan căn hộ: Không gian thoáng mát, sáng, tầm nhìn hướng ra nội khu\nTiện ích: Vincom Mega Mall, trường mầm non và trường tiểu học, công viên, trung tâm thể dục thể thao (gym, spa, yoga…), quảng trường, vườn nướng BBQ, khu ẩm thực, thư viện, phòng sinh hoạt chung, đường chạy bộ, bể bơi…\nKhu vực lân cận: Quốc tế ACG School, British School, siêu thị Metro, BigC An Phú, Cantavil, Bệnh viện đa khoa Quận 2, Bệnh viện đa khoa Hoàn Mỹ…\nGiao thông: 10 phút đến Bình Thạnh, 15 phút đến quận 1",
+        "city": "Hồ Chí Minh",
+        "district": "Quận 2",
+        "ward": "Thảo Điền",
+        "street": "161 Đ. Võ Nguyên Giáp",
+        "price": 13000000,
+        "startDate": "2024-08-07",
+        "attributeIds": [
+            "669e7304b8e8f4fc436295ca",
+            "669e72feb8e8f4fc436295c9",
+            "66aee2e8b48d362d1e687f03",
+            "66aee322b48d362d1e687f09"
+        ],
+        "conditions": [
+            { "type": "Diện tích", "value": "45m2" },
+            { "type": "Phòng ngủ", "value": "1" },
+            { "type": "Phòng tắm", "value": "1" },
+            { "type": "Nội thất", "value": "Đầy đủ" }
+        ],
+        "latitude": 10.801288810358482,
+        "longitude": 106.73818579103727
+    },
+    {
+        "title": "Cho Thuê Căn hộ 2 PN Masteri Thao Dien - Đầy Đủ Nội Thất & Thân Thiện",
+        "description": "Tổng quan căn hộ: Không gian thoáng mát, sáng, tầm nhìn hướng ra thành phố & sông\n\nĐịa chỉ: Xa lộ Hà Nội, Phường Thảo Điền, Quận 2\n\nTiện ích:hồ bơi, phòng gym, sân chơi trẻ em, trung tâm mua sắm, cửa hàng tiện lợi,...\n\nKhu vực lân cận: Vincom Mega Mall, Rạp chiếu phim CGV , Nhà hàng, Cà phê và Spa, Trạm xe buýt,...\n\nGiao thông: 10 phút đến Bình Thạnh, 15 phút đến quận 1",
+        "city": "Hồ Chí Minh",
+        "district": "Quận 2",
+        "ward": "Thảo Điền",
+        "street": "161 Đ. Võ Nguyên Giáp",
+        "price": 13500000,
+        "startDate": "2024-08-07",
+        "attributeIds": [
+            "669e7304b8e8f4fc436295ca",
+            "669e72feb8e8f4fc436295c9"
+        ],
+        "conditions": [
+            { "type": "Diện tích", "value": "72m2" },
+            { "type": "Phòng ngủ", "value": "2" },
+            { "type": "Phòng tắm", "value": "2" },
+            { "type": "Nội thất", "value": "Đầy đủ" }
+        ],
+        "latitude": 10.801288810358482,
+        "longitude": 106.73818579103727
+    },
+    {
+        "title": "Cho Thuê Căn hộ 1 PN Vinhomes Central Park - Đầy đủ nội thất, dọn vào ở ngay tháng 1/2023",
+        "description": "Cho Thuê Căn hộ 1 PN Vinhomes Central Park - Đầy đủ nội thất, dọn vào ở ngay tháng 1/2023. Căn hộ vô cùng rộng rãi và thoáng mát, tối ưu không gian, tiện ích nội khu bậc nhất mang lại cảm giác tiện nghi, thoải mái. Giá thuê 17 triệu net không bao gồm phí quản lí.",
+        "city": "Hồ Chí Minh",
+        "district": "Bình Thạnh",
+        "ward": "Phường 1",
+        "street": "Food Kingdom LM81, 772 Đ. Điện Biên Phủ",
+        "price": 17000000,
+        "startDate": "2024-08-07",
+        "attributeIds": [
+            "669e7304b8e8f4fc436295ca",
+            "669e72feb8e8f4fc436295c9",
+            "66aee388b48d362d1e687f16"
+        ],
+        "conditions": [
+            { "type": "Diện tích", "value": "46m2" },
+            { "type": "Phòng ngủ", "value": "1" },
+            { "type": "Phòng tắm", "value": "1" },
+            { "type": "Nội thất", "value": "Đầy đủ" }
+        ],
+        "latitude": 10.794824895607489,
+        "longitude": 106.72197961375531
+    },
+    {
+        "title": "Cho Thuê Căn hộ 1 PN Lê Văn Sỹ Apartment - Giá Hợp Lý",
+        "description": "Không gian tương đối hài hòa, thu được toàn bộ ánh sáng tự nhiên vào ngôi nhà thân yêu của bạn\n\nMỗi studio nằm ở một tầng riêng trong một tòa nhà nhỏ đầy đủ nội thất sẽ khiến bạn cảm thấy như đang sống trong một ngôi nhà mới hoàn toàn thuộc về bạn.\n\nTiện nghi và tiện ích: - Máy lạnh, máy nước nóng, tủ lạnh, Smart Tv Android, Lò vi sóng,.... - Tủ quần áo, tủ trang điểm, ghế dài, bàn ăn, bàn cà phê,... - Không gian giặt sấy dùng chung tại tầng trệt\n\nCăn hộ nằm tại khu vực trung tâm thành phố, cách ngã tư phú nhuận chỉ 600m, cách chợ tân định và chợ phú nhuận 400m. Liền kề các trục đường chính như nam kỳ, lý chính thắng, hai bà trưng.......",
+        "city": "Hồ Chí Minh",
+        "district": "Quận 3",
+        "ward": "Phường 12",
+        "street": "429/1 A Đ. Lê Văn Sỹ",
+        "price": 5000000,
+        "startDate": "2024-08-07",
+        "attributeIds": [
+            "669e7304b8e8f4fc436295ca",
+            "669e72feb8e8f4fc436295c9",
+            "66aee30fb48d362d1e687f07"
+        ],
+        "conditions": [
+            { "type": "Diện tích", "value": "35m2" },
+            { "type": "Phòng ngủ", "value": "1" },
+            { "type": "Phòng tắm", "value": "1" },
+            { "type": "Nội thất", "value": "Cơ bản" }
+        ],
+        "latitude": 10.789672861628272,
+        "longitude": 106.675035728836
+    },
+    {
+        "title": "Cho Thuê Căn hộ 1 PN Đường Trần Qúy Cáp - Free Internet & Cáp",
+        "description": "Chúng tôi hiểu được tầm quan trọng của việc cảm thấy thoải mái và thư giãn khi bạn về đến nhà sau một ngày dài làm việc. Điều đó đã truyền cảm hứng để chúng tôi tạo nên một không gian phù hợp cho tất cả mọi người để nạp năng lượng, thư giãn và tận hưởng.\nĐịa chỉ: Đường Trần Qúy Cáp, Quận Bình Thạnh\nTổng quan: Thiết kế thanh lịch, nội thất cao cấp và không gian sống mở, thoáng đãng\nGiá thuê đã bao gồm: - Wifi, truyền hình cáp - Vệ sinh phòng 3 lần/tuần - Phí quản lý\nGiao thông: vài phút đến Quận 3,4,7..",
+        "city": "Hồ Chí Minh",
+        "district": "Bình Thạnh",
+        "ward": "Phường 11",
+        "street": "5a Trần Quý Cáp",
+        "price": 7500000,
+        "startDate": "2024-08-07",
+        "attributeIds": ["669e7304b8e8f4fc436295ca"],
+        "conditions": [
+            { "type": "Diện tích", "value": "20m2" },
+            { "type": "Phòng ngủ", "value": "1" },
+            { "type": "Phòng tắm", "value": "1" },
+            { "type": "Nội thất", "value": "Đầy đủ" }
+        ]
+    }
+]
