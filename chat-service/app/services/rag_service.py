@@ -4,9 +4,14 @@ from langchain_qdrant import Qdrant
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+from langchain.schema import HumanMessage, SystemMessage
+from qdrant_client.http import models as qdrant_models
+from app.utils.preprocess_currency import preprocess_currency
 import os
 import dotenv
+import re
+
+# TODO: Chính tả, emoji, lịch sử trò chuyện
 
 dotenv.load_dotenv()
 
@@ -121,7 +126,47 @@ class RagService:
             )
 
     def generate_response(self, collection_name: str, query: str, chat_history: list[dict] = []):
-        retriever = self.vector_stores[collection_name].as_retriever(search_kwargs={"k": 5})
+        price_range_match = re.search(r"từ ((\d+(?:\.\d+)?)\s*(?:triệu)?\s*(?:đồng)?) đến ((\d+(?:\.\d+)?)\s*(?:triệu)?\s*(?:đồng)?)", query, re.IGNORECASE)
+        min_price_match = re.search(r"(?:trên|lớn hơn|cao hơn)\s+((\d+(?:\.\d+)?)\s*(?:triệu)?\s*(?:đồng)?)", query, re.IGNORECASE)
+        max_price_match = re.search(r"(?:dưới|nhỏ hơn|thấp hơn|bé hơn)\s+((\d+(?:\.\d+)?)\s*(?:triệu)?\s*(?:đồng)?)", query, re.IGNORECASE)
+        approx_price_match = re.search(r"(?:khoảng|tầm)\s+((\d+(?:\.\d+)?)\s*(?:triệu)?\s*(?:đồng)?)", query, re.IGNORECASE)
+
+        min_price = None
+        max_price = None
+
+        if approx_price_match:
+            approx_price = self._normalize_price(preprocess_currency(query=query, match=approx_price_match.group(1)))
+            tolerance = 0.2
+            min_price = approx_price * (1 - tolerance)
+            max_price = approx_price * (1 + tolerance)
+        elif price_range_match:
+            min_price = self._normalize_price(preprocess_currency(query=query, match=price_range_match.group(1)))
+            max_price = self._normalize_price(preprocess_currency(query=query, match=price_range_match.group(3)))
+        elif min_price_match:
+            min_price = self._normalize_price(preprocess_currency(query=query, match=min_price_match.group(1)))
+        elif max_price_match:
+            max_price = self._normalize_price(preprocess_currency(query=query, match=max_price_match.group(1)))
+        
+        must_filter = []
+        if min_price is not None:
+            must_filter.append(qdrant_models.FieldCondition(
+                key="metadata.prices",
+                range=qdrant_models.Range(
+                    gte=min_price
+                )
+            ))
+        if max_price is not None:
+            must_filter.append(qdrant_models.FieldCondition(
+                key="metadata.prices",
+                range=qdrant_models.Range(
+                    lte=max_price
+                )
+            ))
+
+        retriever = self.vector_stores[collection_name].as_retriever(search_kwargs={
+            "k": 5, 
+            "filter": qdrant_models.Filter(must=must_filter)
+        })
         docs = retriever.invoke(query)
 
         product_info = []
@@ -225,3 +270,11 @@ class RagService:
         llm_res = llm.invoke(messages)
 
         return llm_res.content
+    
+    def _normalize_price(self, price_str):
+        price_str = price_str.lower().replace(".", "").replace(",", "")
+        if "triệu" in price_str or "triệu đồng" in price_str:
+            return int(price_str.replace("triệu đồng", "").replace("triệu", "").strip()) * 1000000
+        if "đồng" in price_str:
+            return int(price_str.replace("đồng", "").strip())
+        return int(price_str)
