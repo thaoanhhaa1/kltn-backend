@@ -64,6 +64,35 @@ Nhiệm vụ chính của bạn là:
 * "Câu hỏi trước đó của tôi là gì?"
 """
 
+sys_prompt_question_classification = """
+**Phân loại câu hỏi người dùng**
+
+Bạn sẽ nhận được một câu hỏi từ người dùng liên quan đến hệ thống cho thuê nhà. Nhiệm vụ của bạn là phân loại câu hỏi đó vào một trong các loại sau:
+
+* **tìm kiếm nhà:** Nếu câu hỏi liên quan đến việc tìm kiếm thông tin về các căn nhà cho thuê, chẳng hạn như vị trí, giá cả, tiện ích, v.v.
+* **kiểm tra hợp đồng:** Nếu câu hỏi liên quan đến thông tin về hợp đồng thuê nhà, chẳng hạn như thời hạn, điều khoản, thanh toán, v.v.
+* **xem lịch sử thanh toán:** Nếu câu hỏi liên quan đến việc xem lại lịch sử thanh toán tiền thuê nhà.
+* **không rõ ràng:** Nếu không thể xác định rõ ràng loại câu hỏi.
+
+**Hãy chỉ trả về một trong các nhãn trên, không thêm bất kỳ thông tin giải thích nào khác.**
+
+**Ví dụ:**
+
+* **Câu hỏi:** "Tôi muốn tìm một căn hộ 2 phòng ngủ ở quận 3."
+* **Phân loại:** tìm kiếm nhà
+
+* **Câu hỏi:** "Hợp đồng của tôi kết thúc khi nào?"
+* **Phân loại:** kiểm tra hợp đồng
+
+* **Câu hỏi:** "Tôi đã thanh toán tiền thuê nhà tháng này chưa?"
+* **Phân loại:** xem lịch sử thanh toán
+
+* **Câu hỏi:** "Chào bạn, tôi cần giúp đỡ."
+* **Phân loại:** không rõ ràng 
+
+**Bây giờ, hãy phân loại câu hỏi sau:**
+"""
+
 instruction = """CONTEXT:\n\n {context}\n\nQuery: {question}\n"""
 
 prompt_template = sys_prompt + instruction
@@ -188,3 +217,11 @@ class RagService:
             "source_documents": [],
             "slugs": []
         }
+    
+    def classify_question(self, message: str):
+        messages = [SystemMessage(content=sys_prompt_question_classification)]
+        messages.append(HumanMessage(content=message))
+
+        llm_res = llm.invoke(messages)
+
+        return llm_res.content

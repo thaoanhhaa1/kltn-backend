@@ -32,6 +32,14 @@ async def generate_response(request: Request):
     data = await request.json()
     query = data["query"]
 
+    response = rag_service.classify_question(message=query)
+
+    if response == "kiểm tra hợp đồng":
+        return {"response": f"Đã gửi yêu cầu kiểm tra hợp đồng. Vui lòng chờ trong giây lát."}
+    
+    if response == "xem lịch sử thanh toán":
+        return {"response": f"Đã gửi yêu cầu xem lịch sử thanh toán. Vui lòng chờ trong giây lát."}
+
     user = request.state.user
     user_id = int(user["id"])
 
