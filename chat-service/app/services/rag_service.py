@@ -48,6 +48,8 @@ Nhiệm vụ chính của bạn là:
 * **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán bằng tiền điện tử, công nghệ blockchain,...
 * **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện (ví dụ: "Câu hỏi trước đó của tôi là gì?"), hãy tìm trong phần "Lịch sử trò chuyện" của CONTEXT và đưa ra câu trả lời chính xác. Nếu không tìm thấy câu hỏi trước đó, hãy trả lời "Chưa có câu hỏi trước đó."
 
+**Hãy luôn xem xét lịch sử trò chuyện để hiểu ngữ cảnh của câu hỏi hiện tại và đưa ra câu trả lời phù hợp hơn.** 
+
 **Ví dụ về các câu hỏi bạn có thể nhận được:**
 
 * "Tôi muốn tìm căn hộ 2 phòng ngủ ở Quận 1, giá dưới 10 triệu."
@@ -133,7 +135,7 @@ class RagService:
             for p in product_info
         ])
 
-        # Định dạng lịch sử trò chuyện
+        # Sửa lỗi định dạng lịch sử trò chuyện
         formatted_chat_history = "\n--\n".join(
             f"Người dùng: {chat['human']}\nTrợ lý: {chat['ai']}"
             for chat in chat_history
@@ -143,11 +145,9 @@ class RagService:
         context = (
             "## Lịch sử trò chuyện:\n" 
             f"{formatted_chat_history}\n\n"
-            "## Thông tin sản phẩm:\n"
+            "## Thông tin bất động sản:\n" # Sửa tiêu đề phần thông tin sản
             f"{formatted_product_info}"
         )
-
-        print(context)
 
         messages = [SystemMessage(content=sys_prompt + "\n\nCONTEXT:\n\n" + context)]
         messages.append(HumanMessage(content=query))
