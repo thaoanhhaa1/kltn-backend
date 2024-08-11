@@ -7,6 +7,7 @@ from langchain.chains import RetrievalQA
 from langchain.schema import HumanMessage, SystemMessage
 from qdrant_client.http import models as qdrant_models
 from app.utils.preprocess_currency import preprocess_currency
+from app.utils.product_info import document_to_product_info, format_product_infos
 import os
 import dotenv
 import re
@@ -51,7 +52,11 @@ Nhiệm vụ chính của bạn là:
 * **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê... Hãy sử dụng thông tin trong phần "Thông tin bất động sản" để tìm kiếm.
 * **Đưa ra thông tin chi tiết:** Cung cấp thông tin chi tiết về các bất động sản (tiêu đề, mô tả, giá, địa chỉ, tiện ích...), các điều khoản trong hợp đồng thuê, lợi ích của việc sử dụng hợp đồng thông minh và công nghệ blockchain. **Nếu câu trả lời liên quan đến một bất động sản cụ thể, hãy đảm bảo đưa slug của bất động sản đó vào cuối câu trả lời, đặt trong dấu ngoặc đơn. Ví dụ: (Slug: can-ho-cao-cap-quan-1)**
 * **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán bằng tiền điện tử, công nghệ blockchain,...
-* **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện (ví dụ: "Câu hỏi trước đó của tôi là gì?"), hãy tìm trong phần "Lịch sử trò chuyện" của CONTEXT và đưa ra câu trả lời chính xác. Nếu không tìm thấy câu hỏi trước đó, hãy trả lời "Chưa có câu hỏi trước đó."
+* **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện hoặc các bất động sản đã được đề cập trước đó, hãy làm theo các bước sau:
+    1. **Kiểm tra câu trả lời trước:** Xem xét kỹ các câu trả lời trước đó của bạn trong phần "Lịch sử trò chuyện" để tìm thông tin liên quan đến câu hỏi hiện tại.
+    2. **Tìm kiếm slug:** Nếu tìm thấy bất kỳ slug nào trong các câu trả lời trước đó, hãy sử dụng chúng để tìm kiếm thông tin chi tiết về các bất động sản tương ứng trong phần "Thông tin bất động sản".
+    3. **Sử dụng thông tin để trả lời:** Kết hợp thông tin từ lịch sử trò chuyện và thông tin bất động sản (nếu có) để đưa ra câu trả lời chính xác và đầy đủ nhất cho người dùng.
+    4. **Nếu không tìm thấy thông tin:** Nếu không tìm thấy thông tin liên quan trong lịch sử trò chuyện hoặc thông tin bất động sản, hãy trả lời "Tôi không tìm thấy thông tin liên quan trong lịch sử trò chuyện."
 * **Gợi ý câu hỏi:** Khi không có đủ thông tin để trả lời hoặc câu hỏi không liên quan đến CONTEXT, hãy ưu tiên xem xét lịch sử trò chuyện để đưa ra câu trả lời phù hợp. Nếu vẫn không thể trả lời, hãy gợi ý một vài câu hỏi khác liên quan đến các dịch vụ của Gigalogy để hỗ trợ người dùng tốt hơn. Ví dụ:
     * "Bạn có muốn tìm hiểu thêm về cách công nghệ blockchain đảm bảo tính minh bạch và bảo mật cho các giao dịch trên hệ thống của chúng tôi không?"
     * "Bạn có quan tâm đến việc tìm hiểu về các lợi ích của việc thanh toán tiền thuê nhà bằng tiền điện tử không?"
@@ -170,48 +175,22 @@ class RagService:
         docs = retriever.invoke(query)
 
         product_info = []
+        unique_product_ids = []
+
+        for chat in chat_history:
+            for doc in chat['source_documents']:
+                if doc.get('id', '') not in unique_product_ids:
+                    product_info.append(document_to_product_info(doc))
+                    unique_product_ids.append(doc.get('id', ''))
 
         for doc in docs:
             product = doc.metadata
-            if product:
-                attributes_dict = {
-                    'Amenity': [],
-                    'Highlight': [],
-                    'Facility': []
-                }
 
-                for attr in product.get('attributes', []):
-                    attr_type = attr['attribute_type']
-                    if attr_type in attributes_dict:
-                        attributes_dict[attr_type].append(attr['attribute_name'])
+            if product and product.get('id', '') not in unique_product_ids:
+                product_info.append(document_to_product_info(product))
+                unique_product_ids.append(product.get('id', ''))
 
-                product_info.append({
-                    "title": product.get('title', ''),
-                    "description": product.get('description', ''),
-                    "prices": product.get('prices', ''),
-                    "address": {
-                        "street": product['address'].get('street', ''),
-                        "ward": product['address'].get('ward', ''),
-                        "district": product['address'].get('district', ''),
-                        "city": product['address'].get('city', '')
-                    },
-                    "conditions": [f"{cond['condition_type']}: {cond['condition_value']}" for cond in product.get('conditions', [])],
-                    "attributes": attributes_dict,  # Sử dụng dictionary đã phân loại
-                    "slug": product.get('slug', '')
-                })
-
-        formatted_product_info = "\n\n".join([
-            f"**Tiêu đề:** {p['title']}\n"
-            f"**Mô tả:** {p['description']}\n"
-            f"**Giá:** {p['prices']}\n"
-            f"**Địa chỉ:** {p['address']['street']}, {p['address']['ward']}, {p['address']['district']}, {p['address']['city']}\n"
-            f"**Điều kiện:** {', '.join(p['conditions'])}\n"
-            f"**Tiện ích:** {', '.join(p['attributes'].get('Amenity', []))}\n"
-            f"**Điểm nổi bật:** {', '.join(p['attributes'].get('Highlight', []))}\n"
-            f"**Cơ sở vật chất:** {', '.join(p['attributes'].get('Facility', []))}\n"
-            f"**Slug:** {p['slug']}" 
-            for p in product_info
-        ])
+        formatted_product_info = format_product_infos(product_info)
 
         # Sửa lỗi định dạng lịch sử trò chuyện
         formatted_chat_history = "\n--\n".join(
@@ -226,6 +205,11 @@ class RagService:
             "## Thông tin bất động sản:\n" # Sửa tiêu đề phần thông tin sản
             f"{formatted_product_info}"
         )
+
+        # In context ra file để kiểm tra, nếu file đã tồn tại thì ghi vào cuối file
+        with open("context.txt", "a", encoding="utf-8") as f:
+            f.write("=========== CONTEXT ===========\n")
+            f.write(context + "\n\n")
 
         messages = [SystemMessage(content=sys_prompt + "\n\nCONTEXT:\n\n" + context)]
         messages.append(HumanMessage(content=query))

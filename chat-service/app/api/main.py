@@ -32,13 +32,14 @@ async def generate_response(request: Request):
     data = await request.json()
     query = data["query"]
 
-    response = rag_service.classify_question(message=query)
+    # FIXME: Uncomment this block to enable the RAG model
+    # response = rag_service.classify_question(message=query)
 
-    if response == "kiểm tra hợp đồng":
-        return {"response": f"Đã gửi yêu cầu kiểm tra hợp đồng. Vui lòng chờ trong giây lát."}
+    # if response == "kiểm tra hợp đồng":
+    #     return {"response": f"Đã gửi yêu cầu kiểm tra hợp đồng. Vui lòng chờ trong giây lát."}
     
-    if response == "xem lịch sử thanh toán":
-        return {"response": f"Đã gửi yêu cầu xem lịch sử thanh toán. Vui lòng chờ trong giây lát."}
+    # if response == "xem lịch sử thanh toán":
+    #     return {"response": f"Đã gửi yêu cầu xem lịch sử thanh toán. Vui lòng chờ trong giây lát."}
 
     user = request.state.user
     user_id = int(user["id"])
@@ -50,7 +51,8 @@ async def generate_response(request: Request):
     for chat in chats:
         chat_history.append({
             "human": chat["request"],
-            "ai": chat["response"]
+            "ai": chat["response"],
+            "source_documents": chat["source_documents"]
         })
 
     response = rag_service.generate_response(collection_name=property_collection, query=query, chat_history=chat_history)
