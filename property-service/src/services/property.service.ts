@@ -1,5 +1,11 @@
-import { ICreateProperty, IResProperty, IResRepositoryProperty } from '../interfaces/property';
-import { createProperty, getAllProperties, getPropertyBySlug } from '../repositories/property.repository';
+import { ICreateProperty, IDeleteProperty, IResProperty, IResRepositoryProperty } from '../interfaces/property';
+import {
+    createProperty,
+    deletePropertyById,
+    getAllProperties,
+    getPropertyBySlug,
+} from '../repositories/property.repository';
+import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
@@ -32,6 +38,22 @@ export const getPropertyBySlugService = async (slug: string) => {
     const property = await getPropertyBySlug(slug);
 
     if (property) return convertToDTO(property);
+
+    throw new CustomError(404, 'Property not found');
+};
+
+export const deletePropertyService = async (deleteProperty: IDeleteProperty) => {
+    const res = await deletePropertyById(deleteProperty);
+
+    if (res) {
+        const response: ResponseError = {
+            status: 200,
+            message: `Property with id ${deleteProperty.property_id} has been deleted`,
+            success: true,
+        };
+
+        return response;
+    }
 
     throw new CustomError(404, 'Property not found');
 };

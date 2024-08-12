@@ -34,3 +34,5 @@ export type IResProperty = Property & {
     prices: number;
     owner: Omit<User, 'user_types'>;
 };
+
+export type IDeleteProperty = Pick<Property, 'owner_id' | 'property_id'>;

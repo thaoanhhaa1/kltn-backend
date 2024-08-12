@@ -33,6 +33,13 @@ model Address {
   Properties Property[]
 }
 
+enum PropertyStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  UNAVAILABLE
+}
+
 model Property {
   property_id     String            @id @map("_id")
   owner_id        Int
@@ -42,10 +49,13 @@ model Property {
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
   Address         Address           @relation(fields: [address_id], references: [address_id])
+  deposit         Float             @default(0)
+  min_duration    Int               @default(0)
   deleted         Boolean           @default(false)
   slug            String            @unique
   latitude        Float?
   longitude       Float?
+  status          PropertyStatus    @default(PENDING)
   RentalConditions RentalCondition[]
   RentalPrices    RentalPrice[]
   PropertyImages  PropertyImage[]

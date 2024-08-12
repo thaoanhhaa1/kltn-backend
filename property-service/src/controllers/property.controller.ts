@@ -5,8 +5,14 @@ import Redis from '../configs/redis.config';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
-import { createPropertyService, getAllPropertiesService, getPropertyBySlugService } from '../services/property.service';
+import {
+    createPropertyService,
+    deletePropertyService,
+    getAllPropertiesService,
+    getPropertyBySlugService,
+} from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
+import CustomError from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
 
 const REDIS_KEY = {
@@ -129,6 +135,31 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
         });
 
         res.status(200).json(searchResult);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deleteProperty = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { property_id } = req.params;
+        const user_id = req.user!.id;
+
+        if (!property_id) throw new CustomError(400, 'Property id is required');
+
+        const response = await deletePropertyService({
+            property_id: property_id,
+            owner_id: user_id,
+        });
+
+        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+            type: PROPERTY_QUEUE.type.DELETED,
+            data: {
+                property_id,
+            },
+        });
+
+        res.status(response.status).json(response);
     } catch (error) {
         next(error);
     }

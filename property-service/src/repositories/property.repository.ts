@@ -1,6 +1,6 @@
 import slug from 'slug';
 import { v4 } from 'uuid';
-import { ICreateProperty, IResRepositoryProperty } from '../interfaces/property';
+import { ICreateProperty, IDeleteProperty, IResRepositoryProperty } from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 import { convertToISODate } from '../utils/convertToISODate.util';
 import { options } from '../utils/slug.util';
@@ -178,6 +178,15 @@ export const getPropertyBySlug = async (slug: string) => {
             slug,
         },
         include: propertyInclude,
+    });
+};
+
+export const deletePropertyById = async (deleteProperty: IDeleteProperty) => {
+    return prisma.property.update({
+        where: deleteProperty,
+        data: {
+            deleted: true,
+        },
     });
 };
 
