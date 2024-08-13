@@ -76,5 +76,6 @@ class QdrantRepository:
                         match=models.MatchValue(value=doc_id)
                     )
                 ]
-            )
+            ),
+            wait=True
         )

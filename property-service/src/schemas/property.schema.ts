@@ -46,6 +46,8 @@ export const propertySchema = z
         startDate: z.string().date('Format date is YYYY-MM-DD').optional(),
         latitude: z.coerce.number().optional(),
         longitude: z.coerce.number().optional(),
+        deposit: z.coerce.number().min(0, 'Deposit must be greater than 0').optional(),
+        min_duration: z.coerce.number().min(0, 'Min duration must be greater than 0').optional(),
     })
     .refine(
         (data) => {

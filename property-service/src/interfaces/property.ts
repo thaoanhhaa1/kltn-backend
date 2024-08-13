@@ -36,3 +36,5 @@ export type IResProperty = Property & {
 };
 
 export type IDeleteProperty = Pick<Property, 'owner_id' | 'property_id'>;
+
+export type IUpdateProperty = Exclude<ICreateProperty, 'slug'>;

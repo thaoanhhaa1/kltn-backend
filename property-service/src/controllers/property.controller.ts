@@ -10,6 +10,7 @@ import {
     deletePropertyService,
     getAllPropertiesService,
     getPropertyBySlugService,
+    updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
@@ -65,6 +66,62 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
 
         RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
             type: PROPERTY_QUEUE.type.CREATED,
+            data: property,
+        });
+
+        res.status(201).json(property);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateProperty = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const files = req.files as Express.Multer.File[] | undefined;
+        const imageUrls: Array<string> = req.body.imageUrls || [];
+        const property_id = req.params.property_id;
+
+        if (files) imageUrls.push(...files.map((file) => file.originalname));
+
+        const safePare = propertySchema.safeParse({
+            ...req.body,
+            images: imageUrls,
+            ...(typeof req.body.conditions === 'string' && { conditions: JSON.parse(req.body.conditions) }),
+        });
+
+        if (!safePare.success)
+            throw convertZodIssueToEntryErrors({
+                issue: safePare.error.issues,
+            });
+
+        if (files) {
+            const images = await uploadFiles({ files, folder: 'property-service' });
+
+            imageUrls.length = 0;
+
+            imageUrls.push(...images);
+        }
+
+        const property = await updatePropertyService(property_id, {
+            ...safePare.data,
+            price: Number(safePare.data.price),
+            ownerId: req.user!.id,
+            images: imageUrls,
+        });
+
+        Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
+        Redis.getInstance().getClient().del(`${REDIS_KEY.PROPERTY}${property.slug}`);
+
+        elasticClient
+            .index({
+                index: 'properties',
+                body: property,
+            })
+            .then(() => console.log('Property added to ElasticSearch'))
+            .catch((err) => console.error('ElasticSearch error:', err));
+
+        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+            type: PROPERTY_QUEUE.type.UPDATED,
             data: property,
         });
 

@@ -80,9 +80,13 @@ async def health_check():
 def property_callback(message):
     data = message.decode("utf-8")
     data_dict = json.loads(data)
+    type = data_dict["type"]
+    data_dict = data_dict["data"]
 
-    if data_dict["type"] == "PROPERTY_CREATED":
-        data_dict = data_dict["data"]
+    if type == "PROPERTY_DELETED" or type == "PROPERTY_UPDATED":
+        qdrant_repo.delete_document(collection_name=property_collection, doc_id=data_dict["property_id"])
+
+    if type == "PROPERTY_CREATED" or type == "PROPERTY_UPDATED":
         data_dict["id"] = data_dict["property_id"]
 
         conditions = "\n".join(f"{condition["condition_type"]}: {condition["condition_value"]}" for condition in data_dict["conditions"])
@@ -104,13 +108,8 @@ def property_callback(message):
         property_split_docs = split_document(property_doc)
         embeddings = from_documents(property_split_docs)
         qdrant_repo.insert_documents(collection_name=property_collection, documents=property_split_docs, embeddings=embeddings)
-    elif data_dict["type"] == "PROPERTY_DELETED":
-        data_dict = data_dict["data"]
 
-        qdrant_repo.delete_document(collection_name=property_collection, doc_id=data_dict["property_id"])
-    elif data_dict["type"] == "PROPERTY_UPDATED":
-        # Handle update property
-        pass
+
 
 def worker():
     rabbitmq_service.consume_messages(queue_name=os.getenv("RABBIT_MQ_PROPERTY_QUEUE"), callback=property_callback)
