@@ -1,0 +1,2 @@
+-   route, params, query: using `_`
+-   pagination: `take` and `skip` query params

@@ -1,6 +1,6 @@
 import slug from 'slug';
 import { v4 } from 'uuid';
-import { ICreateProperty, IResRepositoryProperty } from '../interfaces/property';
+import { ICreateProperty, IDeleteProperty, IResRepositoryProperty, IUpdateProperty } from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 import { convertToISODate } from '../utils/convertToISODate.util';
 import { options } from '../utils/slug.util';
@@ -176,6 +176,87 @@ export const getPropertyBySlug = async (slug: string) => {
     return prisma.property.findUnique({
         where: {
             slug,
+        },
+        include: propertyInclude,
+    });
+};
+
+export const deletePropertyById = async (deleteProperty: IDeleteProperty) => {
+    return prisma.property.update({
+        where: deleteProperty,
+        data: {
+            deleted: true,
+        },
+    });
+};
+
+export const updateProperty = async (property_id: string, property: IUpdateProperty) => {
+    const { city, district, ward, street, price, startDate, attributeIds, conditions, images, ownerId, ...rest } =
+        property;
+    const address = await prisma.address.create({
+        data: {
+            city,
+            district,
+            ward,
+            street,
+        },
+    });
+
+    return prisma.property.update({
+        where: {
+            property_id,
+            owner_id: ownerId,
+        },
+        data: {
+            ...rest,
+            address_id: address.address_id,
+            RentalPrices: {
+                create: {
+                    rental_price: price,
+                    ...(startDate && {
+                        start_date: convertToISODate(startDate),
+                    }),
+                },
+            },
+            PropertyAttributes: {
+                deleteMany: {
+                    property_id: {
+                        equals: property_id,
+                    },
+                },
+                createMany: {
+                    data: attributeIds.map((id) => ({
+                        attribute_id: id,
+                    })),
+                },
+            },
+            RentalConditions: {
+                deleteMany: {
+                    property_id: {
+                        equals: property_id,
+                    },
+                },
+                createMany: {
+                    data: conditions.map(({ type, value }) => ({
+                        condition_type: type,
+                        condition_value: value,
+                    })),
+                },
+            },
+            ...(images.length && {
+                PropertyImages: {
+                    deleteMany: {
+                        property_id: {
+                            equals: property_id,
+                        },
+                    },
+                    createMany: {
+                        data: images.map((url) => ({
+                            image_url: url,
+                        })),
+                    },
+                },
+            }),
         },
         include: propertyInclude,
     });
