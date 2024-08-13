@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.use('/attributes', attribute);
 router.use('/properties', property);
-router.use('/property-interactions', propertyInteraction);
+router.use('/property_interactions', propertyInteraction);
 
 export default router;

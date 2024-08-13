@@ -1,7 +1,9 @@
+import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
+import { DEFAULT_PROPERTIES_SKIP, DEFAULT_PROPERTIES_TAKE } from '../constants/pagination';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
@@ -184,11 +186,69 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: NextF
 
 export const searchProperties = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { q } = req.query;
+        const {
+            q,
+            take = DEFAULT_PROPERTIES_TAKE,
+            skip = DEFAULT_PROPERTIES_SKIP,
+            min_price,
+            max_price,
+            amenities,
+        } = req.query;
+
+        const filter: QueryDslQueryContainer[] = [];
+        const must: QueryDslQueryContainer[] = [];
+
+        if (Array.isArray(amenities)) {
+            amenities.forEach((amenity) =>
+                filter.push({
+                    match: {
+                        'attributes.attribute_name': {
+                            query: amenity as string,
+                            operator: 'and',
+                        },
+                    },
+                }),
+            );
+        }
+
+        if (Number(min_price) >= 0)
+            filter.push({
+                range: {
+                    prices: {
+                        gte: Number(min_price),
+                    },
+                },
+            });
+
+        if (Number(max_price) >= 0)
+            filter.push({
+                range: {
+                    prices: {
+                        lte: Number(max_price),
+                    },
+                },
+            });
+
+        if (q) {
+            must.push({
+                query_string: {
+                    query: String(q),
+                },
+            });
+        }
 
         const searchResult = await elasticClient.search({
             index: 'properties',
-            q: String(q),
+            body: {
+                query: {
+                    bool: {
+                        must,
+                        filter,
+                    },
+                },
+                size: Number(take),
+                from: Number(skip),
+            },
         });
 
         res.status(200).json(searchResult);
