@@ -1,16 +1,22 @@
 import {
     ICreateProperty,
     IDeleteProperty,
+    IPropertyId,
+    IPropertyStatus,
     IResProperty,
     IResRepositoryProperty,
     IUpdateProperty,
+    IUpdatePropertyStatus,
 } from '../interfaces/property';
 import {
     createProperty,
     deletePropertyById,
     getAllProperties,
+    getPropertiesDetailByIds,
     getPropertyBySlug,
+    updatePropertiesStatus,
     updateProperty,
+    updatePropertyStatus,
 } from '../repositories/property.repository';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
@@ -71,4 +77,24 @@ export const updatePropertyService = async (property_id: string, property: IUpda
     if (res) return convertToDTO(res);
 
     throw new CustomError(404, 'Property not found');
+};
+
+export const updatePropertyStatusService = async (params: IUpdatePropertyStatus) => {
+    const res = await updatePropertyStatus(params);
+
+    if (res) return convertToDTO(res);
+
+    throw new CustomError(404, 'Property not found');
+};
+
+export const updatePropertiesStatusService = async (propertyIds: IPropertyId[], status: IPropertyStatus) => {
+    const res = await updatePropertiesStatus(propertyIds, status);
+
+    if (res.count) {
+        const properties = await getPropertiesDetailByIds(propertyIds);
+
+        return properties.map(convertToDTO);
+    }
+
+    throw new CustomError(404, 'Properties not found');
 };

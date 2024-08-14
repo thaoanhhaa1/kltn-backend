@@ -12,11 +12,13 @@ import {
     deletePropertyService,
     getAllPropertiesService,
     getPropertyBySlugService,
+    updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { PropertyStatus } from '@prisma/client';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -54,21 +56,6 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
             price: Number(safePare.data.price),
             ownerId: req.user!.id,
             images: imageUrls,
-        });
-
-        Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
-
-        elasticClient
-            .index({
-                index: 'properties',
-                body: property,
-            })
-            .then(() => console.log('Property added to ElasticSearch'))
-            .catch((err) => console.error('ElasticSearch error:', err));
-
-        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-            type: PROPERTY_QUEUE.type.CREATED,
-            data: property,
         });
 
         res.status(201).json(property);
@@ -277,6 +264,66 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
         });
 
         res.status(response.status).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { properties, status } = req.body;
+
+        if (!properties || !status) throw new CustomError(400, 'Properties and status are required');
+        if (!Array.isArray(properties)) throw new CustomError(400, 'Properties must be an array');
+        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.INACTIVE)
+            throw new CustomError(400, 'Status must be either ACTIVE or INACTIVE');
+
+        const response = await updatePropertiesStatusService(properties, status);
+
+        Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
+
+        if (status === PropertyStatus.ACTIVE) {
+            elasticClient
+                .bulk({
+                    operations: response.map((item) => ({
+                        create: {
+                            _id: item.property_id,
+                            _source: item,
+                        },
+                    })),
+                    index: 'properties',
+                })
+                .then(() => console.log('Properties added to ElasticSearch'))
+                .catch((err) => console.error('ElasticSearch error:', err));
+
+            response.forEach((item) =>
+                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                }),
+            );
+        } else {
+            elasticClient
+                .bulk({
+                    operations: response.map((item) => ({
+                        delete: {
+                            _id: item.property_id,
+                        },
+                    })),
+                    index: 'properties',
+                })
+                .then(() => console.log('Properties deleted from ElasticSearch'))
+                .catch((err) => console.error('ElasticSearch error:', err));
+
+            response.forEach((item) =>
+                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+                    type: PROPERTY_QUEUE.type.DELETED,
+                    data: item,
+                }),
+            );
+        }
+
+        res.status(200).json(response);
     } catch (error) {
         next(error);
     }
