@@ -48,8 +48,6 @@ elasticClient
         } finally {
             const properties = await getAllPropertiesService();
 
-            if (!properties.length) return;
-
             await elasticClient.bulk({
                 index: 'properties',
                 body: properties.flatMap((property) => [{ index: { _id: property.property_id } }, property]),

@@ -1,6 +1,14 @@
 import slug from 'slug';
 import { v4 } from 'uuid';
-import { ICreateProperty, IDeleteProperty, IResRepositoryProperty, IUpdateProperty } from '../interfaces/property';
+import {
+    ICreateProperty,
+    IDeleteProperty,
+    IPropertyId,
+    IPropertyStatus,
+    IResRepositoryProperty,
+    IUpdateProperty,
+    IUpdatePropertyStatus,
+} from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 import { convertToISODate } from '../utils/convertToISODate.util';
 import { options } from '../utils/slug.util';
@@ -167,6 +175,9 @@ export const getAllProperties = async (): Promise<Array<IResRepositoryProperty>>
     return prisma.property.findMany({
         where: {
             deleted: false,
+            status: {
+                not: 'PENDING',
+            },
         },
         include: propertiesInclude,
     });
@@ -190,7 +201,7 @@ export const deletePropertyById = async (deleteProperty: IDeleteProperty) => {
     });
 };
 
-export const updateProperty = async (property_id: string, property: IUpdateProperty) => {
+export const updateProperty = async (property_id: IPropertyId, property: IUpdateProperty) => {
     const { city, district, ward, street, price, startDate, attributeIds, conditions, images, ownerId, ...rest } =
         property;
     const address = await prisma.address.create({
@@ -259,6 +270,43 @@ export const updateProperty = async (property_id: string, property: IUpdatePrope
             }),
         },
         include: propertyInclude,
+    });
+};
+
+export const updatePropertyStatus = async ({ property_id, status, user_id, isAdmin }: IUpdatePropertyStatus) => {
+    return prisma.property.update({
+        where: {
+            property_id,
+            ...(isAdmin ? {} : { owner_id: user_id }),
+        },
+        data: {
+            status,
+        },
+        include: propertyInclude,
+    });
+};
+
+export const updatePropertiesStatus = (properties: IPropertyId[], status: IPropertyStatus) => {
+    return prisma.property.updateMany({
+        where: {
+            property_id: {
+                in: properties,
+            },
+        },
+        data: {
+            status,
+        },
+    });
+};
+
+export const getPropertiesDetailByIds = (properties: IPropertyId[]) => {
+    return prisma.property.findMany({
+        where: {
+            property_id: {
+                in: properties,
+            },
+        },
+        include: propertiesInclude,
     });
 };
 

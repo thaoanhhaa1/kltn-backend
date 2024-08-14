@@ -38,3 +38,12 @@ export type IResProperty = Property & {
 export type IDeleteProperty = Pick<Property, 'owner_id' | 'property_id'>;
 
 export type IUpdateProperty = Exclude<ICreateProperty, 'slug'>;
+
+export type IPropertyStatus = Pick<Property, 'status'>['status'];
+export type IPropertyId = Pick<Property, 'property_id'>['property_id'];
+export type IUpdatePropertyStatus = {
+    property_id: IPropertyId;
+    status: IPropertyStatus;
+    user_id: number;
+    isAdmin?: boolean;
+};
