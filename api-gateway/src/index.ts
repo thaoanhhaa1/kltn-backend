@@ -63,6 +63,8 @@ app.use(
         target: CHAT_SERVICE_URL,
         changeOrigin: true,
         logger: console,
+        timeout: 120000,
+        proxyTimeout: 120000,
     }),
 );
 
