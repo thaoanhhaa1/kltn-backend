@@ -120,4 +120,4 @@ jobs:
                     docker run --name chat-service -p 8000:8000 -e QDRANT_URL=${{secrets.QDRANT_URL}} -e QDRANT_API_KEY=${{secrets.QDRANT_API_KEY}} -e QDRANT_PROPERTY_COLLECTION=${{secrets.QDRANT_PROPERTY_COLLECTION}} -e EMBEDDING_MODEL=${{secrets.EMBEDDING_MODEL}} -e GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}} -e GOOGLE_MODEL=${{secrets.GOOGLE_MODEL}} -e RABBIT_MQ_URL=${{secrets.RABBIT_MQ_URL}} -e RABBIT_MQ_PROPERTY_QUEUE=${{secrets.RABBIT_MQ_PROPERTY_QUEUE}} -e JWT_ACCESS_SECRET=${{secrets.JWT_ACCESS_SECRET}} -e MONGO_URL=${{secrets.MONGO_URL}} -e DATABASE_NAME=kltn-chat-service -d ikltnchatservice
                   EOF
               env:
-                  SSH_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+                  VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
