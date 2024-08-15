@@ -6,6 +6,30 @@ on:
             - master
 
 jobs:
+    build-api-gateway-service:
+        runs-on: ubuntu-latest
+        # needs: build-user-service # Ensures this job runs after 'build-user-service'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+
+            - name: Log in to Docker Hub
+              run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            - name: Build Docker image for apigateway service
+              run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ikltnapigatewayservice:latest ./apigateway-service/.
+
+            - name: Push Docker image to Docker Hub
+              run: docker push ${{ secrets.DOCKER_USERNAME }}/ikltnapigatewayservice:latest
+
+            - name: Install and configure the Koyeb CLI
+              uses: koyeb-community/install-koyeb-cli@v2
+              with:
+                  api_token: '${{ secrets.KOYEB_TOKEN_HIEU }}'
+            - name: Deploy to Koyeb
+              run: koyeb service redeploy bc4d9d9d-1c95-4f4e-b162-203962691c6a
+
     build-user-service:
         runs-on: ubuntu-latest
 
