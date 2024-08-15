@@ -103,7 +103,7 @@ jobs:
 
             - name: Execute Docker Commands
               run: |
-                  echo "${{ secrets.VPS_PASSWORD }}" | sshpass ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_IP }} << 'EOF'
+                  echo "${{ secrets.VPS_PASSWORD }}" | sshpass ssh -tt -o StrictHostKeyChecking=no root@${{ secrets.VPS_IP }} << 'EOF'
                     # Xóa Docker image
                     docker rmi ikltnchatservice
 
