@@ -1,13 +1,13 @@
 import express from 'express';
+import elasticClient from './configs/elastic.config';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
 import { USER_QUEUE } from './constants/rabbitmq';
 import { ICreateUserReq } from './interfaces/user';
 import errorHandler from './middlewares/error.middleware';
 import router from './routes';
+import { getNotPendingPropertiesService } from './services/property.service';
 import { createUser } from './services/user.service';
-import elasticClient from './configs/elastic.config';
-import { getAllPropertiesService } from './services/property.service';
 
 const app = express();
 
@@ -46,7 +46,7 @@ elasticClient
             });
         } catch (error) {
         } finally {
-            const properties = await getAllPropertiesService();
+            const properties = await getNotPendingPropertiesService();
 
             await elasticClient.bulk({
                 index: 'properties',

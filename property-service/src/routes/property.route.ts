@@ -3,15 +3,17 @@ import upload from '../configs/multer.config';
 import {
     createProperty,
     deleteProperty,
-    getAllProperties,
+    getNotDeletedProperties,
+    getNotDeletedProperty,
+    getNotPendingProperties,
     getPropertyBySlug,
     searchProperties,
     updatePropertiesStatus,
     updateProperty,
 } from '../controllers/property.controller';
 import authMiddleware from '../middlewares/auth.middleware';
-import roleMiddleware from '../middlewares/role.middleware';
 import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
+import roleMiddleware from '../middlewares/role.middleware';
 
 const router = express.Router();
 
@@ -27,7 +29,9 @@ router.put(
 
 router.get('/search', searchProperties);
 router.get('/slug/:slug', getPropertyBySlug);
-router.get('/', getAllProperties);
+router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedProperties);
+router.get('/:property_id', authMiddleware, roleMiddleware('admin'), getNotDeletedProperty);
+router.get('/', getNotPendingProperties);
 
 router.post('/approval', authMiddleware, roleMiddleware('admin'), updatePropertiesStatus);
 router.post('/', authMiddleware, roleMiddleware('owner'), upload.array('images'), createProperty);
