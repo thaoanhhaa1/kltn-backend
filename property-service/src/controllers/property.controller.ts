@@ -1,4 +1,5 @@
 import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
+import { PropertyStatus } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -10,7 +11,9 @@ import { propertySchema } from '../schemas/property.schema';
 import {
     createPropertyService,
     deletePropertyService,
-    getAllPropertiesService,
+    getNotDeletedPropertiesService,
+    getNotDeletedPropertyService,
+    getNotPendingPropertiesService,
     getPropertyBySlugService,
     updatePropertiesStatusService,
     updatePropertyService,
@@ -18,7 +21,6 @@ import {
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
-import { PropertyStatus } from '@prisma/client';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -120,7 +122,7 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
     }
 };
 
-export const getAllProperties = async (_req: Request, res: Response, next: NextFunction) => {
+export const getNotPendingProperties = async (_req: Request, res: Response, next: NextFunction) => {
     try {
         const KEY = REDIS_KEY.ALL_PROPERTIES;
 
@@ -131,7 +133,7 @@ export const getAllProperties = async (_req: Request, res: Response, next: NextF
             return;
         }
 
-        const properties = await getAllPropertiesService();
+        const properties = await getNotPendingPropertiesService();
         Redis.getInstance()
             .getClient()
             .set(KEY, properties, {
@@ -140,6 +142,34 @@ export const getAllProperties = async (_req: Request, res: Response, next: NextF
             .then(() => console.log('Properties cached'));
 
         res.status(200).json(properties);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getNotDeletedProperties = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const take = Number(req.query.take || DEFAULT_PROPERTIES_TAKE);
+        const skip = Number(req.query.skip || DEFAULT_PROPERTIES_SKIP);
+
+        const properties = await getNotDeletedPropertiesService({
+            skip,
+            take,
+        });
+
+        res.status(200).json(properties);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getNotDeletedProperty = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { property_id } = req.params;
+
+        const property = await getNotDeletedPropertyService(property_id);
+
+        res.status(200).json(property);
     } catch (error) {
         next(error);
     }

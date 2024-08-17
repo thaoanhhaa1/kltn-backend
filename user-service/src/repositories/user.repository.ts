@@ -1,3 +1,4 @@
+import { IPagination } from '../interface/IPagination';
 import prisma from '../prisma/prismaClient';
 import { RegisterInput } from '../schemas/auth.schema';
 
@@ -37,6 +38,44 @@ export const createUser = async ({ email, name, password, userType }: Omit<Regis
             user_types: true,
             avatar: true,
             phone_number: true,
+        },
+    });
+};
+
+export const getUsers = async ({ skip, take }: IPagination) => {
+    return await prisma.user.findMany({
+        where: {
+            NOT: {
+                user_types: {
+                    has: 'admin',
+                },
+            },
+        },
+        select: {
+            user_id: true,
+            email: true,
+            name: true,
+            user_types: true,
+            avatar: true,
+            phone_number: true,
+            wallet_address: true,
+            created_at: true,
+            updated_at: true,
+            status: true,
+        },
+        take,
+        skip,
+    });
+};
+
+export const countUsers = async () => {
+    return await prisma.user.count({
+        where: {
+            NOT: {
+                user_types: {
+                    has: 'admin',
+                },
+            },
         },
     });
 };

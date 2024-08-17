@@ -2,7 +2,7 @@ import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from './auth.middleware';
 import { RegisterInput } from '../schemas/auth.schema';
 
-type RoleType = RegisterInput['userType'];
+type RoleType = RegisterInput['userType'] | 'admin';
 
 const roleMiddleware = (role: RoleType) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user?.userTypes.includes(role)) {
