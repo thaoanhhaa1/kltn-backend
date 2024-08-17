@@ -1,5 +1,6 @@
 import slug from 'slug';
 import { v4 } from 'uuid';
+import { IPagination } from '../interfaces/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
@@ -171,7 +172,7 @@ export const createProperty = async ({
     });
 };
 
-export const getAllProperties = async (): Promise<Array<IResRepositoryProperty>> => {
+export const getNotPendingProperties = async (): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
             deleted: false,
@@ -180,6 +181,35 @@ export const getAllProperties = async (): Promise<Array<IResRepositoryProperty>>
             },
         },
         include: propertiesInclude,
+    });
+};
+
+export const getNotDeletedProperties = async ({ skip, take }: IPagination): Promise<Array<IResRepositoryProperty>> => {
+    return prisma.property.findMany({
+        where: {
+            deleted: false,
+        },
+        include: propertiesInclude,
+        skip,
+        take,
+    });
+};
+
+export const countNotDeletedProperties = async () => {
+    return prisma.property.count({
+        where: {
+            deleted: false,
+        },
+    });
+};
+
+export const getNotDeletedProperty = (property_id: IPropertyId) => {
+    return prisma.property.findFirst({
+        where: {
+            property_id,
+            deleted: false,
+        },
+        include: propertyInclude,
     });
 };
 

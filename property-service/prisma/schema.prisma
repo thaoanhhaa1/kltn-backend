@@ -34,10 +34,10 @@ model Address {
 }
 
 enum PropertyStatus {
-  PENDING
-  ACTIVE
-  INACTIVE
-  UNAVAILABLE
+  PENDING // waiting for approval
+  ACTIVE // approved and available for rent
+  INACTIVE // not approved
+  UNAVAILABLE // rented out
 }
 
 model Property {

@@ -1,3 +1,4 @@
+import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
@@ -9,9 +10,12 @@ import {
     IUpdatePropertyStatus,
 } from '../interfaces/property';
 import {
+    countNotDeletedProperties,
     createProperty,
     deletePropertyById,
-    getAllProperties,
+    getNotDeletedProperties,
+    getNotDeletedProperty,
+    getNotPendingProperties,
     getPropertiesDetailByIds,
     getPropertyBySlug,
     updatePropertiesStatus,
@@ -20,6 +24,7 @@ import {
 } from '../repositories/property.repository';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
+import getPageInfo from '../utils/getPageInfo';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
     const { PropertyAttributes, PropertyImages, RentalConditions, RentalPrices, Address, Owner, ...rest } = property;
@@ -41,10 +46,32 @@ export const createPropertyService = async (property: ICreateProperty) => {
     return convertToDTO(res);
 };
 
-export const getAllPropertiesService = async () => {
-    const properties = await getAllProperties();
+export const getNotPendingPropertiesService = async () => {
+    const properties = await getNotPendingProperties();
 
     return properties.map(convertToDTO);
+};
+
+export const getNotDeletedPropertiesService = async (params: IPagination) => {
+    const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties()]);
+
+    const result: IPaginationResponse<IResProperty> = {
+        data: properties.map(convertToDTO),
+        pageInfo: getPageInfo({
+            count,
+            ...params,
+        }),
+    };
+
+    return result;
+};
+
+export const getNotDeletedPropertyService = async (property_id: IPropertyId) => {
+    const property = await getNotDeletedProperty(property_id);
+
+    if (property) return convertToDTO(property);
+
+    throw new CustomError(404, 'Property not found');
 };
 
 export const getPropertyBySlugService = async (slug: string) => {

@@ -13,6 +13,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+} 
+
+enum UserType {
+  admin
+  renter
+  owner
+}
+
 model User {
   user_id         Int      @id @default(autoincrement())
   name            String
@@ -20,8 +33,9 @@ model User {
   email           String   @unique
   password        String
   phone_number    String?
-  user_types      String[]
+  user_types      UserType[]
   wallet_address  String?
+  status          UserStatus @default(ACTIVE)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
