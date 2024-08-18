@@ -52,6 +52,7 @@ model Property {
   deposit         Float             @default(0)
   min_duration    Int               @default(0)
   deleted         Boolean           @default(false)
+  agreement_price Boolean?          @default(false)
   slug            String            @unique
   latitude        Float?
   longitude       Float?
@@ -64,13 +65,13 @@ model Property {
 }
 
 model RentalCondition {
-  condition_id String @id @default(auto()) @map("_id") @db.ObjectId
-  property_id String
-  condition_type String
+  condition_id    String   @id @default(auto()) @map("_id") @db.ObjectId
+  property_id     String
+  condition_type  String
   condition_value String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  Property Property @relation(fields: [property_id], references: [property_id])
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  Property        Property @relation(fields: [property_id], references: [property_id])
 }
 
 model RentalPrice {
