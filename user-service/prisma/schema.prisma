@@ -32,9 +32,9 @@ model User {
   avatar          String?
   email           String   @unique
   password        String
-  phone_number    String?
+  phone_number    String?  @unique
   user_types      UserType[]
-  wallet_address  String?
+  wallet_address  String?  @unique
   status          UserStatus @default(ACTIVE)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt

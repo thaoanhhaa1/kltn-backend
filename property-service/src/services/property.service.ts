@@ -2,18 +2,21 @@ import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
+    IGetPropertiesWithOwnerId,
     IPropertyId,
-    IPropertyStatus,
     IResProperty,
     IResRepositoryProperty,
+    IUpdatePropertiesStatus,
     IUpdateProperty,
     IUpdatePropertyStatus,
 } from '../interfaces/property';
 import {
     countNotDeletedProperties,
+    countNotDeletedPropertiesByOwnerId,
     createProperty,
     deletePropertyById,
     getNotDeletedProperties,
+    getNotDeletedPropertiesByOwnerId,
     getNotDeletedProperty,
     getNotPendingProperties,
     getPropertiesDetailByIds,
@@ -54,6 +57,23 @@ export const getNotPendingPropertiesService = async () => {
 
 export const getNotDeletedPropertiesService = async (params: IPagination) => {
     const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties()]);
+
+    const result: IPaginationResponse<IResProperty> = {
+        data: properties.map(convertToDTO),
+        pageInfo: getPageInfo({
+            count,
+            ...params,
+        }),
+    };
+
+    return result;
+};
+
+export const getNotDeletedPropertiesByOwnerIdService = async (params: IGetPropertiesWithOwnerId) => {
+    const [properties, count] = await Promise.all([
+        getNotDeletedPropertiesByOwnerId(params),
+        countNotDeletedPropertiesByOwnerId(params.ownerId),
+    ]);
 
     const result: IPaginationResponse<IResProperty> = {
         data: properties.map(convertToDTO),
@@ -114,11 +134,11 @@ export const updatePropertyStatusService = async (params: IUpdatePropertyStatus)
     throw new CustomError(404, 'Property not found');
 };
 
-export const updatePropertiesStatusService = async (propertyIds: IPropertyId[], status: IPropertyStatus) => {
-    const res = await updatePropertiesStatus(propertyIds, status);
+export const updatePropertiesStatusService = async (params: IUpdatePropertiesStatus) => {
+    const res = await updatePropertiesStatus(params);
 
     if (res.count) {
-        const properties = await getPropertiesDetailByIds(propertyIds);
+        const properties = await getPropertiesDetailByIds(params);
 
         return properties.map(convertToDTO);
     }

@@ -9,6 +9,8 @@ import {
     User,
 } from '@prisma/client';
 import { PropertyInput } from './../schemas/property.schema';
+import { IPagination } from './pagination';
+import { IUserId } from './user';
 
 export interface ICreateProperty extends PropertyInput {
     ownerId: number;
@@ -46,4 +48,14 @@ export type IUpdatePropertyStatus = {
     status: IPropertyStatus;
     user_id: number;
     isAdmin?: boolean;
+};
+
+export type IGetPropertiesWithOwnerId = IPagination & {
+    ownerId: number;
+};
+
+export type IUpdatePropertiesStatus = {
+    properties: IPropertyId[];
+    status: IPropertyStatus;
+    owner_id?: IUserId;
 };

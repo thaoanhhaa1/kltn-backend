@@ -4,12 +4,14 @@ import { IPagination } from '../interfaces/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
+    IGetPropertiesWithOwnerId,
     IPropertyId,
-    IPropertyStatus,
     IResRepositoryProperty,
+    IUpdatePropertiesStatus,
     IUpdateProperty,
     IUpdatePropertyStatus,
 } from '../interfaces/property';
+import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { convertToISODate } from '../utils/convertToISODate.util';
 import { options } from '../utils/slug.util';
@@ -97,9 +99,9 @@ const propertiesInclude = {
 export const createProperty = async ({
     attributeIds,
     conditions,
-    description,
     price,
     title,
+    description,
     images,
     ownerId,
     city,
@@ -107,8 +109,7 @@ export const createProperty = async ({
     ward,
     street,
     startDate,
-    latitude,
-    longitude,
+    ...props
 }: ICreateProperty): Promise<IResRepositoryProperty> => {
     const address = await prisma.address.create({
         data: {
@@ -123,10 +124,11 @@ export const createProperty = async ({
 
     return prisma.property.create({
         data: {
+            ...props,
+            description,
+            title,
             property_id: v4(),
             slug: propertySlug,
-            latitude,
-            longitude,
             address_id: address.address_id,
             ...(conditions.length && {
                 RentalConditions: {
@@ -138,8 +140,6 @@ export const createProperty = async ({
                     },
                 },
             }),
-            description,
-            title,
             ...(attributeIds.length && {
                 PropertyAttributes: {
                     createMany: {
@@ -149,14 +149,16 @@ export const createProperty = async ({
                     },
                 },
             }),
-            RentalPrices: {
-                create: {
-                    rental_price: price,
-                    ...(startDate && {
-                        start_date: convertToISODate(startDate),
-                    }),
+            ...(price && {
+                RentalPrices: {
+                    create: {
+                        rental_price: price,
+                        ...(startDate && {
+                            start_date: convertToISODate(startDate),
+                        }),
+                    },
                 },
-            },
+            }),
             owner_id: ownerId,
             ...(images.length && {
                 PropertyImages: {
@@ -199,6 +201,31 @@ export const countNotDeletedProperties = async () => {
     return prisma.property.count({
         where: {
             deleted: false,
+        },
+    });
+};
+
+export const getNotDeletedPropertiesByOwnerId = async ({
+    skip,
+    take,
+    ownerId,
+}: IGetPropertiesWithOwnerId): Promise<Array<IResRepositoryProperty>> => {
+    return prisma.property.findMany({
+        where: {
+            deleted: false,
+            owner_id: ownerId,
+        },
+        include: propertiesInclude,
+        skip,
+        take,
+    });
+};
+
+export const countNotDeletedPropertiesByOwnerId = async (ownerId: IUserId) => {
+    return prisma.property.count({
+        where: {
+            deleted: false,
+            owner_id: ownerId,
         },
     });
 };
@@ -251,14 +278,16 @@ export const updateProperty = async (property_id: IPropertyId, property: IUpdate
         data: {
             ...rest,
             address_id: address.address_id,
-            RentalPrices: {
-                create: {
-                    rental_price: price,
-                    ...(startDate && {
-                        start_date: convertToISODate(startDate),
-                    }),
+            ...(price && {
+                RentalPrices: {
+                    create: {
+                        rental_price: price,
+                        ...(startDate && {
+                            start_date: convertToISODate(startDate),
+                        }),
+                    },
                 },
-            },
+            }),
             PropertyAttributes: {
                 deleteMany: {
                     property_id: {
@@ -316,25 +345,44 @@ export const updatePropertyStatus = async ({ property_id, status, user_id, isAdm
     });
 };
 
-export const updatePropertiesStatus = (properties: IPropertyId[], status: IPropertyStatus) => {
+export const updatePropertiesStatus = ({ properties, status, owner_id }: IUpdatePropertiesStatus) => {
     return prisma.property.updateMany({
         where: {
             property_id: {
                 in: properties,
             },
+            ...(owner_id && {
+                owner_id,
+            }),
+            ...(owner_id
+                ? {
+                      status: {
+                          in: ['ACTIVE', 'INACTIVE'],
+                      },
+                  }
+                : {
+                      status: {
+                          not: 'UNAVAILABLE',
+                      },
+                  }),
         },
         data: {
-            status,
+            status: {
+                set: status,
+            },
         },
     });
 };
 
-export const getPropertiesDetailByIds = (properties: IPropertyId[]) => {
+export const getPropertiesDetailByIds = ({ owner_id, properties }: Omit<IUpdatePropertiesStatus, 'status'>) => {
     return prisma.property.findMany({
         where: {
             property_id: {
                 in: properties,
             },
+            ...(owner_id && {
+                owner_id,
+            }),
         },
         include: propertiesInclude,
     });

@@ -4,12 +4,14 @@ import {
     createProperty,
     deleteProperty,
     getNotDeletedProperties,
+    getNotDeletedPropertiesByOwnerId,
     getNotDeletedProperty,
     getNotPendingProperties,
     getPropertyBySlug,
     searchProperties,
     updatePropertiesStatus,
     updateProperty,
+    updateVisiblePropertiesStatus,
 } from '../controllers/property.controller';
 import authMiddleware from '../middlewares/auth.middleware';
 import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
@@ -30,10 +32,12 @@ router.put(
 router.get('/search', searchProperties);
 router.get('/slug/:slug', getPropertyBySlug);
 router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedProperties);
+router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
 router.get('/:property_id', authMiddleware, roleMiddleware('admin'), getNotDeletedProperty);
 router.get('/', getNotPendingProperties);
 
 router.post('/approval', authMiddleware, roleMiddleware('admin'), updatePropertiesStatus);
+router.post('/visible', authMiddleware, roleMiddleware('owner'), updateVisiblePropertiesStatus);
 router.post('/', authMiddleware, roleMiddleware('owner'), upload.array('images'), createProperty);
 
 export default router;
