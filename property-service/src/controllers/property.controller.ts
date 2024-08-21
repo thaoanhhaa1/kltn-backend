@@ -11,6 +11,7 @@ import { propertySchema } from '../schemas/property.schema';
 import {
     createPropertyService,
     deletePropertyService,
+    getNotDeletedPropertiesByOwnerIdService,
     getNotDeletedPropertiesService,
     getNotDeletedPropertyService,
     getNotPendingPropertiesService,
@@ -175,6 +176,28 @@ export const getNotDeletedProperty = async (req: Request, res: Response, next: N
     }
 };
 
+export const getNotDeletedPropertiesByOwnerId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const take = Number(req.query.take || DEFAULT_PROPERTIES_TAKE);
+        const skip = Number(req.query.skip || DEFAULT_PROPERTIES_SKIP);
+        const owner_id = req.user!.id;
+
+        const properties = await getNotDeletedPropertiesByOwnerIdService({
+            skip,
+            take,
+            ownerId: owner_id,
+        });
+
+        res.status(200).json(properties);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getPropertyBySlug = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { slug } = req.params;
@@ -308,7 +331,75 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
         if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.INACTIVE)
             throw new CustomError(400, 'Status must be either ACTIVE or INACTIVE');
 
-        const response = await updatePropertiesStatusService(properties, status);
+        const response = await updatePropertiesStatusService({
+            properties,
+            status,
+        });
+
+        Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
+
+        if (status === PropertyStatus.ACTIVE) {
+            elasticClient
+                .bulk({
+                    operations: response.map((item) => ({
+                        create: {
+                            _id: item.property_id,
+                            _source: item,
+                        },
+                    })),
+                    index: 'properties',
+                })
+                .then(() => console.log('Properties added to ElasticSearch'))
+                .catch((err) => console.error('ElasticSearch error:', err));
+
+            response.forEach((item) =>
+                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                }),
+            );
+        } else {
+            elasticClient
+                .bulk({
+                    operations: response.map((item) => ({
+                        delete: {
+                            _id: item.property_id,
+                        },
+                    })),
+                    index: 'properties',
+                })
+                .then(() => console.log('Properties deleted from ElasticSearch'))
+                .catch((err) => console.error('ElasticSearch error:', err));
+
+            response.forEach((item) =>
+                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
+                    type: PROPERTY_QUEUE.type.DELETED,
+                    data: item,
+                }),
+            );
+        }
+
+        res.status(200).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { properties, status } = req.body;
+        const user_id = req.user!.id;
+
+        if (!properties || !status) throw new CustomError(400, 'Properties and status are required');
+        if (!Array.isArray(properties)) throw new CustomError(400, 'Properties must be an array');
+        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.INACTIVE)
+            throw new CustomError(400, 'Status must be either ACTIVE or INACTIVE');
+
+        const response = await updatePropertiesStatusService({
+            properties,
+            status,
+            owner_id: user_id,
+        });
 
         Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
 

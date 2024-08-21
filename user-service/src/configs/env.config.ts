@@ -17,6 +17,13 @@ const EnvSchema = z.object({
     KV_REST_API_TOKEN: z.string(),
     KV_REST_API_URL: z.string().url(),
     OTP_EXPIRATION: z.coerce.number(),
+    FIREBASE_API_KEY: z.string(),
+    FIREBASE_AUTH_DOMAIN: z.string(),
+    FIREBASE_AUTH_PROJECT_ID: z.string(),
+    FIREBASE_STORAGE_BUCKET: z.string(),
+    FIREBASE_MESSAGING_SENDER_ID: z.string(),
+    FIREBASE_APP_ID: z.string(),
+    FIREBASE_MEASUREMENT_ID: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

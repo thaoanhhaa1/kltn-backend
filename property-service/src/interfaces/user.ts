@@ -1,3 +1,4 @@
+import { User } from '@prisma/client';
 import { RoleType } from '../middlewares/role.middleware';
 
 export interface ICreateUserReq {
@@ -17,3 +18,5 @@ export interface ICreateUserRes {
     avatar: string | null;
     phone_number: string | null;
 }
+
+export type IUserId = Pick<User, 'user_id'>['user_id'];

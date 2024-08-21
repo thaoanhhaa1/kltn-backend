@@ -32,11 +32,7 @@ export const propertySchema = z
                 }),
             )
             .default([]),
-        price: z.coerce
-            .number({
-                required_error: 'Price is required',
-            })
-            .min(0, 'Price must be greater than 0'),
+        price: z.coerce.number().min(0, 'Price must be greater than 0').optional(),
         attributeIds: z.array(z.string()).default([]),
         images: z
             .array(z.string(), {
@@ -48,6 +44,7 @@ export const propertySchema = z
         longitude: z.coerce.number().optional(),
         deposit: z.coerce.number().min(0, 'Deposit must be greater than 0').optional(),
         min_duration: z.coerce.number().min(0, 'Min duration must be greater than 0').optional(),
+        agreement_price: z.coerce.boolean().optional(),
     })
     .refine(
         (data) => {
@@ -64,6 +61,11 @@ export const propertySchema = z
         {
             message: 'Latitude and longitude are required',
         },
-    );
+    )
+    .refine((data) => {
+        if (data.price && data.agreement_price) return false;
+        if (!data.price && !data.agreement_price) return false;
+        return true;
+    });
 
 export type PropertyInput = z.infer<typeof propertySchema>;
