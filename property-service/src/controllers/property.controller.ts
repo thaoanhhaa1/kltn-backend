@@ -341,13 +341,8 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
         if (status === PropertyStatus.ACTIVE) {
             elasticClient
                 .bulk({
-                    operations: response.map((item) => ({
-                        create: {
-                            _id: item.property_id,
-                            _source: item,
-                        },
-                    })),
                     index: 'properties',
+                    body: response.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
@@ -406,13 +401,8 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
         if (status === PropertyStatus.ACTIVE) {
             elasticClient
                 .bulk({
-                    operations: response.map((item) => ({
-                        create: {
-                            _id: item.property_id,
-                            _source: item,
-                        },
-                    })),
                     index: 'properties',
+                    body: response.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
