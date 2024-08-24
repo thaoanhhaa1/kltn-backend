@@ -15,6 +15,16 @@ export const getAllAttributes = async () => {
     });
 };
 
+export const getAllAttributesCbb = async () => {
+    return prisma.attribute.findMany({
+        where: { deleted: false },
+        select: {
+            attribute_id: true,
+            attribute_name: true,
+        },
+    });
+};
+
 export const getAttributeById = async (id: string) => {
     return prisma.attribute.findUnique({
         where: { attribute_id: id, deleted: false },
