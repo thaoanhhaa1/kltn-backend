@@ -59,3 +59,15 @@ export type IUpdatePropertiesStatus = {
     status: IPropertyStatus;
     owner_id?: IUserId;
 };
+
+export interface IOwnerFilterProperties {
+    title?: Property['title'];
+    deposit_from?: Property['deposit'];
+    deposit_to?: Property['deposit'];
+    price_from?: RentalPrice['rental_price'];
+    price_to?: RentalPrice['rental_price'];
+    status?: Property['status'];
+    city?: Address['city'];
+    district?: Address['district'];
+    ward?: Address['ward'];
+}
