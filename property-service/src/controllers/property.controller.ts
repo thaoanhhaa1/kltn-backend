@@ -190,14 +190,14 @@ export const getNotDeletedPropertiesByOwnerId = async (
         const filter: IOwnerFilterProperties = req.query;
 
         const properties = await getNotDeletedPropertiesByOwnerIdService({
-            skip,
-            take,
-            ownerId: owner_id,
             ...filter,
             price_from: filter.price_from && Number(filter.price_from),
             price_to: filter.price_to && Number(filter.price_to),
             deposit_from: filter.deposit_from && Number(filter.deposit_from),
             deposit_to: filter.deposit_to && Number(filter.deposit_to),
+            skip,
+            take,
+            ownerId: owner_id,
         });
 
         res.status(200).json(properties);
