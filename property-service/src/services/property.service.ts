@@ -3,6 +3,7 @@ import {
     ICreateProperty,
     IDeleteProperty,
     IGetPropertiesWithOwnerId,
+    IOwnerFilterProperties,
     IPropertyId,
     IResProperty,
     IResRepositoryProperty,
@@ -69,10 +70,12 @@ export const getNotDeletedPropertiesService = async (params: IPagination) => {
     return result;
 };
 
-export const getNotDeletedPropertiesByOwnerIdService = async (params: IGetPropertiesWithOwnerId) => {
+export const getNotDeletedPropertiesByOwnerIdService = async (
+    params: IGetPropertiesWithOwnerId & IOwnerFilterProperties,
+) => {
     const [properties, count] = await Promise.all([
         getNotDeletedPropertiesByOwnerId(params),
-        countNotDeletedPropertiesByOwnerId(params.ownerId),
+        countNotDeletedPropertiesByOwnerId(params.ownerId, params),
     ]);
 
     const result: IPaginationResponse<IResProperty> = {
