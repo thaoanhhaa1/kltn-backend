@@ -17,12 +17,14 @@ import {
     getNotDeletedPropertyService,
     getNotPendingPropertiesService,
     getPropertyBySlugService,
+    getPropertyStatusService,
     updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -443,6 +445,14 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
         }
 
         res.status(200).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyStatus = (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        res.json(getPropertyStatusService());
     } catch (error) {
         next(error);
     }
