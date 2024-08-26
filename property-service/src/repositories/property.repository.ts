@@ -5,6 +5,7 @@ import {
     ICreateProperty,
     IDeleteProperty,
     IGetPropertiesWithOwnerId,
+    IOwnerFilterProperties,
     IPropertyId,
     IResRepositoryProperty,
     IUpdatePropertiesStatus,
@@ -95,6 +96,67 @@ const propertiesInclude = {
     latitude: false,
     longitude: false,
 };
+
+const ownerFilterPropertiesWhere = ({
+    city,
+    deposit_from,
+    deposit_to,
+    district,
+    price_from,
+    price_to,
+    status,
+    title,
+    ward,
+}: IOwnerFilterProperties) => ({
+    ...(city && {
+        Address: {
+            city,
+        },
+    }),
+    ...(district && {
+        Address: {
+            district,
+        },
+    }),
+    ...(ward && {
+        Address: {
+            ward,
+        },
+    }),
+    ...(title && {
+        title: {
+            contains: title,
+            mode: 'insensitive' as const,
+        },
+    }),
+    ...(status && {
+        status,
+    }),
+    ...((deposit_from || deposit_to) && {
+        deposit: {
+            ...(deposit_from && {
+                gte: deposit_from,
+            }),
+            ...(deposit_to && {
+                lte: deposit_to,
+            }),
+        },
+    }),
+    ...((price_from || price_to) && {
+        RentalPrices: {
+            some: {
+                rental_price: {
+                    ...(price_from && {
+                        gte: price_from,
+                    }),
+                    ...(price_to && {
+                        lte: price_to,
+                    }),
+                },
+            },
+        },
+    }),
+});
 
 export const createProperty = async ({
     attributeIds,
@@ -209,11 +271,13 @@ export const getNotDeletedPropertiesByOwnerId = async ({
     skip,
     take,
     ownerId,
-}: IGetPropertiesWithOwnerId): Promise<Array<IResRepositoryProperty>> => {
+    ...filter
+}: IGetPropertiesWithOwnerId & IOwnerFilterProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
             deleted: false,
             owner_id: ownerId,
+            ...ownerFilterPropertiesWhere(filter),
         },
         include: propertiesInclude,
         skip,
@@ -221,11 +285,12 @@ export const getNotDeletedPropertiesByOwnerId = async ({
     });
 };
 
-export const countNotDeletedPropertiesByOwnerId = async (ownerId: IUserId) => {
+export const countNotDeletedPropertiesByOwnerId = async (ownerId: IUserId, filter: IOwnerFilterProperties) => {
     return prisma.property.count({
         where: {
             deleted: false,
             owner_id: ownerId,
+            ...ownerFilterPropertiesWhere(filter),
         },
     });
 };
