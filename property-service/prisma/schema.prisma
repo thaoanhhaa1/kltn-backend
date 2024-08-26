@@ -45,6 +45,7 @@ enum PropertyStatus {
   PENDING // waiting for approval
   ACTIVE // approved and available for rent
   INACTIVE // not approved
+  REJECTED // rejected by admin
   UNAVAILABLE // rented out
 }
 
@@ -70,6 +71,7 @@ model Property {
   PropertyImages  PropertyImage[]
   PropertyAttributes PropertyAttribute[]
   Owner           User              @relation(fields: [owner_id], references: [user_id])
+  RejectReasons   RejectReason[]
 }
 
 model RentalCondition {
@@ -136,4 +138,13 @@ model UserPropertyInteractions {
   created_at        DateTime    @default(now())
   updated_at        DateTime    @updatedAt
   User User @relation(fields: [user_id], references: [user_id])
+}
+
+model RejectReason {
+  reject_reason_id String @id @default(auto()) @map("_id") @db.ObjectId
+  property_id String
+  reason String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  Property Property @relation(fields: [property_id], references: [property_id])
 }

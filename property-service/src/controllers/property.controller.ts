@@ -22,9 +22,8 @@ import {
     updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
-import CustomError from '../utils/error.util';
+import CustomError, { EntryError } from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
-import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -334,16 +333,25 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
 
 export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { properties, status } = req.body;
+        const { properties, status, reason } = req.body;
 
         if (!properties || !status) throw new CustomError(400, 'Properties and status are required');
         if (!Array.isArray(properties)) throw new CustomError(400, 'Properties must be an array');
-        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.INACTIVE)
-            throw new CustomError(400, 'Status must be either ACTIVE or INACTIVE');
+        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.REJECTED)
+            throw new CustomError(400, 'Status must be either ACTIVE or REJECTED');
+
+        if (status === PropertyStatus.REJECTED && !reason)
+            throw new EntryError(400, 'Reason is required when status is REJECTED', [
+                {
+                    field: 'reason',
+                    error: 'Reason is required when status is REJECTED',
+                },
+            ]);
 
         const response = await updatePropertiesStatusService({
             properties,
             status,
+            reason,
         });
 
         Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);

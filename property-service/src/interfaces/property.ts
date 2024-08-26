@@ -58,6 +58,7 @@ export type IUpdatePropertiesStatus = {
     properties: IPropertyId[];
     status: IPropertyStatus;
     owner_id?: IUserId;
+    reason?: string;
 };
 
 export interface IOwnerFilterProperties {

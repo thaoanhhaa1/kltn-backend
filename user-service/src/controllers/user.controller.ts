@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { forgotPasswordSchema, updatePasswordSchema, updateSchema } from '../schemas/user.schema';
 import {
     forgotPasswordService,
+    getAllOwnersCbbService,
     getMyInfoService,
     getUsersService,
     isExistingUser,
@@ -180,6 +181,16 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
         };
 
         res.json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllOwnersCbb = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const owners = await getAllOwnersCbbService();
+
+        res.json(owners);
     } catch (error) {
         next(error);
     }

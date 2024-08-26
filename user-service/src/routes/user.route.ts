@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     forgotPassword,
+    getAllOwnersCbb,
     getMyInfo,
     getUsers,
     otpToUser,
@@ -20,6 +21,7 @@ router.post('/forgot-password', forgotPassword);
 router.post('/update-password', authMiddleware, updatePassword);
 
 router.get('/me', authMiddleware, getMyInfo);
+router.get('/owners/cbb', authMiddleware, roleMiddleware('admin'), getAllOwnersCbb);
 router.get('/', authMiddleware, roleMiddleware('admin'), getUsers);
 
 export default router;
