@@ -1,8 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Đây là file schema Prisma của bạn,
+// tìm hiểu thêm về nó trong tài liệu: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Tìm cách để tăng tốc truy vấn của bạn, hoặc mở rộng dễ dàng với các chức năng serverless hoặc edge của bạn?
+// Thử Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -21,16 +21,32 @@ enum Status {
 }
 
 model Contract {
-  contract_id               Int      @id @default(autoincrement())
-  owner_id                  Int
-  renter_id                 Int
+  contract_id               Int           @id @default(autoincrement())
+  owner_address             String
+  renter_address            String
   property_id               String
-  blockchain_contract_address String
-  contract_terms            String
   start_date                DateTime
   end_date                  DateTime
-  deleted                   Boolean  @default(false)
-  status                    Status   @default(WAITING)
-  created_at                DateTime @default(now())
-  updated_at                DateTime @updatedAt
+  deleted                   Boolean       @default(false)
+  status                    Status        @default(WAITING)
+  created_at                DateTime      @default(now())
+  updated_at                DateTime      @updatedAt
+  monthly_rent              Float
+  deposit_amount            Float
+  contract_terms            String
+  transaction_hash_contract String?
+  Transactions              Transaction[] @relation("ContractTransactions")
 }
+
+model Transaction {
+  id                      Int      @id @default(autoincrement())
+  contract_id             Int
+  amount                  Float
+  transaction_hash        String
+  status                  String
+  description             String?  // Trường mô tả nội dung giao dịch
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+  Contract                Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+}
+
