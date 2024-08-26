@@ -13,6 +13,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+} 
+
 model User {
   user_id          Int  @id @map("_id")
   name        String
@@ -20,6 +27,7 @@ model User {
   avatar      String?
   phone_number String?
   user_types   String[]
+  status          UserStatus @default(ACTIVE)
   Properties  Property[]
   UserProductInteractions UserPropertyInteractions[]
 }
