@@ -17,12 +17,14 @@ import {
     getNotDeletedPropertyService,
     getNotPendingPropertiesService,
     getPropertyBySlugService,
+    getPropertyStatusService,
     updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -190,14 +192,14 @@ export const getNotDeletedPropertiesByOwnerId = async (
         const filter: IOwnerFilterProperties = req.query;
 
         const properties = await getNotDeletedPropertiesByOwnerIdService({
-            skip,
-            take,
-            ownerId: owner_id,
             ...filter,
             price_from: filter.price_from && Number(filter.price_from),
             price_to: filter.price_to && Number(filter.price_to),
             deposit_from: filter.deposit_from && Number(filter.deposit_from),
             deposit_to: filter.deposit_to && Number(filter.deposit_to),
+            skip,
+            take,
+            ownerId: owner_id,
         });
 
         res.status(200).json(properties);
@@ -443,6 +445,14 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
         }
 
         res.status(200).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyStatus = (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        res.json(getPropertyStatusService());
     } catch (error) {
         next(error);
     }

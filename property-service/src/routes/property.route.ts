@@ -8,6 +8,7 @@ import {
     getNotDeletedProperty,
     getNotPendingProperties,
     getPropertyBySlug,
+    getPropertyStatus,
     searchProperties,
     updatePropertiesStatus,
     updateProperty,
@@ -33,6 +34,7 @@ router.get('/search', searchProperties);
 router.get('/slug/:slug', getPropertyBySlug);
 router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedProperties);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
+router.get('/status', getPropertyStatus);
 router.get('/:property_id', authMiddleware, roleMiddleware('admin'), getNotDeletedProperty);
 router.get('/', getNotPendingProperties);
 
