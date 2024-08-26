@@ -1,3 +1,4 @@
+import { PropertyStatus } from '@prisma/client';
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import {
     ICreateProperty,
@@ -147,4 +148,10 @@ export const updatePropertiesStatusService = async (params: IUpdatePropertiesSta
     }
 
     throw new CustomError(404, 'Properties not found');
+};
+
+export const getPropertyStatusService = () => {
+    const res = PropertyStatus;
+
+    return Object.keys(res);
 };
