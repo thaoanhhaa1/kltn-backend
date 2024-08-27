@@ -62,7 +62,9 @@ RabbitMQ.getInstance().subscribeToQueue({
                 await createPropertyService({
                     property_id: property.property_id,
                     status: property.status,
+                    address_id: property.address_id,
                     deleted: false,
+                    address: data.address,
                 });
                 break;
             case PROPERTY_QUEUE.type.DELETED:
@@ -72,6 +74,8 @@ RabbitMQ.getInstance().subscribeToQueue({
                 await updatePropertyService(property.property_id, {
                     status: property.status,
                     deleted: property.deleted,
+                    address_id: property.address_id,
+                    address: data.address,
                 });
                 break;
         }
