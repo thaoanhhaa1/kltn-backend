@@ -316,7 +316,12 @@ export const getPropertyBySlug = async (slug: string) => {
 
 export const deletePropertyById = async (deleteProperty: IDeleteProperty) => {
     return prisma.property.update({
-        where: deleteProperty,
+        where: {
+            ...deleteProperty,
+            status: {
+                not: 'UNAVAILABLE',
+            },
+        },
         data: {
             deleted: true,
         },
@@ -339,6 +344,9 @@ export const updateProperty = async (property_id: IPropertyId, property: IUpdate
         where: {
             property_id,
             owner_id: ownerId,
+            status: {
+                not: 'UNAVAILABLE',
+            },
         },
         data: {
             ...rest,
@@ -392,6 +400,7 @@ export const updateProperty = async (property_id: IPropertyId, property: IUpdate
                     },
                 },
             }),
+            status: 'PENDING',
         },
         include: propertyInclude,
     });
@@ -427,7 +436,7 @@ export const updatePropertiesStatus = ({ properties, status, owner_id }: IUpdate
                   }
                 : {
                       status: {
-                          not: 'UNAVAILABLE',
+                          notIn: ['UNAVAILABLE', 'INACTIVE'],
                       },
                   }),
         },

@@ -30,6 +30,8 @@ import {
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
+import prisma from '../prisma/prismaClient';
+import { addRejectReason } from '../repositories/rejectReason.repository';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
     const { PropertyAttributes, PropertyImages, RentalConditions, RentalPrices, Address, Owner, ...rest } = property;
@@ -139,15 +141,29 @@ export const updatePropertyStatusService = async (params: IUpdatePropertyStatus)
 };
 
 export const updatePropertiesStatusService = async (params: IUpdatePropertiesStatus) => {
-    const res = await updatePropertiesStatus(params);
+    try {
+        const queries = [updatePropertiesStatus(params)];
 
-    if (res.count) {
-        const properties = await getPropertiesDetailByIds(params);
+        if (params.reason && params.status === 'REJECTED')
+            queries.push(
+                addRejectReason({
+                    property_ids: params.properties,
+                    reason: params.reason,
+                }),
+            );
 
-        return properties.map(convertToDTO);
+        const [res] = await prisma.$transaction(queries);
+
+        if (res.count) {
+            const properties = await getPropertiesDetailByIds(params);
+
+            return properties.map(convertToDTO);
+        }
+
+        throw new CustomError(404, 'Properties not found');
+    } catch (error) {
+        throw new CustomError(400, (error as any).message);
     }
-
-    throw new CustomError(404, 'Properties not found');
 };
 
 export const getPropertyStatusService = () => {

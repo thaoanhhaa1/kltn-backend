@@ -90,9 +90,23 @@ export const findPassword = (userId: IUserId) => {
     return prisma.user.findUnique({ where: { user_id: userId }, select: { password: true } });
 };
 
-export const forgoPassword = async ({ email, password }: IForgotPasswordParams) => {
+export const forgotPassword = async ({ email, password }: IForgotPasswordParams) => {
     return await prisma.user.update({
         where: { email },
         data: { password },
+    });
+};
+
+export const getAllOwnersCbb = () => {
+    return prisma.user.findMany({
+        where: {
+            user_types: {
+                has: 'owner',
+            },
+        },
+        select: {
+            user_id: true,
+            name: true,
+        },
     });
 };

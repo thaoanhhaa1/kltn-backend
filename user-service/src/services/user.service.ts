@@ -6,7 +6,8 @@ import {
     findPassword,
     findUserByPhone,
     findUserDTOByEmail,
-    forgoPassword,
+    forgotPassword,
+    getAllOwnersCbb,
     getUsers,
     updatePassword,
     updateUser,
@@ -67,8 +68,12 @@ export const updatePasswordService = async (userId: IUserId, { old_password, pas
 
 export const forgotPasswordService = async ({ password, email }: IForgotPasswordParams) => {
     const hashedPassword = await bcrypt.hash(password, 10);
-    return forgoPassword({
+    return forgotPassword({
         email,
         password: hashedPassword,
     });
+};
+
+export const getAllOwnersCbbService = () => {
+    return getAllOwnersCbb();
 };
