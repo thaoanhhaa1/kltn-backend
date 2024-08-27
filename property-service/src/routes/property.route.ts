@@ -22,13 +22,7 @@ const router = express.Router();
 
 router.delete('/:property_id', authMiddleware, hasAnyRoleMiddleware(['owner', 'admin']), deleteProperty);
 
-router.put(
-    '/:property_id',
-    authMiddleware,
-    hasAnyRoleMiddleware(['owner', 'admin']),
-    upload.array('images'),
-    updateProperty,
-);
+router.put('/:property_id', authMiddleware, roleMiddleware('owner'), upload.array('images'), updateProperty);
 
 router.get('/search', searchProperties);
 router.get('/slug/:slug', getPropertyBySlug);

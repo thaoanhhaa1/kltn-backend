@@ -1,8 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
+import sendEmail from '../configs/email.config';
+import envConfig from '../configs/env.config';
+import otp from '../configs/otp.config';
+import RabbitMQ from '../configs/rabbitmq.config';
+import Redis from '../configs/redis.config';
+import { USER_QUEUE } from '../constants/rabbitmq';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import { otpSchema } from '../schemas/otp.schema';
 import { forgotPasswordSchema, updatePasswordSchema, updateSchema } from '../schemas/user.schema';
 import {
     forgotPasswordService,
+    getAllOwnersCbbService,
     getMyInfoService,
     getUsersService,
     isExistingUser,
@@ -11,13 +19,8 @@ import {
 } from '../services/user.service';
 import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
-import { uploadFile } from '../utils/uploadToFirebase.util';
-import { otpSchema } from '../schemas/otp.schema';
 import { EntryError } from '../utils/error.util';
-import otp from '../configs/otp.config';
-import sendEmail from '../configs/email.config';
-import envConfig from '../configs/env.config';
-import Redis from '../configs/redis.config';
+import { uploadFile } from '../utils/uploadToFirebase.util';
 
 export const otpToUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -128,6 +131,15 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
             avatar: avatarUrl,
         });
 
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: USER_QUEUE.exchange,
+            name: USER_QUEUE.name,
+            message: {
+                data: updatedUser,
+                type: USER_QUEUE.type.UPDATED,
+            },
+        });
+
         res.json(updatedUser);
     } catch (error) {
         next(error);
@@ -180,6 +192,16 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
         };
 
         res.json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllOwnersCbb = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const owners = await getAllOwnersCbbService();
+
+        res.json(owners);
     } catch (error) {
         next(error);
     }

@@ -13,6 +13,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+}
+
+model User {
+  user_id         Int      @id
+  wallet_address  String?  @unique
+  status          UserStatus @default(ACTIVE)
+
+  @@map("users")
+}
+
+enum PropertyStatus {
+  PENDING // waiting for approval
+  ACTIVE // approved and available for rent
+  INACTIVE // not approved
+  REJECTED // rejected by admin
+  UNAVAILABLE // rented out
+}
+
+model Property {
+  property_id     String            @id @map("_id")
+  status          PropertyStatus    @default(PENDING)
+  deleted         Boolean?           @default(false)
+}
+
 enum Status {
   WAITING
   ACCEPTED

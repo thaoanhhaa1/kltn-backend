@@ -7,7 +7,7 @@ import { ICreateUserReq } from './interfaces/user';
 import errorHandler from './middlewares/error.middleware';
 import router from './routes';
 import { getNotPendingPropertiesService } from './services/property.service';
-import { createUser } from './services/user.service';
+import { createUser, updateUserService } from './services/user.service';
 
 const app = express();
 
@@ -21,17 +21,39 @@ app.use(envConfig.PREFIX, router);
 
 app.use(errorHandler);
 
-RabbitMQ.getInstance().consumeQueue(USER_QUEUE.name, async (message) => {
-    if (message) {
-        const { type, data } = JSON.parse(message.content.toString());
-        const user: ICreateUserReq = data;
+RabbitMQ.getInstance().subscribeToQueue({
+    exchange: USER_QUEUE.exchange,
+    name: USER_QUEUE.name,
+    callback: async (message) => {
+        if (message) {
+            const { type, data } = JSON.parse(message.content.toString());
 
-        switch (type) {
-            case USER_QUEUE.type.CREATED:
-                await createUser(user);
-                break;
+            const user: ICreateUserReq = data;
+
+            switch (type) {
+                case USER_QUEUE.type.CREATED:
+                    await createUser({
+                        avatar: user.avatar,
+                        email: user.email,
+                        name: user.name,
+                        phone_number: user.phone_number,
+                        user_types: user.user_types,
+                        user_id: user.user_id,
+                    });
+                    break;
+                case USER_QUEUE.type.UPDATED:
+                    await updateUserService(data.user_id, {
+                        avatar: data.avatar,
+                        email: data.email,
+                        name: data.name,
+                        phone_number: data.phone_number,
+                        status: data.status,
+                        user_types: data.user_types,
+                    });
+                    break;
+            }
         }
-    }
+    },
 });
 
 elasticClient
