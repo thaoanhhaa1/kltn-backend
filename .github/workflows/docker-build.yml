@@ -98,6 +98,17 @@ jobs:
             - name: Push Docker image to Docker Hub
               run: docker push ${{ secrets.DOCKER_USERNAME }}/ikltncontractservice:latest
 
+            # Test
+            - name: Push Docker image to Render
+              env:
+                  RENDER_CONTRACT_API_KEY: ${{ secrets.RENDER_CONTRACT_API_KEY }}
+                  RENDER_CONTRACT_SERVICE: ${{ secrets.RENDER_CONTRACT_SERVICE }}
+              run: |
+                  curl -X POST "https://api.render.com/v1/services/$RENDER_CONTRACT_SERVICE/deploys" \
+                       -H "Authorization: Bearer $RENDER_CONTRACT_API_KEY" \
+                       -H "Content-Type: application/json" \
+                       -d '{"image": "${{ secrets.DOCKER_USERNAME }}/ikltncontractservice:latest"}'
+
     build-chat-service:
         runs-on: ubuntu-latest
 
