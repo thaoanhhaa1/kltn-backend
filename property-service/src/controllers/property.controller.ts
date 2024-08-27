@@ -63,6 +63,15 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
             images: imageUrls,
         });
 
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.CREATED,
+                data: property,
+            },
+        });
+
         res.status(201).json(property);
     } catch (error) {
         next(error);
@@ -107,16 +116,20 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
         Redis.getInstance().getClient().del(`${REDIS_KEY.PROPERTY}${property.slug}`);
 
         elasticClient
-            .index({
+            .delete({
                 index: 'properties',
-                body: property,
+                id: property.property_id,
             })
-            .then(() => console.log('Property added to ElasticSearch'))
+            .then(() => console.log('Property deleted from ElasticSearch'))
             .catch((err) => console.error('ElasticSearch error:', err));
 
-        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-            type: PROPERTY_QUEUE.type.UPDATED,
-            data: property,
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.UPDATED,
+                data: property,
+            },
         });
 
         res.status(201).json(property);
@@ -318,11 +331,20 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
             owner_id: user_id,
         });
 
-        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-            type: PROPERTY_QUEUE.type.DELETED,
-            data: {
-                property_id,
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.DELETED,
+                data: {
+                    property_id,
+                },
             },
+        });
+
+        elasticClient.delete({
+            index: 'properties',
+            id: property_id,
         });
 
         res.status(response.status).json(response);
@@ -364,13 +386,6 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.UPDATED,
-                    data: item,
-                }),
-            );
         } else {
             elasticClient
                 .bulk({
@@ -383,14 +398,18 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
                 })
                 .then(() => console.log('Properties deleted from ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.DELETED,
-                    data: item,
-                }),
-            );
         }
+
+        response.forEach((item) =>
+            RabbitMQ.getInstance().publishInQueue({
+                exchange: PROPERTY_QUEUE.exchange,
+                name: PROPERTY_QUEUE.name,
+                message: {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                },
+            }),
+        );
 
         res.status(200).json(response);
     } catch (error) {
@@ -424,13 +443,6 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.UPDATED,
-                    data: item,
-                }),
-            );
         } else {
             elasticClient
                 .bulk({
@@ -443,14 +455,18 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
                 })
                 .then(() => console.log('Properties deleted from ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.DELETED,
-                    data: item,
-                }),
-            );
         }
+
+        response.forEach((item) =>
+            RabbitMQ.getInstance().publishInQueue({
+                exchange: PROPERTY_QUEUE.exchange,
+                name: PROPERTY_QUEUE.name,
+                message: {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                },
+            }),
+        );
 
         res.status(200).json(response);
     } catch (error) {

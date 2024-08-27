@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from app.services.rag_service import RagService
 from app.services.chat_service import create_item, get_chats_by_user_id
 from app.repositories.qdrant_repository import QdrantRepository
-from app.services.rabbitmq_service import RabbitMQService
+from app.services.rabbitmq_service import RabbitMQ
 from app.utils.document import to_document
 from app.utils.splitter import split_document
 from app.utils.embedding import from_documents
@@ -21,7 +21,7 @@ app = FastAPI()
 
 qdrant_repo = QdrantRepository()
 rag_service = RagService(qdrant_repo=qdrant_repo, collection_names=[property_collection])
-rabbitmq_service = RabbitMQService()
+rabbitmq_service = RabbitMQ()
 
 qdrant_repo.create_collection(collection_name=property_collection)
 
@@ -86,7 +86,7 @@ def property_callback(message):
     if type == "PROPERTY_DELETED" or type == "PROPERTY_UPDATED":
         qdrant_repo.delete_document(collection_name=property_collection, doc_id=data_dict["property_id"])
 
-    if type == "PROPERTY_CREATED" or type == "PROPERTY_UPDATED":
+    if (type == "PROPERTY_UPDATED" and (data_dict["status"] == "ACTIVE" or data_dict["status"] == "UNAVAILABLE")):
         data_dict["id"] = data_dict["property_id"]
 
         conditions = "\n".join(f"{condition["condition_type"]}: {condition["condition_value"]}" for condition in data_dict["conditions"])
@@ -112,7 +112,10 @@ def property_callback(message):
 
 
 def worker():
-    rabbitmq_service.consume_messages(queue_name=os.getenv("RABBIT_MQ_PROPERTY_QUEUE"), callback=property_callback)
+    rabbitmq_service.subscribe_to_queue(name="property-service-property-queue", exchange={
+        "name": "property-service-exchange",
+        "type": "fanout"
+    }, callback=property_callback)
 
 worker_thread = threading.Thread(target=worker)
 worker_thread.start()

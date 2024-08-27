@@ -34,13 +34,7 @@ class RabbitMQ {
         });
     }
 
-    async createChannel({
-        exchange,
-        name,
-    }: {
-        name: string;
-        exchange?: { name: string; type: string };
-    }) {
+    async createChannel({ exchange, name }: { name: string; exchange?: { name: string; type: string } }) {
         if (!this.connection) this.connection = await this.connect();
 
         return new Promise((resolve, reject) => {
@@ -64,19 +58,10 @@ class RabbitMQ {
     async sendToQueue(queue: string, message: { type: string; data: any }) {
         if (!this.channels[queue]) await this.createChannel({ name: queue });
 
-        console.log('Sending to queue:', queue);
-        console.log('Message:', message);
-
-        this.channels[queue]!.sendToQueue(
-            queue,
-            Buffer.from(JSON.stringify(message)),
-        );
+        this.channels[queue]!.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
     }
 
-    async consumeQueue(
-        queue: string,
-        callback: (message: amqp.Message | null) => void,
-    ) {
+    async consumeQueue(queue: string, callback: (message: amqp.Message | null) => void) {
         if (!this.channels[queue]) await this.createChannel({ name: queue });
 
         this.channels[queue]!.consume(queue, callback, {
@@ -99,11 +84,7 @@ class RabbitMQ {
                 exchange,
             });
 
-        this.channels[name]!.publish(
-            exchange.name,
-            '',
-            Buffer.from(JSON.stringify(message)),
-        );
+        this.channels[name]!.publish(exchange.name, '', Buffer.from(JSON.stringify(message)));
     }
 
     async subscribeToQueue({
@@ -121,19 +102,15 @@ class RabbitMQ {
                 exchange,
             });
 
-        this.channels[name]!.assertQueue(
-            '',
-            { exclusive: true },
-            (error, q) => {
-                if (error) throw error;
+        this.channels[name]!.assertQueue('', { exclusive: true }, (error, q) => {
+            if (error) throw error;
 
-                this.channels[name]!.bindQueue(q.queue, exchange.name, '');
+            this.channels[name]!.bindQueue(q.queue, exchange.name, '');
 
-                this.channels[name]!.consume(q.queue, callback, {
-                    noAck: true,
-                });
-            },
-        );
+            this.channels[name]!.consume(q.queue, callback, {
+                noAck: true,
+            });
+        });
     }
 }
 
