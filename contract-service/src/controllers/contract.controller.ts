@@ -3,8 +3,10 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
     createContractService,
-    depositAndCreateContractService ,
+    depositService ,
     payMonthlyRentService,
+    cancelContractByRenterService,
+    cancelContractByOwnerService,
     // getAllContractsService,
     // getContractByIdService,
     // getContractsByOwnerIdService,
@@ -33,7 +35,7 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
     }
 };
 
-export const depositAndCreateContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const deposit = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { contractId, renterAddress } = req.body;
 
@@ -43,7 +45,7 @@ export const depositAndCreateContract = async (req: AuthenticatedRequest, res: R
         }
 
         // Gọi hàm service để thực hiện đặt cọc và tạo hợp đồng
-        const result = await depositAndCreateContractService(contractId, renterAddress);
+        const result = await depositService(contractId, renterAddress);
 
         // Trả về kết quả thành công
         res.status(200).json(result);
@@ -72,6 +74,48 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
         next(error);
     }
 };
+
+export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, ownerAddress, notifyBefore30Days } = req.body;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (typeof contractId !== 'number' || typeof ownerAddress !== 'string' || typeof notifyBefore30Days !== 'boolean') {
+            throw new Error('Contract ID, owner address, and notifyBefore30Days are required and must be valid.');
+        }
+
+        // Gọi hàm service để thực hiện hủy hợp đồng
+        const updatedContract = await cancelContractByOwnerService(contractId, ownerAddress, notifyBefore30Days);
+
+        // Phản hồi với dữ liệu hợp đồng đã cập nhật
+        res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
+
+
+export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, renterAddress, notifyBefore30Days } = req.body;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (typeof contractId !== 'number' || typeof renterAddress !== 'string' || typeof notifyBefore30Days !== 'boolean') {
+            throw new Error('Contract ID, renter address, and notifyBefore30Days are required and must be valid.');
+        }
+
+        // Gọi hàm service để thực hiện hủy hợp đồng
+        const updatedContract = await cancelContractByRenterService(contractId, renterAddress, notifyBefore30Days);
+
+        // Phản hồi với dữ liệu hợp đồng đã cập nhật
+        res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
+
 // export const createContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
 //     try {
 //         const safeParse = createContractReq.safeParse(req.body);

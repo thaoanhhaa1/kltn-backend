@@ -4,8 +4,10 @@ import { CreateContractReq } from '../schemas/contract.schema';
 import { Contract as PrismaContract } from '@prisma/client';
 import {
     createContract as createContractInRepo,
-    depositAndCreateContract as depositAndCreateContractInRepo,
+    deposit as depositInRepo,
     payMonthlyRent as payMonthlyRentInRepo,
+    cancelContractByRenter as cancelContractByRenterInRepo,
+    cancelContractByOwner as cancelContractByOwnerInRepo,
     // getContractById as getContractByIdInRepo,
     // updateContractStatus as updateContractStatusInRepo,
     // deleteContract as deleteContractInRepo
@@ -23,10 +25,10 @@ export const createContractService = async (contract: CreateContractReq): Promis
 };
 
 
-export const depositAndCreateContractService = async (contractId: number, renterAddress: string): Promise<PrismaContract> => {
+export const depositService = async (contractId: number, renterAddress: string): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện đặt cọc và tạo hợp đồng
-        return await depositAndCreateContractInRepo(contractId, renterAddress);
+        return await depositInRepo(contractId, renterAddress);
     } catch (error) {
         console.error("Error processing deposit and creating contract:", error);
         throw new Error("Could not process deposit and create contract");
@@ -44,6 +46,28 @@ export const payMonthlyRentService = async (contractId: number, renterAddress: s
     }
 };
 
+
+// Hàm để hủy hợp đồng bởi người thuê
+export const cancelContractByRenterService = async (contractId: number, renterAddress: string, notifyBefore30Days: boolean): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng
+        return await cancelContractByRenterInRepo(contractId, renterAddress, notifyBefore30Days);
+    } catch (error) {
+        console.error("Error processing contract cancellation:", error);
+        throw new Error("Could not process contract cancellation");
+    }
+};
+
+// Hàm để hủy hợp đồng bởi chủ nhà
+export const cancelContractByOwnerService = async (contractId: number, ownerAddress: string, notifyBefore30Days: boolean): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng
+        return await cancelContractByOwnerInRepo(contractId, ownerAddress, notifyBefore30Days);
+    } catch (error) {
+        console.error("Error processing contract cancellation:", error);
+        throw new Error("Could not process contract cancellation");
+    }
+};
 
 // // Hàm để lấy hợp đồng theo ID
 // export const getContractById = async (contractId: number): Promise<PrismaContract | null> => {
