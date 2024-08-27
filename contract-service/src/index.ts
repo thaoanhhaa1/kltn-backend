@@ -7,7 +7,7 @@ import { USER_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
-import { createUserService } from './services/user.service';
+import { createUserService, updateUserService } from './services/user.service';
 
 const app = express();
 
@@ -35,6 +35,12 @@ RabbitMQ.getInstance().subscribeToQueue({
                 await createUserService({
                     status: user.status,
                     user_id: user.user_id,
+                    wallet_address: user.wallet_address,
+                });
+                break;
+            case USER_QUEUE.type.UPDATED:
+                await updateUserService(user.user_id, {
+                    status: user.status,
                     wallet_address: user.wallet_address,
                 });
                 break;

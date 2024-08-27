@@ -6,3 +6,12 @@ export const createUser = async (user: User) => {
         data: user,
     });
 };
+
+export const updateUser = (userId: number, user: Omit<User, 'user_id'>) => {
+    return prisma.user.update({
+        where: {
+            user_id: userId,
+        },
+        data: user,
+    });
+};
