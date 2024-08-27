@@ -28,6 +28,15 @@ model User {
   @@map("users")
 }
 
+model Address {
+  address_id String @id
+  street String
+  ward String
+  district String
+  city String
+  Properties Property[]
+}
+
 enum PropertyStatus {
   PENDING // waiting for approval
   ACTIVE // approved and available for rent
@@ -40,6 +49,8 @@ model Property {
   property_id     String            @id @map("_id")
   status          PropertyStatus    @default(PENDING)
   deleted         Boolean?           @default(false)
+  address_id      String            
+  Address         Address           @relation(fields: [address_id], references: [address_id])
 }
 
 enum Status {
