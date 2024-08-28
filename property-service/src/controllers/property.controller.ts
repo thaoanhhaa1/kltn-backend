@@ -1,4 +1,4 @@
-import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
+import { QueryDslQueryContainer, Sort } from '@elastic/elasticsearch/lib/api/types';
 import { PropertyStatus } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
@@ -10,6 +10,7 @@ import { IOwnerFilterProperties } from '../interfaces/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
 import {
+    countNotPendingPropertiesService,
     createPropertyService,
     deletePropertyService,
     getNotDeletedPropertiesByOwnerIdService,
@@ -24,6 +25,7 @@ import {
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -261,6 +263,7 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             city,
             district,
             ward,
+            sort,
         } = req.query;
 
         const filter: QueryDslQueryContainer[] = [];
@@ -422,6 +425,18 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             });
         }
 
+        let sortElastic: Sort | undefined;
+
+        if (sort === 'price_asc') {
+            sortElastic = { prices: 'asc' };
+        } else if (sort === 'price_desc') {
+            sortElastic = { prices: 'desc' };
+        } else if (sort === 'newest') {
+            sortElastic = { updated_at: 'desc' };
+        } else if (sort === 'oldest') {
+            sortElastic = { created_at: 'asc' };
+        }
+
         const result = await elasticClient.search({
             index: 'properties',
             body: {
@@ -431,6 +446,7 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                         filter,
                     },
                 },
+                sort: sortElastic,
                 size: Number(take),
                 from: Number(skip),
             },
@@ -439,6 +455,20 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
         const searchResult = result.hits.hits.map((item) => item._source);
 
         res.status(200).json(searchResult);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countNotPendingProperties = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const count = await countNotPendingPropertiesService();
+
+        return res.status(200).json({
+            data: count,
+            status: 200,
+            success: true,
+        });
     } catch (error) {
         next(error);
     }

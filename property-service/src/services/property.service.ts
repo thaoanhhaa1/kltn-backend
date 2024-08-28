@@ -59,6 +59,12 @@ export const getNotPendingPropertiesService = async () => {
     return properties.map(convertToDTO);
 };
 
+export const countNotPendingPropertiesService = async () => {
+    const count = await countNotDeletedProperties();
+
+    return count;
+};
+
 export const getNotDeletedPropertiesService = async (params: IPagination) => {
     const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties()]);
 

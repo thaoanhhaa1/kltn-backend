@@ -248,6 +248,17 @@ export const getNotPendingProperties = async (): Promise<Array<IResRepositoryPro
     });
 };
 
+export const countNotPendingProperties = () => {
+    return prisma.property.count({
+        where: {
+            deleted: false,
+            status: {
+                notIn: ['INACTIVE', 'PENDING', 'REJECTED'],
+            },
+        },
+    });
+};
+
 export const getNotDeletedProperties = async ({ skip, take }: IPagination): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
