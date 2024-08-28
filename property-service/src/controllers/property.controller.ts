@@ -1,4 +1,4 @@
-import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
+import { QueryDslQueryContainer, Sort } from '@elastic/elasticsearch/lib/api/types';
 import { PropertyStatus } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
@@ -10,6 +10,7 @@ import { IOwnerFilterProperties } from '../interfaces/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
 import {
+    countNotPendingPropertiesService,
     createPropertyService,
     deletePropertyService,
     getNotDeletedPropertiesByOwnerIdService,
@@ -24,6 +25,7 @@ import {
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -255,6 +257,13 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             min_price,
             max_price,
             amenities,
+            bedroom,
+            bathroom,
+            furniture,
+            city,
+            district,
+            ward,
+            sort,
         } = req.query;
 
         const filter: QueryDslQueryContainer[] = [];
@@ -271,6 +280,123 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                     },
                 }),
             );
+        }
+
+        if (bedroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bedroom} phòng`,
+                                    operator: 'and',
+                                    // start with 2 phòng
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng ngủ',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (bathroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bathroom} phòng`,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng tắm',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (furniture) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: furniture as string,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Nội thất',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (city) {
+            const mustAddress: QueryDslQueryContainer[] = [
+                {
+                    match: {
+                        'address.city': {
+                            query: city as string,
+                            operator: 'and',
+                        },
+                    },
+                },
+            ];
+
+            if (district) {
+                mustAddress.push({
+                    match: {
+                        'address.district': {
+                            query: district as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            if (ward) {
+                mustAddress.push({
+                    match: {
+                        'address.ward': {
+                            query: ward as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            filter.push({
+                bool: {
+                    must: mustAddress,
+                },
+            });
         }
 
         if (Number(min_price) >= 0)
@@ -299,7 +425,19 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             });
         }
 
-        const searchResult = await elasticClient.search({
+        let sortElastic: Sort | undefined;
+
+        if (sort === 'price_asc') {
+            sortElastic = { prices: 'asc' };
+        } else if (sort === 'price_desc') {
+            sortElastic = { prices: 'desc' };
+        } else if (sort === 'newest') {
+            sortElastic = { updated_at: 'desc' };
+        } else if (sort === 'oldest') {
+            sortElastic = { created_at: 'asc' };
+        }
+
+        const result = await elasticClient.search({
             index: 'properties',
             body: {
                 query: {
@@ -308,12 +446,29 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                         filter,
                     },
                 },
+                sort: sortElastic,
                 size: Number(take),
                 from: Number(skip),
             },
         });
 
+        const searchResult = result.hits.hits.map((item) => item._source);
+
         res.status(200).json(searchResult);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countNotPendingProperties = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const count = await countNotPendingPropertiesService();
+
+        return res.status(200).json({
+            data: count,
+            status: 200,
+            success: true,
+        });
     } catch (error) {
         next(error);
     }

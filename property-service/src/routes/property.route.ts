@@ -1,6 +1,7 @@
 import express from 'express';
 import upload from '../configs/multer.config';
 import {
+    countNotPendingProperties,
     createProperty,
     deleteProperty,
     getNotDeletedProperties,
@@ -29,6 +30,7 @@ router.get('/slug/:slug', getPropertyBySlug);
 router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedProperties);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
 router.get('/status', getPropertyStatus);
+router.get('/count', countNotPendingProperties);
 router.get('/:property_id', authMiddleware, roleMiddleware('admin'), getNotDeletedProperty);
 router.get('/', getNotPendingProperties);
 

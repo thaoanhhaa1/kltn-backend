@@ -62,19 +62,22 @@ elasticClient
         console.log('Elasticsearch is connected');
 
         try {
-            await elasticClient.delete({
+            await elasticClient.deleteByQuery({
                 index: 'properties',
-                id: '1',
+                body: {
+                    query: {
+                        match_all: {},
+                    },
+                },
             });
         } catch (error) {
+            console.log('Error deleting document:', error);
         } finally {
             const properties = await getNotPendingPropertiesService();
-
             await elasticClient.bulk({
                 index: 'properties',
                 body: properties.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
             });
-
             console.log('Properties added to ElasticSearch');
         }
     })
