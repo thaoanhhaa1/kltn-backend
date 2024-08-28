@@ -255,6 +255,12 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             min_price,
             max_price,
             amenities,
+            bedroom,
+            bathroom,
+            furniture,
+            city,
+            district,
+            ward,
         } = req.query;
 
         const filter: QueryDslQueryContainer[] = [];
@@ -271,6 +277,123 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                     },
                 }),
             );
+        }
+
+        if (bedroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bedroom} phòng`,
+                                    operator: 'and',
+                                    // start with 2 phòng
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng ngủ',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (bathroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bathroom} phòng`,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng tắm',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (furniture) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: furniture as string,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Nội thất',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (city) {
+            const mustAddress: QueryDslQueryContainer[] = [
+                {
+                    match: {
+                        'address.city': {
+                            query: city as string,
+                            operator: 'and',
+                        },
+                    },
+                },
+            ];
+
+            if (district) {
+                mustAddress.push({
+                    match: {
+                        'address.district': {
+                            query: district as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            if (ward) {
+                mustAddress.push({
+                    match: {
+                        'address.ward': {
+                            query: ward as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            filter.push({
+                bool: {
+                    must: mustAddress,
+                },
+            });
         }
 
         if (Number(min_price) >= 0)
@@ -299,7 +422,7 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             });
         }
 
-        const searchResult = await elasticClient.search({
+        const result = await elasticClient.search({
             index: 'properties',
             body: {
                 query: {
@@ -312,6 +435,8 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                 from: Number(skip),
             },
         });
+
+        const searchResult = result.hits.hits.map((item) => item._source);
 
         res.status(200).json(searchResult);
     } catch (error) {

@@ -241,7 +241,7 @@ export const getNotPendingProperties = async (): Promise<Array<IResRepositoryPro
         where: {
             deleted: false,
             status: {
-                not: 'PENDING',
+                notIn: ['INACTIVE', 'PENDING', 'REJECTED'],
             },
         },
         include: propertiesInclude,
