@@ -25,7 +25,7 @@ export type IResRepositoryProperty = Property & {
     PropertyImages: Pick<PropertyImage, 'image_url'>[];
     RentalConditions: Pick<RentalCondition, 'condition_type' | 'condition_value'>[];
     RentalPrices: Pick<RentalPrice, 'rental_price' | 'start_date'>[];
-    Owner: Omit<User, 'user_types'>;
+    Owner: Omit<User, 'user_types' | 'status'>;
 };
 
 export type IResProperty = Property & {
@@ -34,7 +34,7 @@ export type IResProperty = Property & {
     images: string[];
     conditions: Pick<RentalCondition, 'condition_type' | 'condition_value'>[];
     prices: number;
-    owner: Omit<User, 'user_types'>;
+    owner: Omit<User, 'user_types' | 'status'>;
 };
 
 export type IDeleteProperty = Pick<Property, 'owner_id' | 'property_id'>;
@@ -58,4 +58,17 @@ export type IUpdatePropertiesStatus = {
     properties: IPropertyId[];
     status: IPropertyStatus;
     owner_id?: IUserId;
+    reason?: string;
 };
+
+export interface IOwnerFilterProperties {
+    title?: Property['title'];
+    deposit_from?: Property['deposit'];
+    deposit_to?: Property['deposit'];
+    price_from?: RentalPrice['rental_price'];
+    price_to?: RentalPrice['rental_price'];
+    status?: Property['status'];
+    city?: Address['city'];
+    district?: Address['district'];
+    ward?: Address['ward'];
+}

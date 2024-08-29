@@ -1,8 +1,10 @@
+import { PropertyStatus } from '@prisma/client';
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
     IGetPropertiesWithOwnerId,
+    IOwnerFilterProperties,
     IPropertyId,
     IResProperty,
     IResRepositoryProperty,
@@ -28,6 +30,8 @@ import {
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
+import prisma from '../prisma/prismaClient';
+import { addRejectReason } from '../repositories/rejectReason.repository';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
     const { PropertyAttributes, PropertyImages, RentalConditions, RentalPrices, Address, Owner, ...rest } = property;
@@ -55,6 +59,12 @@ export const getNotPendingPropertiesService = async () => {
     return properties.map(convertToDTO);
 };
 
+export const countNotPendingPropertiesService = async () => {
+    const count = await countNotDeletedProperties();
+
+    return count;
+};
+
 export const getNotDeletedPropertiesService = async (params: IPagination) => {
     const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties()]);
 
@@ -69,10 +79,12 @@ export const getNotDeletedPropertiesService = async (params: IPagination) => {
     return result;
 };
 
-export const getNotDeletedPropertiesByOwnerIdService = async (params: IGetPropertiesWithOwnerId) => {
+export const getNotDeletedPropertiesByOwnerIdService = async (
+    params: IGetPropertiesWithOwnerId & IOwnerFilterProperties,
+) => {
     const [properties, count] = await Promise.all([
         getNotDeletedPropertiesByOwnerId(params),
-        countNotDeletedPropertiesByOwnerId(params.ownerId),
+        countNotDeletedPropertiesByOwnerId(params.ownerId, params),
     ]);
 
     const result: IPaginationResponse<IResProperty> = {
@@ -135,13 +147,33 @@ export const updatePropertyStatusService = async (params: IUpdatePropertyStatus)
 };
 
 export const updatePropertiesStatusService = async (params: IUpdatePropertiesStatus) => {
-    const res = await updatePropertiesStatus(params);
+    try {
+        const queries = [updatePropertiesStatus(params)];
 
-    if (res.count) {
-        const properties = await getPropertiesDetailByIds(params);
+        if (params.reason && params.status === 'REJECTED')
+            queries.push(
+                addRejectReason({
+                    property_ids: params.properties,
+                    reason: params.reason,
+                }),
+            );
 
-        return properties.map(convertToDTO);
+        const [res] = await prisma.$transaction(queries);
+
+        if (res.count) {
+            const properties = await getPropertiesDetailByIds(params);
+
+            return properties.map(convertToDTO);
+        }
+
+        throw new CustomError(404, 'Properties not found');
+    } catch (error) {
+        throw new CustomError(400, (error as any).message);
     }
+};
 
-    throw new CustomError(404, 'Properties not found');
+export const getPropertyStatusService = () => {
+    const res = PropertyStatus;
+
+    return Object.keys(res);
 };

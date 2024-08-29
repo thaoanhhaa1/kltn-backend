@@ -1,8 +1,7 @@
 import { User } from '@prisma/client';
-import { ICreateUserReq, ICreateUserRes } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 
-export const createUser = (user: ICreateUserReq): Promise<ICreateUserRes> => {
+export const createUser = async (user: User) => {
     return prisma.user.create({
         data: user,
     });

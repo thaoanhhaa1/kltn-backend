@@ -1,4 +1,4 @@
-import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
+import { QueryDslQueryContainer, Sort } from '@elastic/elasticsearch/lib/api/types';
 import { PropertyStatus } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
@@ -6,9 +6,11 @@ import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
 import { DEFAULT_PROPERTIES_SKIP, DEFAULT_PROPERTIES_TAKE } from '../constants/pagination';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
+import { IOwnerFilterProperties } from '../interfaces/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
 import {
+    countNotPendingPropertiesService,
     createPropertyService,
     deletePropertyService,
     getNotDeletedPropertiesByOwnerIdService,
@@ -16,12 +18,14 @@ import {
     getNotDeletedPropertyService,
     getNotPendingPropertiesService,
     getPropertyBySlugService,
+    getPropertyStatusService,
     updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
-import CustomError from '../utils/error.util';
+import CustomError, { EntryError } from '../utils/error.util';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
+import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -59,6 +63,15 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
             price: Number(safePare.data.price),
             ownerId: req.user!.id,
             images: imageUrls,
+        });
+
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.CREATED,
+                data: property,
+            },
         });
 
         res.status(201).json(property);
@@ -105,16 +118,20 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
         Redis.getInstance().getClient().del(`${REDIS_KEY.PROPERTY}${property.slug}`);
 
         elasticClient
-            .index({
+            .delete({
                 index: 'properties',
-                body: property,
+                id: property.property_id,
             })
-            .then(() => console.log('Property added to ElasticSearch'))
+            .then(() => console.log('Property deleted from ElasticSearch'))
             .catch((err) => console.error('ElasticSearch error:', err));
 
-        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-            type: PROPERTY_QUEUE.type.UPDATED,
-            data: property,
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.UPDATED,
+                data: property,
+            },
         });
 
         res.status(201).json(property);
@@ -186,7 +203,14 @@ export const getNotDeletedPropertiesByOwnerId = async (
         const skip = Number(req.query.skip || DEFAULT_PROPERTIES_SKIP);
         const owner_id = req.user!.id;
 
+        const filter: IOwnerFilterProperties = req.query;
+
         const properties = await getNotDeletedPropertiesByOwnerIdService({
+            ...filter,
+            price_from: filter.price_from && Number(filter.price_from),
+            price_to: filter.price_to && Number(filter.price_to),
+            deposit_from: filter.deposit_from && Number(filter.deposit_from),
+            deposit_to: filter.deposit_to && Number(filter.deposit_to),
             skip,
             take,
             ownerId: owner_id,
@@ -233,6 +257,13 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             min_price,
             max_price,
             amenities,
+            bedroom,
+            bathroom,
+            furniture,
+            city,
+            district,
+            ward,
+            sort,
         } = req.query;
 
         const filter: QueryDslQueryContainer[] = [];
@@ -249,6 +280,123 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                     },
                 }),
             );
+        }
+
+        if (bedroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bedroom} phòng`,
+                                    operator: 'and',
+                                    // start with 2 phòng
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng ngủ',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (bathroom) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: `${bathroom} phòng`,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Phòng tắm',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (furniture) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'conditions.condition_value': {
+                                    query: furniture as string,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'conditions.condition_type': {
+                                    query: 'Nội thất',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (city) {
+            const mustAddress: QueryDslQueryContainer[] = [
+                {
+                    match: {
+                        'address.city': {
+                            query: city as string,
+                            operator: 'and',
+                        },
+                    },
+                },
+            ];
+
+            if (district) {
+                mustAddress.push({
+                    match: {
+                        'address.district': {
+                            query: district as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            if (ward) {
+                mustAddress.push({
+                    match: {
+                        'address.ward': {
+                            query: ward as string,
+                            operator: 'and',
+                        },
+                    },
+                });
+            }
+
+            filter.push({
+                bool: {
+                    must: mustAddress,
+                },
+            });
         }
 
         if (Number(min_price) >= 0)
@@ -277,7 +425,19 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             });
         }
 
-        const searchResult = await elasticClient.search({
+        let sortElastic: Sort | undefined;
+
+        if (sort === 'price_asc') {
+            sortElastic = { prices: 'asc' };
+        } else if (sort === 'price_desc') {
+            sortElastic = { prices: 'desc' };
+        } else if (sort === 'newest') {
+            sortElastic = { updated_at: 'desc' };
+        } else if (sort === 'oldest') {
+            sortElastic = { created_at: 'asc' };
+        }
+
+        const result = await elasticClient.search({
             index: 'properties',
             body: {
                 query: {
@@ -286,12 +446,29 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                         filter,
                     },
                 },
+                sort: sortElastic,
                 size: Number(take),
                 from: Number(skip),
             },
         });
 
+        const searchResult = result.hits.hits.map((item) => item._source);
+
         res.status(200).json(searchResult);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countNotPendingProperties = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const count = await countNotPendingPropertiesService();
+
+        return res.status(200).json({
+            data: count,
+            status: 200,
+            success: true,
+        });
     } catch (error) {
         next(error);
     }
@@ -309,11 +486,20 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
             owner_id: user_id,
         });
 
-        RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-            type: PROPERTY_QUEUE.type.DELETED,
-            data: {
-                property_id,
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            name: PROPERTY_QUEUE.name,
+            message: {
+                type: PROPERTY_QUEUE.type.DELETED,
+                data: {
+                    property_id,
+                },
             },
+        });
+
+        elasticClient.delete({
+            index: 'properties',
+            id: property_id,
         });
 
         res.status(response.status).json(response);
@@ -324,16 +510,25 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
 
 export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { properties, status } = req.body;
+        const { properties, status, reason } = req.body;
 
         if (!properties || !status) throw new CustomError(400, 'Properties and status are required');
         if (!Array.isArray(properties)) throw new CustomError(400, 'Properties must be an array');
-        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.INACTIVE)
-            throw new CustomError(400, 'Status must be either ACTIVE or INACTIVE');
+        if (status !== PropertyStatus.ACTIVE && status !== PropertyStatus.REJECTED)
+            throw new CustomError(400, 'Status must be either ACTIVE or REJECTED');
+
+        if (status === PropertyStatus.REJECTED && !reason)
+            throw new EntryError(400, 'Reason is required when status is REJECTED', [
+                {
+                    field: 'reason',
+                    error: 'Reason is required when status is REJECTED',
+                },
+            ]);
 
         const response = await updatePropertiesStatusService({
             properties,
             status,
+            reason,
         });
 
         Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
@@ -341,23 +536,11 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
         if (status === PropertyStatus.ACTIVE) {
             elasticClient
                 .bulk({
-                    operations: response.map((item) => ({
-                        create: {
-                            _id: item.property_id,
-                            _source: item,
-                        },
-                    })),
                     index: 'properties',
+                    body: response.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.UPDATED,
-                    data: item,
-                }),
-            );
         } else {
             elasticClient
                 .bulk({
@@ -370,14 +553,18 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
                 })
                 .then(() => console.log('Properties deleted from ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.DELETED,
-                    data: item,
-                }),
-            );
         }
+
+        response.forEach((item) =>
+            RabbitMQ.getInstance().publishInQueue({
+                exchange: PROPERTY_QUEUE.exchange,
+                name: PROPERTY_QUEUE.name,
+                message: {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                },
+            }),
+        );
 
         res.status(200).json(response);
     } catch (error) {
@@ -406,23 +593,11 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
         if (status === PropertyStatus.ACTIVE) {
             elasticClient
                 .bulk({
-                    operations: response.map((item) => ({
-                        create: {
-                            _id: item.property_id,
-                            _source: item,
-                        },
-                    })),
                     index: 'properties',
+                    body: response.flatMap((property) => [{ index: { _id: property.property_id } }, property]),
                 })
                 .then(() => console.log('Properties added to ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.UPDATED,
-                    data: item,
-                }),
-            );
         } else {
             elasticClient
                 .bulk({
@@ -435,16 +610,28 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
                 })
                 .then(() => console.log('Properties deleted from ElasticSearch'))
                 .catch((err) => console.error('ElasticSearch error:', err));
-
-            response.forEach((item) =>
-                RabbitMQ.getInstance().sendToQueue(PROPERTY_QUEUE.name, {
-                    type: PROPERTY_QUEUE.type.DELETED,
-                    data: item,
-                }),
-            );
         }
 
+        response.forEach((item) =>
+            RabbitMQ.getInstance().publishInQueue({
+                exchange: PROPERTY_QUEUE.exchange,
+                name: PROPERTY_QUEUE.name,
+                message: {
+                    type: PROPERTY_QUEUE.type.UPDATED,
+                    data: item,
+                },
+            }),
+        );
+
         res.status(200).json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyStatus = (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        res.json(getPropertyStatusService());
     } catch (error) {
         next(error);
     }

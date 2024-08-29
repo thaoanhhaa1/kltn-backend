@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import {
     createAttributeService,
     deleteAttributeService,
+    getAllAttributesCbbService,
     getAllAttributesService,
     getAttributeByIdService,
     updateAttributeService,
@@ -28,6 +29,15 @@ export const createAttribute = async (req: Request, res: Response, next: NextFun
 export const getAllAttributes = async (_req: Request, res: Response, next: NextFunction) => {
     try {
         const attributes = await getAllAttributesService();
+        res.json(attributes);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllAttributesCbb = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const attributes = await getAllAttributesCbbService();
         res.json(attributes);
     } catch (error) {
         next(error);

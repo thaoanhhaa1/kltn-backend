@@ -5,6 +5,7 @@ import {
     ICreateProperty,
     IDeleteProperty,
     IGetPropertiesWithOwnerId,
+    IOwnerFilterProperties,
     IPropertyId,
     IResRepositoryProperty,
     IUpdatePropertiesStatus,
@@ -96,6 +97,67 @@ const propertiesInclude = {
     longitude: false,
 };
 
+const ownerFilterPropertiesWhere = ({
+    city,
+    deposit_from,
+    deposit_to,
+    district,
+    price_from,
+    price_to,
+    status,
+    title,
+    ward,
+}: IOwnerFilterProperties) => ({
+    ...(city && {
+        Address: {
+            city,
+        },
+    }),
+    ...(district && {
+        Address: {
+            district,
+        },
+    }),
+    ...(ward && {
+        Address: {
+            ward,
+        },
+    }),
+    ...(title && {
+        title: {
+            contains: title,
+            mode: 'insensitive' as const,
+        },
+    }),
+    ...(status && {
+        status,
+    }),
+    ...((deposit_from || deposit_to) && {
+        deposit: {
+            ...(deposit_from && {
+                gte: deposit_from,
+            }),
+            ...(deposit_to && {
+                lte: deposit_to,
+            }),
+        },
+    }),
+    ...((price_from || price_to) && {
+        RentalPrices: {
+            some: {
+                rental_price: {
+                    ...(price_from && {
+                        gte: price_from,
+                    }),
+                    ...(price_to && {
+                        lte: price_to,
+                    }),
+                },
+            },
+        },
+    }),
+});
+
 export const createProperty = async ({
     attributeIds,
     conditions,
@@ -179,10 +241,21 @@ export const getNotPendingProperties = async (): Promise<Array<IResRepositoryPro
         where: {
             deleted: false,
             status: {
-                not: 'PENDING',
+                notIn: ['INACTIVE', 'PENDING', 'REJECTED'],
             },
         },
         include: propertiesInclude,
+    });
+};
+
+export const countNotPendingProperties = () => {
+    return prisma.property.count({
+        where: {
+            deleted: false,
+            status: {
+                notIn: ['INACTIVE', 'PENDING', 'REJECTED'],
+            },
+        },
     });
 };
 
@@ -209,11 +282,13 @@ export const getNotDeletedPropertiesByOwnerId = async ({
     skip,
     take,
     ownerId,
-}: IGetPropertiesWithOwnerId): Promise<Array<IResRepositoryProperty>> => {
+    ...filter
+}: IGetPropertiesWithOwnerId & IOwnerFilterProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
             deleted: false,
             owner_id: ownerId,
+            ...ownerFilterPropertiesWhere(filter),
         },
         include: propertiesInclude,
         skip,
@@ -221,11 +296,12 @@ export const getNotDeletedPropertiesByOwnerId = async ({
     });
 };
 
-export const countNotDeletedPropertiesByOwnerId = async (ownerId: IUserId) => {
+export const countNotDeletedPropertiesByOwnerId = async (ownerId: IUserId, filter: IOwnerFilterProperties) => {
     return prisma.property.count({
         where: {
             deleted: false,
             owner_id: ownerId,
+            ...ownerFilterPropertiesWhere(filter),
         },
     });
 };
@@ -251,7 +327,12 @@ export const getPropertyBySlug = async (slug: string) => {
 
 export const deletePropertyById = async (deleteProperty: IDeleteProperty) => {
     return prisma.property.update({
-        where: deleteProperty,
+        where: {
+            ...deleteProperty,
+            status: {
+                not: 'UNAVAILABLE',
+            },
+        },
         data: {
             deleted: true,
         },
@@ -274,6 +355,9 @@ export const updateProperty = async (property_id: IPropertyId, property: IUpdate
         where: {
             property_id,
             owner_id: ownerId,
+            status: {
+                not: 'UNAVAILABLE',
+            },
         },
         data: {
             ...rest,
@@ -327,6 +411,7 @@ export const updateProperty = async (property_id: IPropertyId, property: IUpdate
                     },
                 },
             }),
+            status: 'PENDING',
         },
         include: propertyInclude,
     });
@@ -362,7 +447,7 @@ export const updatePropertiesStatus = ({ properties, status, owner_id }: IUpdate
                   }
                 : {
                       status: {
-                          not: 'UNAVAILABLE',
+                          notIn: ['UNAVAILABLE', 'INACTIVE'],
                       },
                   }),
         },

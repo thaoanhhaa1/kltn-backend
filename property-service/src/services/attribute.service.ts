@@ -1,12 +1,12 @@
+import { Attribute } from '@prisma/client';
 import {
     createAttribute,
-    deleteAttribute,
     getAllAttributes,
+    getAllAttributesCbb,
     getAttributeById,
     softDeleteAttribute,
     updateAttribute,
 } from '../repositories/attribute.repository';
-import { Attribute } from '@prisma/client';
 
 export const createAttributeService = async (
     attribute: Omit<Attribute, 'attribute_id' | 'created_at' | 'updated_at' | 'deleted'>,
@@ -16,6 +16,10 @@ export const createAttributeService = async (
 
 export const getAllAttributesService = async () => {
     return getAllAttributes();
+};
+
+export const getAllAttributesCbbService = async () => {
+    return getAllAttributesCbb();
 };
 
 export const getAttributeByIdService = async (id: string) => {
