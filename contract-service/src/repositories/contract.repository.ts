@@ -1,8 +1,9 @@
 // //contract.repository.ts
 
 import Web3 from 'web3';
+import envConfig from '../configs/env.config';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
-import { Contract as PrismaContract, Status } from '@prisma/client';
+import { Contract as PrismaContract, Status,PropertyStatus } from '@prisma/client';
 import prisma from '../prisma/prismaClient';
 import { CreateContractReq } from '../schemas/contract.schema';
 import { startOfDay, endOfDay, isSameDay, isBefore, addMonths } from 'date-fns';
@@ -10,7 +11,7 @@ import { startOfDay, endOfDay, isSameDay, isBefore, addMonths } from 'date-fns';
 // Khởi tạo Web3 và hợp đồng từ biến môi trường
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
 
-const contractAddress = process.env.RENTAL_CONTRACT_ADDRESS || '0xce35e7A0bA07EAe6D973ed02F9E73Dc33bB21d3B';
+const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
 // Kiểm tra tính hợp lệ của địa chỉ hợp đồng
 if (!web3.utils.isAddress(contractAddress)) {
@@ -25,9 +26,7 @@ const createBlockchainContract = async (
     renterAddress: string, 
     startDate: number, 
     endDate: number, 
-    details: string, 
     monthlyRent: number, 
-    propertyId: string, 
     depositAmount: number
 ) => {
     try {
@@ -37,8 +36,7 @@ const createBlockchainContract = async (
             startDate, // Ngày bắt đầu
             endDate, // Ngày kết thúc
             depositAmount, // Số tiền đặt cọc
-            monthlyRent, // Giá thuê hàng tháng
-            details // Địa chỉ tài sản
+            monthlyRent // Giá thuê hàng tháng
         ).send({ 
             from: ownerAddress, 
             gas: '3000000', 
@@ -61,18 +59,48 @@ const createBlockchainContract = async (
 
 // Hàm tạo hợp đồng và lưu trữ vào cơ sở dữ liệu
 export const createContract = async (contract: CreateContractReq): Promise<PrismaContract> => {
+    // Lấy thông tin địa chỉ của chủ nhà và người thuê từ bảng `User`
+    const owner = await prisma.user.findUnique({
+        where: { user_id: contract.owner_user_id }
+    });
+
+    const renter = await prisma.user.findUnique({
+        where: { user_id: contract.renter_user_id }
+    });
+
+    if (!owner || !renter) {
+        throw new Error('Invalid owner or renter user ID');
+    }
+
+    // Kiểm tra và đảm bảo wallet_address không phải là null
+    if (!owner.wallet_address || !renter.wallet_address) {
+        throw new Error('Owner or renter does not have a wallet address');
+    }
+
+     // Lấy thông tin bất động sản từ cơ sở dữ liệu
+     const property = await prisma.property.findUnique({
+        where: { property_id: contract.property_id }
+    });
+
+    if (!property) {
+        throw new Error('Property not found.');
+    }
+
+    // Kiểm tra trạng thái bất động sản
+    if (property.status !== PropertyStatus.ACTIVE) {
+        throw new Error('Property is not available for rent.');
+    }
+
     const startDateTimestamp = Math.floor(contract.start_date.getTime() / 1000);
     const endDateTimestamp = Math.floor(contract.end_date.getTime() / 1000);
 
     // Tạo hợp đồng trên blockchain
     const blockchainReceipt = await createBlockchainContract(
-        contract.owner_address,
-        contract.renter_address,
+        owner.wallet_address,    // Địa chỉ của chủ nhà
+        renter.wallet_address,   // Địa chỉ của người thuê
         startDateTimestamp,
         endDateTimestamp,
-        contract.contract_terms,
         contract.monthly_rent,
-        contract.property_id,
         contract.deposit_amount
     );
 
@@ -82,8 +110,8 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
 
     // Xây dựng đối tượng dữ liệu cho Prisma
     const contractData = {
-        owner_address: contract.owner_address,
-        renter_address: contract.renter_address,
+        owner_user_id: contract.owner_user_id,
+        renter_user_id: contract.renter_user_id,
         property_id: contract.property_id,
         start_date: contract.start_date,
         end_date: contract.end_date,
@@ -110,7 +138,7 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
 
 
 // Hàm thực hiện đặt cọc và cập nhật hợp đồng
-export const deposit = async (contractId: number, renterAddress: string): Promise<any> => {
+export const deposit = async (contractId: number, renterUserId: number): Promise<any> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -120,6 +148,17 @@ export const deposit = async (contractId: number, renterAddress: string): Promis
         if (!contract) {
             throw new Error('Contract not found.');
         }
+
+        // Lấy thông tin người thuê từ cơ sở dữ liệu
+        const renter = await prisma.user.findUnique({
+        where: { user_id: renterUserId },
+        });
+
+        if (!renter || !renter.wallet_address) {
+            throw new Error('Renter not found or does not have a wallet address.');
+        }
+
+        const renterAddress = renter.wallet_address.toLowerCase();
 
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -131,7 +170,7 @@ export const deposit = async (contractId: number, renterAddress: string): Promis
         const depositAmount = rental.depositAmount;
 
         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
-        if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
+        if (renterAddress !== rental.renter.toLowerCase()) {
             throw new Error('Renter address mismatch.');
         }
 
@@ -162,11 +201,18 @@ export const deposit = async (contractId: number, renterAddress: string): Promis
             },
         });
 
+        // Cập nhật trạng thái bất động sản thành UNAVAILABLE
+        await prisma.property.update({
+            where: { property_id: contract.property_id },
+            data: { status: PropertyStatus.UNAVAILABLE },
+        });
+
+
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
             data: { 
-                status: 'ACCEPTED', // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
+                status: 'DEPOSITED', // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
                 updated_at: new Date() // Cập nhật thời gian
             }
         });
@@ -180,7 +226,7 @@ export const deposit = async (contractId: number, renterAddress: string): Promis
 };
 
 
-export const payMonthlyRent = async (contractId: number, renterAddress: string): Promise<PrismaContract> => {
+export const payMonthlyRent = async (contractId: number, renterUserId: number): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -190,9 +236,17 @@ export const payMonthlyRent = async (contractId: number, renterAddress: string):
         if (!contract) {
             throw new Error('Contract not found.');
         }
+        // Lấy thông tin người thuê từ cơ sở dữ liệu
+        const renter = await prisma.user.findUnique({
+            where: { user_id: renterUserId },
+            });
 
+            if (!renter || !renter.wallet_address) {
+                throw new Error('Renter not found or does not have a wallet address.');
+            }
+
+        const renterAddress = renter.wallet_address.toLowerCase();
        
-
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
             from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
@@ -285,227 +339,13 @@ export const payMonthlyRent = async (contractId: number, renterAddress: string):
             where: { contract_id: contractId },
             data: {
                 updated_at: new Date(), // 
-                status: 'REJECTED', // 
+                status: 'ONGOING', // 
             }
         });
 
         return updatedContract;
     } catch (error) {
         console.error('Error in payMonthlyRent:', error);
-        throw error;
-    }
-};
-
-export const cancelContractByRenter = async (contractId: number, renterAddress: string, notifyBefore30Days: boolean): Promise<PrismaContract> => {
-    try {
-        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
-        const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
-        });
-
-        if (!contract) {
-            throw new Error('Contract not found.');
-        }
-
-        // Lấy thông tin hợp đồng từ hợp đồng thông minh
-        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress, // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
-        });
-
-        // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
-        if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
-            throw new Error('Renter address mismatch.');
-        }
-
-        // Kiểm tra trạng thái hợp đồng
-        if (rental.status === 3) { // Assuming 3 is for Ended status
-            throw new Error('Contract has already ended.');
-        }
-
-        let extraCharge = 0;
-        let depositLoss = 0;
-
-        if (!notifyBefore30Days) {
-            // Nếu không thông báo trước 30 ngày, lấy tiền thuê hàng tháng làm extraCharge
-            extraCharge = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
-
-            // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).estimateGas({
-                from: renterAddress,
-                value: web3.utils.toWei(extraCharge.toString(), 'wei'),
-            });
-
-            // Gọi hàm cancelContractByRenter trên smart contract
-            const receipt = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).send({
-                from: renterAddress,
-                value: web3.utils.toWei(extraCharge.toString(), 'wei'),
-                gas: gasEstimate.toString(),
-                gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-            });
-
-            // Xử lý thành công và lưu thông tin giao dịch vào cơ sở dữ liệu
-            await prisma.transaction.create({
-                data: {
-                    contract_id: contractId,
-                    amount: extraCharge,
-                    transaction_hash: receipt.transactionHash,
-                    status: 'COMPLETED',
-                    description: 'Contract cancellation with extra charge',
-                },
-            });
-
-            // Tiền cọc sẽ được chuyển cho chủ hợp đồng
-            depositLoss = Number(web3.utils.fromWei(rental.depositAmount, 'wei'));
-            await prisma.transaction.create({
-                data: {
-                    contract_id: contractId,
-                    amount: depositLoss,
-                    transaction_hash: receipt.transactionHash,
-                    status: 'COMPLETED',
-                    description: 'Deposit transferred to owner upon contract cancellation',
-                },
-            });
-        } else {
-            // Nếu thông báo trước 30 ngày
-            // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).estimateGas({
-                from: renterAddress,
-            });
-
-            // Gọi hàm cancelContractByRenter trên smart contract
-            const receipt = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).send({
-                from: renterAddress,
-                gas: gasEstimate.toString(),
-                gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-            });
-
-            // Xử lý hoàn trả và lưu thông tin giao dịch vào cơ sở dữ liệu
-            await prisma.transaction.create({
-                data: {
-                    contract_id: contractId,
-                    amount: Number(web3.utils.fromWei(rental.depositAmount, 'wei')),
-                    transaction_hash: receipt.transactionHash,
-                    status: 'COMPLETED',
-                    description: 'Contract cancellation with deposit refund',
-                },
-            });
-        }
-
-        // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
-        const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
-            data: {
-                status: 'CANCELLED', // Hoặc trạng thái phù hợp với yêu cầu của bạn
-                updated_at: new Date(),
-            },
-        });
-
-        console.log('Contract successfully cancelled by renter.');
-        return updatedContract;
-    } catch (error) {
-        console.error('Error in cancelContractByRenter:', error);
-        throw error;
-    }
-};
-
-export const cancelContractByOwner = async (contractId: number, ownerAddress: string, notifyBefore30Days: boolean): Promise<PrismaContract> => {
-    try {
-        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
-        const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
-        });
-
-        if (!contract) {
-            throw new Error('Contract not found.');
-        }
-
-        // Lấy thông tin hợp đồng từ hợp đồng thông minh
-        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: ownerAddress, // Đảm bảo rằng địa chỉ gọi hàm là chủ nhà
-        });
-
-        // Kiểm tra xem ownerAddress có trùng với owner trên hợp đồng không
-        if (ownerAddress.toLowerCase() !== rental.owner.toLowerCase()) {
-            throw new Error('Owner address mismatch.');
-        }
-
-        // Kiểm tra trạng thái hợp đồng
-        if (rental.status === 3) { // Assuming 3 is for Ended status
-            throw new Error('Contract has already ended.');
-        }
-
-        let compensation = 0;
-
-        if (!notifyBefore30Days) {
-            // Nếu không thông báo trước 30 ngày, chủ nhà phải bồi thường
-            compensation = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
-
-            // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).estimateGas({
-                from: ownerAddress,
-                value: web3.utils.toWei(compensation.toString(), 'wei'),
-            });
-
-            // Gọi hàm cancelContractByOwner trên smart contract
-            const receipt = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).send({
-                from: ownerAddress,
-                value: web3.utils.toWei(compensation.toString(), 'wei'),
-                gas: gasEstimate.toString(),
-                gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-            });
-
-            // Xử lý thành công và lưu thông tin giao dịch vào cơ sở dữ liệu
-            await prisma.transaction.create({
-                data: {
-                    contract_id: contractId,
-                    amount: compensation,
-                    transaction_hash: receipt.transactionHash,
-                    status: 'COMPLETED',
-                    description: 'Contract cancellation with compensation',
-                },
-            });
-        }
-
-        // Hoàn trả tiền cọc cho người thuê nếu cần
-        if (rental.status === 1 || rental.status === 2) { // Assuming 1 is Deposited and 2 is Ongoing
-            const depositAmount = Number(web3.utils.fromWei(rental.depositAmount, 'wei'));
-
-            // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).estimateGas({
-                from: ownerAddress,
-            });
-
-            // Gọi hàm cancelContractByOwner trên smart contract
-            const receipt = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).send({
-                from: ownerAddress,
-                gas: gasEstimate.toString(),
-                gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-            });
-
-            // Xử lý hoàn trả tiền cọc và lưu thông tin giao dịch vào cơ sở dữ liệu
-            await prisma.transaction.create({
-                data: {
-                    contract_id: contractId,
-                    amount: depositAmount,
-                    transaction_hash: receipt.transactionHash,
-                    status: 'COMPLETED',
-                    description: 'Deposit refunded to renter upon contract cancellation',
-                },
-            });
-        }
-
-        // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
-        const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
-            data: {
-                status: 'CANCELLED', 
-                updated_at: new Date(),
-            },
-        });
-
-        return updatedContract;
-    } catch (error) {
-        console.error('Error in cancelContractByOwnerService:', error);
         throw error;
     }
 };

@@ -12,7 +12,6 @@ contract RentalContract {
         uint depositAmount;
         uint monthlyRent;
         RentalStatus status;
-        string addressProperty;
     }
 
     struct Transaction {
@@ -27,7 +26,7 @@ contract RentalContract {
     mapping(uint => Transaction[]) public contractTransactions; // Lưu trữ các giao dịch của mỗi hợp đồng
     uint public nextContractId = 1;  // Bắt đầu từ 1
 
-    event ContractCreated(uint indexed contractId, address indexed owner, address indexed renter, uint startDate, uint endDate, uint depositAmount, uint monthlyRent, string addressProperty);
+    event ContractCreated(uint indexed contractId, address indexed owner, address indexed renter, uint startDate, uint endDate, uint depositAmount, uint monthlyRent);
     event TransactionRecorded(uint indexed contractId, address from, address to, uint amount, uint timestamp, string transactionType);
     event ContractCancelledByRenter(address renter, uint depositLoss, uint extraCharge, uint contractId, uint timestamp);
     event ContractCancelledByOwner(address owner, uint compensation, uint contractId, uint timestamp);
@@ -58,8 +57,8 @@ contract RentalContract {
         uint _startDate,
         uint _endDate,
         uint _depositAmount,
-        uint _monthlyRent,
-        string memory _addressProperty
+        uint _monthlyRent
+       
     ) public onlyContractOwner(_owner) {
         require(_owner != address(0), "Invalid owner address");
         require(_renter != address(0), "Invalid renter address");
@@ -74,12 +73,12 @@ contract RentalContract {
             endDate: _endDate,
             depositAmount: _depositAmount,
             monthlyRent: _monthlyRent,
-            status: RentalStatus.NotCreated,
-            addressProperty: _addressProperty
+            status: RentalStatus.NotCreated
+           
         });
 
         contracts[contractId] = newContract;
-        emit ContractCreated(contractId, _owner, _renter, _startDate, _endDate, _depositAmount, _monthlyRent, _addressProperty);
+        emit ContractCreated(contractId, _owner, _renter, _startDate, _endDate, _depositAmount, _monthlyRent);
     }
 
     function deposit(uint _contractId) public payable onlyRenter(_contractId) {
