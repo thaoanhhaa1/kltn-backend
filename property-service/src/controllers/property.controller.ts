@@ -6,7 +6,8 @@ import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
 import { DEFAULT_PROPERTIES_SKIP, DEFAULT_PROPERTIES_TAKE } from '../constants/pagination';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
-import { IOwnerFilterProperties } from '../interfaces/property';
+import { IPaginationResponse } from '../interfaces/pagination';
+import { IOwnerFilterProperties, IResProperty } from '../interfaces/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
 import {
@@ -24,8 +25,8 @@ import {
 } from '../services/property.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
+import getPageInfo from '../utils/getPageInfo';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
-import { ResponseError } from '../types/error.type';
 
 const REDIS_KEY = {
     ALL_PROPERTIES: 'properties:all',
@@ -453,8 +454,19 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
         });
 
         const searchResult = result.hits.hits.map((item) => item._source);
+        const total = result.hits.total;
+        const totalProperties = total ? (typeof total === 'number' ? total : total.value) : 0;
 
-        res.status(200).json(searchResult);
+        const responseResult: IPaginationResponse<IResProperty> = {
+            data: searchResult as IResProperty[],
+            pageInfo: getPageInfo({
+                count: totalProperties,
+                skip: Number(skip),
+                take: Number(take),
+            }),
+        };
+
+        res.status(200).json(responseResult);
     } catch (error) {
         next(error);
     }
