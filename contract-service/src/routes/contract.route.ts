@@ -1,8 +1,10 @@
 import express from 'express';
 import {
     createContract,
-    depositAndCreateContract,
+    deposit,
     payMonthlyRent,
+    cancelContractByOwner,
+    cancelContractByRenter,
     // deleteContractById,
     // getAllContracts,
     // getContractById,
@@ -19,10 +21,16 @@ const router = express.Router();
 router.post('/', authMiddleware, roleMiddleware('owner'), createContract);
 
 // Route để thực hiện đặt cọc và tạo hợp đồng thành công
-router.post('/deposit', authMiddleware, roleMiddleware('renter'), depositAndCreateContract);
+router.post('/deposit', authMiddleware, roleMiddleware('renter'), deposit);
 
 // Route để thanh toán tiền thuê hàng tháng
 router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);
+
+// Route để hủy hợp đồng bởi người thuê
+router.post('/cancel/renter', authMiddleware, roleMiddleware('renter'), cancelContractByRenter);
+
+// Route để hủy hợp đồng bởi chủ nhà
+router.post('/cancel/owner', authMiddleware, roleMiddleware('owner'), cancelContractByOwner);
 // router.get('/', authMiddleware, roleMiddleware('admin'), getAllContracts);
 // router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwnerId);
 // router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenterId);
