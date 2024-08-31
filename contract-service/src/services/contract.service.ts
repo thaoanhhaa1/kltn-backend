@@ -6,6 +6,8 @@ import {
     createContract as createContractInRepo,
     deposit as depositInRepo,
     payMonthlyRent as payMonthlyRentInRepo,
+    cancelContractByRenter as cancelContractByRenterInRepo,
+    cancelContractByOwner as cancelContractByOwnerInRepo,
     // getContractById as getContractByIdInRepo,
     // updateContractStatus as updateContractStatusInRepo,
     // deleteContract as deleteContractInRepo
@@ -41,6 +43,28 @@ export const payMonthlyRentService = async (contractId: number, renterUserId: nu
     } catch (error) {
         console.error("Error processing monthly rent payment:", error);
         throw new Error("Could not process monthly rent payment");
+    }
+};
+
+// Hàm để hủy hợp đồng bởi người thuê
+export const cancelContractByRenterService = async (contractId: number, renterUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng
+        return await cancelContractByRenterInRepo(contractId, renterUserId, cancellationDate);
+    } catch (error) {
+        console.error("Error processing contract cancellation:", error);
+        throw new Error("Could not process contract cancellation");
+    }
+};
+
+// Hàm để hủy hợp đồng bởi chủ nhà
+export const cancelContractByOwnerService = async (contractId: number, ownerUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng
+        return await cancelContractByOwnerInRepo(contractId, ownerUserId, cancellationDate);
+    } catch (error) {
+        console.error("Error processing contract cancellation:", error);
+        throw new Error("Could not process contract cancellation");
     }
 };
 

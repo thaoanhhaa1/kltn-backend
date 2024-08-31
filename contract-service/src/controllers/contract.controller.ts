@@ -5,6 +5,8 @@ import {
     createContractService,
     depositService ,
     payMonthlyRentService,
+    cancelContractByOwnerService,
+    cancelContractByRenterService,
     // getAllContractsService,
     // getContractByIdService,
     // getContractsByOwnerIdService,
@@ -13,7 +15,6 @@ import {
     // updateContractByIdService,
 } from '../services/contract.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
-import CustomError from '../utils/error.util';
 
 export const createContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -72,99 +73,43 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
         next(error);
     }
 };
-// export const createContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const safeParse = createContractReq.safeParse(req.body);
 
-//         if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
+export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, ownerUserId, cancellationDate } = req.body;
 
-//         const contract = await createContractService(safeParse.data);
+        // Chuyển đổi cancellationDate từ chuỗi thành đối tượng Date
+        const parsedCancellationDate = new Date(cancellationDate);
 
-//         res.status(201).json(contract);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
+        // Kiểm tra dữ liệu đầu vào
+        if (typeof contractId !== 'number' || typeof ownerUserId !== 'number' || isNaN(parsedCancellationDate.getTime())) {
+            throw new Error('Contract ID, ownerUserId, and cancellationDate are required and must be valid.');
+        }
+        const updatedContract = await cancelContractByOwnerService(contractId, ownerUserId, parsedCancellationDate);
+        res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
 
-// export const getAllContracts = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const contracts = await getAllContractsService();
 
-//         res.json(contracts);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
+export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, renterUserId, cancellationDate } = req.body;
 
-// export const getContractById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const contractId = parseInt(req.params.contractId, 10);
+        const parsedCancellationDate = new Date(cancellationDate);
 
-//         const contract = await getContractByIdService({
-//             contractId,
-//             userId: req.user!.id,
-//         });
 
-//         if (!contract) throw new CustomError(404, 'Contract not found');
+        // Kiểm tra dữ liệu đầu vào
+        if (typeof contractId !== 'number' || typeof renterUserId !== 'number' || typeof isNaN(parsedCancellationDate.getTime())) {
+            throw new Error('Contract ID, renter ID, and notifyBefore30Days are required and must be valid.');
+        }
+        const updatedContract = await cancelContractByRenterService(contractId, renterUserId, cancellationDate);
+        res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
 
-//         res.json(contract);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
-// export const getContractsByOwnerId = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const userId = req.user!.id;
-
-//         const contracts = await getContractsByOwnerIdService(userId);
-
-//         res.json(contracts);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
-// export const getContractsByRenterId = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const userId = req.user!.id;
-
-//         const contracts = await getContractsByRenterIdService(userId);
-
-//         res.json(contracts);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
-// export const updateContractById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const contractId = parseInt(req.params.contractId, 10);
-
-//         const safeParse = createContractReq.safeParse(req.body);
-
-//         if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
-
-//         const contract = await updateContractByIdService(contractId, safeParse.data);
-
-//         if (!contract) throw new CustomError(404, 'Contract not found');
-
-//         res.json(contract);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
-// export const deleteContractById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const contractId = parseInt(req.params.contractId, 10);
-
-//         const contract = await softDeleteContractByIdService(contractId);
-
-//         if (!contract) throw new CustomError(404, 'Contract not found');
-
-//         res.json(contract);
-//     } catch (error) {
-//         next(error);
-//     }
-// };
