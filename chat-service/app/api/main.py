@@ -56,15 +56,17 @@ async def generate_response(request: Request):
         })
 
     response = rag_service.generate_response(collection_name=property_collection, query=query, chat_history=chat_history)
+    source_documents=[document.metadata for document in response["source_documents"]]
 
     chat_res = Chat(
         user_id=user_id, 
         request=query, 
         response=response["result"], 
-        source_documents=[document.metadata for document in response["source_documents"]]
+        source_documents=source_documents
     )
     create_item(item=chat_res)
 
+    response["source_documents"] = source_documents
     return {"response": response}
 
 @app.delete("/api/v1/chat-service/{collection_name}/{document_id}")
