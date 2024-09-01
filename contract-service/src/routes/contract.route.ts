@@ -5,6 +5,8 @@ import {
     payMonthlyRent,
     cancelContractByOwner,
     cancelContractByRenter,
+    getContractTransactions,
+    getContractDetails,
     // deleteContractById,
     // getAllContracts,
     // getContractById,
@@ -31,6 +33,13 @@ router.post('/cancel/renter', authMiddleware, roleMiddleware('renter'), cancelCo
 
 // Route để hủy hợp đồng bởi chủ nhà
 router.post('/cancel/owner', authMiddleware, roleMiddleware('owner'), cancelContractByOwner);
+
+// Route để lấy danh sách giao dịch của hợp đồng
+router.get('/:contractId/transactions', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractTransactions);
+
+// Route để lấy chi tiết hợp đồng
+router.get('/:contractId/details', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetails);
+
 // router.get('/', authMiddleware, roleMiddleware('admin'), getAllContracts);
 // router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwnerId);
 // router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenterId);

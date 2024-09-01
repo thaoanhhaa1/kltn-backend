@@ -8,6 +8,8 @@ import {
     payMonthlyRent as payMonthlyRentInRepo,
     cancelContractByRenter as cancelContractByRenterInRepo,
     cancelContractByOwner as cancelContractByOwnerInRepo,
+    getContractTransactions as getContractTransactionsInRepo,
+    getContractDetails as getContractDetailsInRepo,
     // getContractById as getContractByIdInRepo,
     // updateContractStatus as updateContractStatusInRepo,
     // deleteContract as deleteContractInRepo
@@ -65,6 +67,29 @@ export const cancelContractByOwnerService = async (contractId: number, ownerUser
     } catch (error) {
         console.error("Error processing contract cancellation:", error);
         throw new Error("Could not process contract cancellation");
+    }
+};
+
+
+// Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
+export const getContractTransactionsService = async (contractId: number, userId: number): Promise<any[]> => {
+    try {
+        // Gọi phương thức repository để lấy danh sách giao dịch
+        return await getContractTransactionsInRepo(contractId, userId);
+    } catch (error) {
+        console.error("Error fetching contract transactions:", error);
+        throw new Error("Could not fetch contract transactions");
+    }
+};
+
+// Hàm để lấy chi tiết hợp đồng
+export const getContractDetailsService = async (contractId: number, userId: number): Promise<any> => {
+    try {
+        // Gọi phương thức repository để lấy chi tiết hợp đồng
+        return await getContractDetailsInRepo(contractId, userId);
+    } catch (error) {
+        console.error("Error fetching contract details:", error);
+        throw new Error("Could not fetch contract details");
     }
 };
 
