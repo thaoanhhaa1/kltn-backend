@@ -25,8 +25,14 @@ model User {
   wallet_address  String?  @unique
   status          UserStatus @default(ACTIVE)
 
+  // Thiết lập các mối quan hệ với bảng Contract
+  OwnedContracts  Contract[] @relation("OwnerContracts")
+  RentedContracts Contract[] @relation("RenterContracts")
+
   @@map("users")
 }
+
+
 
 model Address {
   address_id String @id
@@ -51,19 +57,20 @@ model Property {
   deleted         Boolean?           @default(false)
   address_id      String            
   Address         Address           @relation(fields: [address_id], references: [address_id])
+  Contracts       Contract[]        @relation("PropertyContracts")
 }
 
 enum Status {
   WAITING
-  ACCEPTED
-  REJECTED
-  CANCELLED
+  DEPOSITED
+  ONGOING
+  ENDED
 }
 
 model Contract {
   contract_id               Int           @id @default(autoincrement())
-  owner_address             String
-  renter_address            String
+  owner_user_id             Int
+  renter_user_id            Int
   property_id               String
   start_date                DateTime
   end_date                  DateTime
@@ -76,7 +83,14 @@ model Contract {
   contract_terms            String
   transaction_hash_contract String?
   Transactions              Transaction[] @relation("ContractTransactions")
+  
+  // Thiết lập các mối quan hệ với bảng User với tên mối quan hệ cụ thể
+  Owner                    User           @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
+  Renter                   User           @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
+
+  Property                 Property       @relation("PropertyContracts", fields: [property_id], references: [property_id])
 }
+
 
 model Transaction {
   id                      Int      @id @default(autoincrement())
