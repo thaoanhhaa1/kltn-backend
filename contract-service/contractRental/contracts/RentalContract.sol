@@ -124,53 +124,69 @@ contract RentalContract {
     }
 
     function cancelContractByRenter(uint _contractId, bool notifyBefore30Days) public payable onlyRenter(_contractId) rentalNotEnded(_contractId) {
-        Contract storage contractInfo = contracts[_contractId];
+    Contract storage contractInfo = contracts[_contractId];
 
-        uint depositLoss = 0;
-        uint extraCharge = 0;
+    uint depositLoss = 0;
+    uint extraCharge = 0;
 
-        if (!notifyBefore30Days) {
-            // Nếu không thông báo trước 30 ngày
-            extraCharge = contractInfo.monthlyRent;
-            require(msg.value == extraCharge, "Incorrect extra charge amount");
+    if (!notifyBefore30Days) {
+        // Nếu không thông báo trước 30 ngày
+        extraCharge = contractInfo.monthlyRent;
+        require(msg.value == extraCharge, "Incorrect extra charge amount");
 
-            (bool successExtraCharge, ) = contractInfo.owner.call{value: extraCharge}("");
-            require(successExtraCharge, "Extra charge transfer failed");
+        (bool successExtraCharge, ) = contractInfo.owner.call{value: extraCharge}("");
+        require(successExtraCharge, "Extra charge transfer failed");
 
-            depositLoss = contractInfo.depositAmount;
-            (bool successDeposit, ) = contractInfo.owner.call{value: depositLoss}("");
-            require(successDeposit, "Deposit transfer failed");
-        } else {
-            // Nếu thông báo trước 30 ngày
-            (bool successRefund, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
-            require(successRefund, "Deposit refund transfer failed");
-        }
+        // Lưu giao dịch chuyển khoản tiền bồi thường cho chủ nhà
+        recordTransaction(_contractId, msg.sender, contractInfo.owner, extraCharge, "Extra Charge");
 
-        contractInfo.status = RentalStatus.Ended;
-        emit ContractCancelledByRenter(contractInfo.renter, depositLoss, extraCharge, _contractId, block.timestamp);
+        depositLoss = contractInfo.depositAmount;
+        (bool successDeposit, ) = contractInfo.owner.call{value: depositLoss}("");
+        require(successDeposit, "Deposit transfer failed");
+
+        // Lưu giao dịch chuyển khoản tiền đặt cọc cho chủ nhà
+        recordTransaction(_contractId, msg.sender, contractInfo.owner, depositLoss, "Deposit Loss");
+    } else {
+        // Nếu thông báo trước 30 ngày
+        (bool successRefund, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
+        require(successRefund, "Deposit refund transfer failed");
+
+        // Lưu giao dịch hoàn trả tiền đặt cọc cho người thuê
+        recordTransaction(_contractId, contractInfo.owner, msg.sender, contractInfo.depositAmount, "Deposit Refund");
     }
 
-    function cancelContractByOwner(uint _contractId, bool notifyBefore30Days) public payable onlyOwner(_contractId) rentalNotEnded(_contractId) {
-        Contract storage contractInfo = contracts[_contractId];
+    contractInfo.status = RentalStatus.Ended;
+    emit ContractCancelledByRenter(contractInfo.renter, depositLoss, extraCharge, _contractId, block.timestamp);
+}
 
-        uint compensation = 0;
+function cancelContractByOwner(uint _contractId, bool notifyBefore30Days) public payable onlyOwner(_contractId) rentalNotEnded(_contractId) {
+    Contract storage contractInfo = contracts[_contractId];
 
-        if (!notifyBefore30Days) {
-            // Nếu không thông báo trước 30 ngày, chủ nhà phải bồi thường
-            compensation = contractInfo.monthlyRent;
+    uint compensation = 0;
 
-            (bool successCompensation, ) = contractInfo.renter.call{value: compensation}("");
-            require(successCompensation, "Compensation transfer failed");
-        }
+    if (!notifyBefore30Days) {
+        // Nếu không thông báo trước 30 ngày, chủ nhà phải bồi thường
+        compensation = contractInfo.monthlyRent;
 
-        if (contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing) {
-            (bool successDeposit, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
-            require(successDeposit, "Deposit refund transfer failed");
-        }
+        (bool successCompensation, ) = contractInfo.renter.call{value: compensation}("");
+        require(successCompensation, "Compensation transfer failed");
 
-        contractInfo.status = RentalStatus.Ended;
-        emit ContractCancelledByOwner(contractInfo.owner, compensation, _contractId, block.timestamp);
+        // Lưu giao dịch chuyển khoản tiền bồi thường cho người thuê
+        recordTransaction(_contractId, msg.sender, contractInfo.renter, compensation, "Compensation");
     }
+
+    if (contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing) {
+        (bool successDeposit, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
+        require(successDeposit, "Deposit refund transfer failed");
+
+        // Lưu giao dịch hoàn trả tiền đặt cọc cho người thuê
+        recordTransaction(_contractId, msg.sender, contractInfo.renter, contractInfo.depositAmount, "Deposit Refund");
+    }
+
+    contractInfo.status = RentalStatus.Ended;
+    emit ContractCancelledByOwner(contractInfo.owner, compensation, _contractId, block.timestamp);
+}
+
 
     function recordTransaction(uint _contractId, address _from, address _to, uint _amount, string memory _transactionType) internal {
         Transaction memory newTransaction = Transaction({

@@ -7,6 +7,8 @@ import {
     payMonthlyRentService,
     cancelContractByOwnerService,
     cancelContractByRenterService,
+    getContractTransactionsService,
+    getContractDetailsService,
     // getAllContractsService,
     // getContractByIdService,
     // getContractsByOwnerIdService,
@@ -107,6 +109,59 @@ export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Res
         }
         const updatedContract = await cancelContractByRenterService(contractId, renterUserId, cancellationDate);
         res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
+
+// Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
+export const getContractTransactions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId } = req.params;
+        const { userId } = req.query;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (isNaN(Number(contractId))) {
+            return res.status(400).json({ message: 'Contract ID is required and must be a valid number.' });
+        }
+
+        if (isNaN(Number(userId))) {
+            return res.status(400).json({ message: 'User ID is required and must be a valid number.' });
+        }
+
+        // Gọi hàm service để lấy danh sách giao dịch
+        const transactions = await getContractTransactionsService(Number(contractId), Number(userId));
+
+        // Trả về danh sách giao dịch
+        res.status(200).json(transactions);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
+
+
+// Hàm để lấy chi tiết hợp đồng
+export const getContractDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId } = req.params;
+        const { userId } = req.query;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (isNaN(Number(contractId))) {
+            return res.status(400).json({ message: 'Contract ID is required and must be a valid number.' });
+        }
+
+        if (isNaN(Number(userId))) {
+            return res.status(400).json({ message: 'User ID is required and must be a valid number.' });
+        }
+
+        // Gọi hàm service để lấy chi tiết hợp đồng
+        const contractDetails = await getContractDetailsService(Number(contractId), Number(userId));
+
+        // Trả về chi tiết hợp đồng
+        res.status(200).json(contractDetails);
     } catch (error) {
         // Chuyển lỗi cho middleware xử lý lỗi
         next(error);

@@ -599,3 +599,112 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
     }
 };
 
+
+export const getContractTransactions = async (contractId: number, userId: number): Promise<any[]> => {
+    try {
+        // Lấy thông tin người dùng từ cơ sở dữ liệu
+        const user = await prisma.user.findUnique({
+            where: { user_id: userId },
+        });
+
+        if (!user || !user.wallet_address) {
+            throw new Error('User not found or does not have a wallet address.');
+        }
+
+        const userAddress = user.wallet_address.toLowerCase();
+
+        // Lấy danh sách giao dịch từ blockchain
+        const transactions = await rentalContract.methods.getContractTransactions(contractId).call({
+            from: userAddress,
+        });
+
+        if (!transactions || transactions.length === 0) {
+            throw new Error('No transactions found for this contract.');
+        }
+
+        // Chuyển đổi dữ liệu từ blockchain thành định dạng phù hợp
+        const formattedTransactions = transactions.map((transaction: any) => ({
+            from: transaction.from,
+            to: transaction.to,
+            amount: Number(transaction.amount), // Chuyển đổi BigInt sang number
+            timestamp: new Date(Number(transaction.timestamp) * 1000).toISOString(), // Chuyển đổi BigInt sang number trước khi chuyển đổi timestamp
+            transactionType: transaction.transactionType
+        }));
+
+        console.log('Blockchain Transactions:', transactions);
+
+        return formattedTransactions;
+    } catch (error) {
+        console.error('Error in getContractTransactions:', error);
+        throw new Error(`Failed to retrieve contract transactions: ${(error as Error).message}`);
+    }
+};
+
+// Hàm lấy chi tiết hợp đồng từ cơ sở dữ liệu
+export const getContractDetails = async (contractId: number, userId: number): Promise<any> => {
+    try {
+        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
+        const contract = await prisma.contract.findUnique({
+            where: { contract_id: contractId },
+            include: {
+                Owner: true,           // Lấy thông tin chủ sở hữu
+                Renter: true,          // Lấy thông tin người thuê
+                Property: true,        // Lấy thông tin tài sản
+                Transactions: true,    // Lấy danh sách giao dịch
+            },
+        });
+
+        if (!contract) {
+            throw new Error('Contract not found.');
+        }
+
+        // Kiểm tra quyền truy cập của người dùng
+        if (contract.owner_user_id !== userId && contract.renter_user_id !== userId) {
+            throw new Error('Access denied. Only the contract owner or renter can view the contract details.');
+        }
+
+        // Trả về thông tin hợp đồng
+        return contract;
+    } catch (error) {
+        console.error('Error in getContractDetails:', error);
+        throw new Error(`Failed to retrieve contract details: ${(error as Error).message}`);
+    }
+};
+
+// Hàm lấy chi tiết hợp đồng từ hợp đồng thông minh
+// export const getContractDetails = async (contractId: number, userId: number): Promise<any> => {
+//     try {
+//         // Lấy thông tin hợp đồng từ hợp đồng thông minh
+//         const rental: any = await rentalContract.methods.getContractDetails(contractId).call();
+
+//         if (!rental) {
+//             throw new Error('Contract not found on the blockchain.');
+//         }
+
+//         // Lấy thông tin người dùng từ cơ sở dữ liệu
+//         const user = await prisma.user.findUnique({
+//             where: { user_id: userId },
+//         });
+
+//         if (!user || !user.wallet_address) {
+//             throw new Error('User not found or does not have a wallet address.');
+//         }
+
+//         const userAddress = user.wallet_address.toLowerCase();
+
+//         // Kiểm tra quyền truy cập: người dùng có phải là chủ nhà hoặc người thuê không
+//         if (userAddress !== rental.owner.toLowerCase() && userAddress !== rental.renter.toLowerCase()) {
+//             throw new Error('Access denied. You are not authorized to view this contract.');
+//         }
+
+//         return rental;
+//     } catch (error) {
+//         console.error('Error in getContractDetails:', error);
+//         throw new Error(`Failed to retrieve contract details: ${(error as Error).message}`);
+//     }
+// };
+
+
+
+
+
