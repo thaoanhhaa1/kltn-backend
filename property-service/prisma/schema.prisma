@@ -72,6 +72,7 @@ model Property {
   PropertyAttributes PropertyAttribute[]
   Owner           User              @relation(fields: [owner_id], references: [user_id])
   RejectReasons   RejectReason[]
+  UserProductInteractions UserPropertyInteractions[]
 }
 
 model RentalCondition {
@@ -138,6 +139,7 @@ model UserPropertyInteractions {
   created_at        DateTime    @default(now())
   updated_at        DateTime    @updatedAt
   User User @relation(fields: [user_id], references: [user_id])
+  Property Property @relation(fields: [property_id], references: [property_id])
 }
 
 model RejectReason {

@@ -1,4 +1,3 @@
-import { UserInteractionType } from '@prisma/client';
 import {
     IPropertyInteractionDeleteReq,
     IPropertyInteractionReq,
@@ -6,7 +5,6 @@ import {
     IPropertyInteractionUpdateReq,
 } from '../interfaces/propertyInteraction';
 import prisma from '../prisma/prismaClient';
-import CustomError from '../utils/error.util';
 
 export const createPropertyInteraction = async (
     interaction: IPropertyInteractionReq,

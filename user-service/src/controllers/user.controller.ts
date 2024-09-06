@@ -16,10 +16,11 @@ import {
     isExistingUser,
     updatePasswordService,
     updateUserService,
+    updateWalletAddressService,
 } from '../services/user.service';
 import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
-import { EntryError } from '../utils/error.util';
+import CustomError, { EntryError } from '../utils/error.util';
 import { uploadFile } from '../utils/uploadToFirebase.util';
 
 export const otpToUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -202,6 +203,40 @@ export const getAllOwnersCbb = async (_req: Request, res: Response, next: NextFu
         const owners = await getAllOwnersCbbService();
 
         res.json(owners);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateWalletAddress = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const reqAuth = req as AuthenticatedRequest;
+        const userId = reqAuth.user!.id;
+        const { wallet_address } = req.body;
+
+        if (!wallet_address) throw new CustomError(400, 'Địa chỉ ví không được để trống');
+
+        if (!wallet_address.startsWith('0x') && wallet_address.length !== 42)
+            throw new CustomError(400, 'Địa chỉ ví không hợp lệ');
+
+        const user = await updateWalletAddressService(userId, wallet_address);
+
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: USER_QUEUE.exchange,
+            name: USER_QUEUE.name,
+            message: {
+                data: user,
+                type: USER_QUEUE.type.UPDATED,
+            },
+        });
+
+        const response: ResponseType = {
+            message: 'Địa chỉ ví đã được cập nhật',
+            status: 200,
+            success: true,
+        };
+
+        res.json(response);
     } catch (error) {
         next(error);
     }
