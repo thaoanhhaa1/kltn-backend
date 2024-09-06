@@ -7,6 +7,7 @@ import {
     otpToUser,
     updatePassword,
     updateUser,
+    updateWalletAddress,
 } from '../controllers/user.controller';
 import authMiddleware from '../middlewares/auth.middleware';
 import roleMiddleware from '../middlewares/role.middleware';
@@ -15,6 +16,8 @@ import upload from '../configs/multer.config';
 const router = express.Router();
 
 router.put('/', authMiddleware, upload.single('avatar'), updateUser);
+
+router.patch('/wallet', authMiddleware, updateWalletAddress);
 
 router.post('/otp', otpToUser);
 router.post('/forgot-password', forgotPassword);

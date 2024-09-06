@@ -110,3 +110,11 @@ export const getAllOwnersCbb = () => {
         },
     });
 };
+
+export const updateWalletAddress = (userId: IUserId, wallet_address: string) => {
+    return prisma.user.update({
+        where: { user_id: userId },
+        data: { wallet_address },
+        select: userDTOSelect,
+    });
+};
