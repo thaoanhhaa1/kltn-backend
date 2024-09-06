@@ -11,6 +11,7 @@ import {
     getUsers,
     updatePassword,
     updateUser,
+    updateWalletAddress,
 } from '../repositories/user.repository';
 import { UpdatePasswordInput } from '../schemas/user.schema';
 import CustomError, { EntryError } from '../utils/error.util';
@@ -76,4 +77,12 @@ export const forgotPasswordService = async ({ password, email }: IForgotPassword
 
 export const getAllOwnersCbbService = () => {
     return getAllOwnersCbb();
+};
+
+export const updateWalletAddressService = async (userId: IUserId, wallet_address: string) => {
+    try {
+        return await updateWalletAddress(userId, wallet_address);
+    } catch (error) {
+        throw new CustomError(400, 'Ví đã được sử dụng');
+    }
 };
