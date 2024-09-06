@@ -9,6 +9,7 @@ const EnvSchema = z.object({
     DATABASE_URL: z.string(),
     JWT_ACCESS_SECRET: z.string(),
     RABBIT_MQ_URL: z.string(),
+    RENTAL_CONTRACT_ADDRESS: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
