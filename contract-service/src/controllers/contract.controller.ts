@@ -9,6 +9,8 @@ import {
     cancelContractByRenterService,
     getContractTransactionsService,
     getContractDetailsService,
+    endContractService,
+    terminateForNonPaymentService,
     // getAllContractsService,
     // getContractByIdService,
     // getContractsByOwnerIdService,
@@ -95,25 +97,46 @@ export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Resp
     }
 };
 
-
 export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { contractId, renterUserId, cancellationDate } = req.body;
 
+        // Chuyển đổi cancellationDate từ chuỗi thành đối tượng Date
         const parsedCancellationDate = new Date(cancellationDate);
 
-
         // Kiểm tra dữ liệu đầu vào
-        if (typeof contractId !== 'number' || typeof renterUserId !== 'number' || typeof isNaN(parsedCancellationDate.getTime())) {
-            throw new Error('Contract ID, renter ID, and notifyBefore30Days are required and must be valid.');
+        if (typeof contractId !== 'number' || typeof renterUserId !== 'number' || isNaN(parsedCancellationDate.getTime())) {
+            throw new Error('Contract ID, renterUserId, and cancellationDate are required and must be valid.');
         }
-        const updatedContract = await cancelContractByRenterService(contractId, renterUserId, cancellationDate);
+
+        const updatedContract = await cancelContractByRenterService(contractId, renterUserId, parsedCancellationDate);
         res.status(200).json(updatedContract);
     } catch (error) {
         // Chuyển lỗi cho middleware xử lý lỗi
         next(error);
     }
 };
+
+export const endContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, userId } = req.body;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (isNaN(Number(contractId)) || isNaN(Number(userId))) {
+            return res.status(400).json({ message: 'Contract ID and user ID are required and must be valid numbers.' });
+        }
+
+        // Gọi hàm service để kết thúc hợp đồng
+        const result = await endContractService(Number(contractId), Number(userId));
+
+        // Trả về kết quả thành công
+        res.status(200).json(result);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};
+
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -141,7 +164,6 @@ export const getContractTransactions = async (req: AuthenticatedRequest, res: Re
     }
 };
 
-
 // Hàm để lấy chi tiết hợp đồng
 export const getContractDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -168,3 +190,22 @@ export const getContractDetails = async (req: AuthenticatedRequest, res: Respons
     }
 };
 
+export const terminateForNonPayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId, ownerUserId } = req.body;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (isNaN(Number(contractId)) || isNaN(Number(ownerUserId))) {
+            return res.status(400).json({ message: 'Contract ID and owner ID are required and must be valid numbers.' });
+        }
+
+        // Gọi hàm service để hủy hợp đồng do không thanh toán
+        const updatedContract = await terminateForNonPaymentService(contractId, ownerUserId);
+
+        // Phản hồi với dữ liệu hợp đồng đã cập nhật
+        res.status(200).json(updatedContract);
+    } catch (error) {
+        // Chuyển lỗi cho middleware xử lý lỗi
+        next(error);
+    }
+};

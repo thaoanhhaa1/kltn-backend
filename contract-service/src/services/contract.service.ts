@@ -10,6 +10,8 @@ import {
     cancelContractByOwner as cancelContractByOwnerInRepo,
     getContractTransactions as getContractTransactionsInRepo,
     getContractDetails as getContractDetailsInRepo,
+    endContract as endContractInRepo,
+    terminateForNonPayment as terminateForNonPaymentInRepo
     // getContractById as getContractByIdInRepo,
     // updateContractStatus as updateContractStatusInRepo,
     // deleteContract as deleteContractInRepo
@@ -70,6 +72,17 @@ export const cancelContractByOwnerService = async (contractId: number, ownerUser
     }
 };
 
+// Hàm để kết thúc hợp đồng
+export const endContractService = async (contractId: number, userId: number): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng
+        return await endContractInRepo(contractId, userId);
+    } catch (error) {
+        console.error("Error ending contract:", error);
+        throw new Error("Could not end contract");
+    }
+};
+
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactionsService = async (contractId: number, userId: number): Promise<any[]> => {
@@ -93,6 +106,16 @@ export const getContractDetailsService = async (contractId: number, userId: numb
     }
 };
 
+// Hàm để hủy hợp đồng do không thanh toán
+export const terminateForNonPaymentService = async (contractId: number, ownerUserId: number): Promise<PrismaContract> => {
+    try {
+        // Gọi phương thức repository để thực hiện hủy hợp đồng do không thanh toán
+        return await terminateForNonPaymentInRepo(contractId, ownerUserId);
+    } catch (error) {
+        console.error("Error terminating contract for non-payment:", error);
+        throw new Error("Could not terminate contract for non-payment");
+    }
+};
 
 // // Hàm để lấy hợp đồng theo ID
 // export const getContractById = async (contractId: number): Promise<PrismaContract | null> => {
