@@ -7,6 +7,7 @@ import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
 import { createUserService, updateUserService } from './services/user.service';
+import { startAgenda } from './tasks/agenda';
 
 const app = express();
 
@@ -83,6 +84,14 @@ RabbitMQ.getInstance().subscribeToQueue({
 });
 
 const PORT = envConfig.PORT || 3000;
+
+// Khởi động công việc theo lịch
+startAgenda().then(() => {
+    console.log('Agenda started and job scheduled.');
+}).catch(err => {
+    console.error('Error starting agenda:', err);
+});
+
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

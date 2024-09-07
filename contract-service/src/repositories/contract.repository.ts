@@ -6,11 +6,11 @@ import RentalContractABI from '../../contractRental/build/contracts/RentalContra
 import { Contract as PrismaContract, Status,PropertyStatus } from '@prisma/client';
 import prisma from '../prisma/prismaClient';
 import { CreateContractReq } from '../schemas/contract.schema';
-import { startOfDay, endOfDay, isSameDay, isBefore, addMonths,  differenceInDays  } from 'date-fns';
+import { startOfDay, endOfDay, isSameDay,addWeeks, isSameMonth,isBefore, addMonths,  differenceInDays,addDays, isAfter  } from 'date-fns';
+import { checkOverduePayments } from '../tasks/checkOverduePayments'; 
 
 // Khởi tạo Web3 và hợp đồng từ biến môi trường
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
-
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
 // Kiểm tra tính hợp lệ của địa chỉ hợp đồng
@@ -136,7 +136,6 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
     return createdContract;
 };
 
-
 // Hàm thực hiện đặt cọc và cập nhật hợp đồng
 export const deposit = async (contractId: number, renterUserId: number): Promise<any> => {
     try {
@@ -149,10 +148,9 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
             throw new Error('Contract not found.');
         }
 
-
         // Lấy thông tin người thuê từ cơ sở dữ liệu
         const renter = await prisma.user.findUnique({
-        where: { user_id: renterUserId },
+            where: { user_id: renterUserId },
         });
 
         if (!renter || !renter.wallet_address) {
@@ -173,6 +171,12 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
         if (renterAddress !== rental.renter.toLowerCase()) {
             throw new Error('Renter address mismatch.');
+        }
+
+         // Kiểm tra số dư của người thuê
+        const renterBalance = await web3.eth.getBalance(renterAddress);
+        if (Number(renterBalance) < Number(rental.depositAmount)) {
+            throw new Error('Insufficient balance to pay deposit amount.');
         }
 
         // Ước lượng lượng gas cần thiết
@@ -208,7 +212,6 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
             data: { status: PropertyStatus.UNAVAILABLE },
         });
 
-
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
@@ -227,6 +230,285 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
 };
 
 
+// export const payMonthlyRent = async (contractId: number, renterUserId: number): Promise<PrismaContract> => {
+//     try {
+//         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
+//         const contract = await prisma.contract.findUnique({
+//             where: { contract_id: contractId },
+//         });
+
+//         if (!contract) {
+//             throw new Error('Contract not found.');
+//         }
+
+//         // Lấy thông tin người thuê từ cơ sở dữ liệu
+//         const renter = await prisma.user.findUnique({
+//             where: { user_id: renterUserId },
+//         });
+
+//         if (!renter || !renter.wallet_address) {
+//             throw new Error('Renter not found or does not have a wallet address.');
+//         }
+
+//         const renterAddress = renter.wallet_address.toLowerCase();
+       
+//         // Lấy thông tin hợp đồng từ hợp đồng thông minh
+//         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+//             from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
+//         });
+
+//         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
+//         if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
+//             throw new Error('Renter address mismatch.');
+//         }
+
+//         const currentTime = new Date();
+
+//         // Log ngày hiện tại
+//         console.log('Current Time:', currentTime);
+
+//         // Kiểm tra lịch sử giao dịch xem đã có thanh toán nào trong ngày chưa
+//         const existingPaymentToday = await prisma.transaction.findFirst({
+//             where: {
+//                 contract_id: contractId,
+//                 created_at: {
+//                     gte: startOfDay(currentTime), // Tìm các giao dịch từ đầu ngày hiện tại
+//                     lt: endOfDay(currentTime), // Cho đến cuối ngày hiện tại
+//                 },
+//                 description: 'Monthly rent payment',
+//             },
+//         });
+
+//         if (existingPaymentToday) {
+//             throw new Error('Rent payment already made for today.');
+//         }
+
+//         const startDate = new Date(Number(rental.startDate) * 1000);
+
+//         // Log ngày bắt đầu hợp đồng
+//         console.log('Start Date:', startDate);
+
+//         const RENTAL_STATUS_NOT_CREATED = 0;
+//         const RENTAL_STATUS_ENDED = 3;
+
+//         if (rental.status === RENTAL_STATUS_NOT_CREATED || rental.status === RENTAL_STATUS_ENDED) {
+//             throw new Error('Rental period not started or already ended.');
+//         }
+
+//         // Kiểm tra số tiền thuê hàng tháng có chính xác không
+//         if (web3.utils.toWei(contract.monthly_rent.toString(), 'wei') !== rental.monthlyRent.toString()) {
+//             throw new Error('Incorrect rent amount.');
+//         }
+
+//         // Tính toán ngày thanh toán tiếp theo
+//         let nextPaymentDate = new Date(startDate);
+
+//         // Nếu ngày hiện tại là ngày bắt đầu hợp đồng hoặc sau đó
+//         if (isBefore(currentTime, startDate)) {
+//             throw new Error('Cannot pay before the contract start date.');
+//         }
+
+//         // Nếu ngày bắt đầu hợp đồng là trong tháng hiện tại
+//         if (isSameMonth(currentTime, startDate) && isBefore(startDate, currentTime)) {
+//             nextPaymentDate = startDate;
+//         } else {
+//             // Tính toán ngày thanh toán hàng tháng từ ngày bắt đầu hợp đồng
+//             while (isBefore(nextPaymentDate, currentTime)) {
+//                 nextPaymentDate = addMonths(nextPaymentDate, 1);
+//             }
+//         }
+
+//         // Đảm bảo ngày thanh toán hàng tháng không bị lệch tháng
+//         nextPaymentDate.setDate(startDate.getDate()); // Đặt ngày thanh toán trùng với ngày bắt đầu hợp đồng
+
+//         // Log ngày thanh toán tiếp theo
+//         console.log('Next Payment Date:', nextPaymentDate);
+
+//         // Tính toán ngày kết thúc cho phép thanh toán (20 ngày sau ngày đến hạn)
+//         const paymentWindowEnd = addDays(nextPaymentDate, 20);
+
+//         // Log khoảng thời gian cho phép thanh toán
+//         console.log('Payment Window End:', paymentWindowEnd);
+
+//         // Kiểm tra xem hôm nay có nằm trong khoảng thời gian cho phép thanh toán không
+//         if (isBefore(currentTime, nextPaymentDate) || isAfter(currentTime, paymentWindowEnd)) {
+//             throw new Error('Today is not within the payment window for rent payment.');
+//         }
+
+//         // Ước lượng lượng gas cần thiết
+//         const gasEstimate = await rentalContract.methods.payRent(contractId).estimateGas({
+//             from: renterAddress,
+//             value: rental.monthlyRent,
+//         });
+
+//         // Gọi hàm payRent trên smart contract
+//         const receipt = await rentalContract.methods.payRent(contractId).send({
+//             from: renterAddress,
+//             value: rental.monthlyRent,
+//             gas: gasEstimate.toString(),
+//             gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+//         });
+
+//         // Lưu thông tin giao dịch vào cơ sở dữ liệu
+//         await prisma.transaction.create({
+//             data: {
+//                 contract_id: contractId,
+//                 amount:  Number(rental.monthlyRent),
+//                 transaction_hash: receipt.transactionHash,
+//                 status: 'COMPLETED',
+//                 description: 'Monthly rent payment',
+//             },
+//         });
+
+//         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu sau khi thanh toán thành công
+//         const updatedContract = await prisma.contract.update({
+//             where: { contract_id: contractId },
+//             data: {
+//                 updated_at: new Date(), // 
+//                 status: 'ONGOING', // 
+//             }
+//         });
+
+//         return updatedContract;
+//     } catch (error) {
+//         console.error('Error in payMonthlyRent:', error);
+//         throw error;
+//     }
+// };
+
+// Hàm để kết thúc hợp đồng
+export const endContract = async (contractId: number, userId: number): Promise<any> => {
+    try {
+        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
+        const contract = await prisma.contract.findUnique({
+            where: { contract_id: contractId },
+        });
+
+        if (!contract) {
+            throw new Error('Contract not found.');
+        }
+
+        // Lấy thông tin người dùng từ cơ sở dữ liệu
+        const user = await prisma.user.findUnique({
+            where: { user_id: userId },
+        });
+
+        if (!user || !user.wallet_address) {
+            throw new Error('User not found or does not have a wallet address.');
+        }
+
+        const userAddress = user.wallet_address.toLowerCase();
+       
+        // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
+        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+            from: userAddress,
+        });
+
+        // Chuyển đổi trạng thái hợp đồng thành số nguyên
+        const rentalStatus = parseInt(rental.status, 10);
+
+        // Log trạng thái hợp đồng
+        console.log('Rental status:', rentalStatus);
+
+        if (rentalStatus === 0) { // NotCreated
+            const threeDaysAfterCreation = addDays(new Date(contract.created_at), 3);
+            const currentDate = new Date();
+
+            // Log ngày hiện tại và ngày ba ngày sau khi tạo hợp đồng
+            console.log('Current date:', currentDate);
+            console.log('Three days after creation:', threeDaysAfterCreation);
+
+            if (isAfter(currentDate, threeDaysAfterCreation)) {
+                // Thay đổi trạng thái hợp đồng thành Ended
+                const receipt = await rentalContract.methods.endContract(contractId).send({
+                    from: userAddress,
+                    gas: '3000000',
+                    gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+                });
+
+                // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
+                const updatedContract = await prisma.contract.update({
+                    where: { contract_id: contractId },
+                    data: {
+                        status: 'ENDED',
+                        updated_at: new Date(),
+                    },
+                });
+
+                // Cập nhật trạng thái property trong cơ sở dữ liệu
+                await prisma.property.update({
+                    where: { property_id: contract.property_id },
+                    data: {
+                        status: 'ACTIVE', // Hoặc trạng thái phù hợp với yêu cầu của bạn
+                    },
+                });
+
+                console.log('Contract ended successfully:', receipt);
+                return updatedContract;
+            } else {
+                throw new Error('Contract cannot be ended before three days of creation.');
+            }
+        } else if (rentalStatus === 1 || rentalStatus === 2) { // Deposited or Ongoing
+            // Kiểm tra xem ngày hiện tại có phải là ngày kết thúc hợp đồng hay không
+            const currentDate = new Date();
+            const endDate = new Date(contract.end_date);
+
+            // Log ngày hiện tại và ngày kết thúc hợp đồng
+            console.log('Current date:', currentDate);
+            console.log('End date:', endDate);
+
+            if (!isSameDay(currentDate, endDate)) {
+                throw new Error('Today is not the end date of the contract.');
+            }
+
+            // Hoàn trả tiền đặt cọc cho người thuê
+            const receipt = await rentalContract.methods.endContract(contractId).send({
+                from: userAddress,
+                gas: '3000000',
+                gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+            });
+
+            // Lưu thông tin giao dịch vào cơ sở dữ liệu
+            await prisma.transaction.create({
+                data: {
+                    contract_id: contractId,
+                    amount: Number(contract.deposit_amount),
+                    transaction_hash: receipt.transactionHash,
+                    status: 'COMPLETED',
+                    description: 'End contract',
+                },
+            });
+
+            // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
+            const updatedContract = await prisma.contract.update({
+                where: { contract_id: contractId },
+                data: {
+                    status: 'ENDED',
+                    updated_at: new Date(),
+                },
+            });
+
+            // Cập nhật trạng thái property trong cơ sở dữ liệu
+            await prisma.property.update({
+                where: { property_id: contract.property_id },
+                data: {
+                    status: 'ACTIVE', // Hoặc trạng thái phù hợp với yêu cầu của bạn
+                },
+            });
+
+            console.log('Contract ended successfully:', updatedContract);
+            return updatedContract;
+        } else if (rentalStatus === 3) { // Ended
+            throw new Error('Contract is already ended.');
+        } else {
+            throw new Error('Contract is not in a valid state for ending.');
+        }
+    } catch (error) {
+        console.error('Error in endContract:', error);
+        throw error;
+    }
+};
+
 export const payMonthlyRent = async (contractId: number, renterUserId: number): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
@@ -237,22 +519,22 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         if (!contract) {
             throw new Error('Contract not found.');
         }
+
         // Lấy thông tin người thuê từ cơ sở dữ liệu
         const renter = await prisma.user.findUnique({
             where: { user_id: renterUserId },
-            });
+        });
 
-            if (!renter || !renter.wallet_address) {
-                throw new Error('Renter not found or does not have a wallet address.');
-            }
+        if (!renter || !renter.wallet_address) {
+            throw new Error('Renter not found or does not have a wallet address.');
+        }
 
         const renterAddress = renter.wallet_address.toLowerCase();
-       
+
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
+            from: renterAddress,
         });
-        
 
         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
         if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
@@ -260,14 +542,15 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         }
 
         const currentTime = new Date();
+        console.log(`Current time: ${currentTime}`);
 
         // Kiểm tra lịch sử giao dịch xem đã có thanh toán nào trong ngày chưa
         const existingPaymentToday = await prisma.transaction.findFirst({
             where: {
                 contract_id: contractId,
                 created_at: {
-                    gte: startOfDay(currentTime), // Tìm các giao dịch từ đầu ngày hiện tại
-                    lt: endOfDay(currentTime), // Cho đến cuối ngày hiện tại
+                    gte: startOfDay(currentTime),
+                    lt: endOfDay(currentTime),
                 },
                 description: 'Monthly rent payment',
             },
@@ -278,11 +561,11 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         }
 
         const startDate = new Date(Number(rental.startDate) * 1000);
+        console.log(`Start date: ${startDate}`);
 
-        const RENTAL_STATUS_NOT_CREATED = 0;
-        const RENTAL_STATUS_ENDED = 3;
+        const rentalStatus = parseInt(rental.status, 10);
 
-        if (rental.status === RENTAL_STATUS_NOT_CREATED || rental.status === RENTAL_STATUS_ENDED) {
+        if (rentalStatus === 0 || rentalStatus === 3) { // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
             throw new Error('Rental period not started or already ended.');
         }
 
@@ -291,20 +574,35 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
             throw new Error('Incorrect rent amount.');
         }
 
+        // Kiểm tra số dư của người thuê
+        const renterBalance = await web3.eth.getBalance(renterAddress);
+        if (Number(renterBalance) < Number(rental.monthlyRent)) {
+            throw new Error('Insufficient balance to pay rent.');
+        }
+
         // Tính toán ngày thanh toán tiếp theo
-        let nextPaymentDate = startDate;
-        while (isBefore(nextPaymentDate, currentTime)) {
-            nextPaymentDate = addMonths(nextPaymentDate, 1);
+        let nextPaymentDate = new Date(startDate);
+
+        if (isBefore(currentTime, startDate)) {
+            throw new Error('Cannot pay before the contract start date.');
         }
 
-        // Nếu ngày thanh toán trùng với ngày bắt đầu hợp đồng, cho phép thanh toán
-        if (isSameDay(currentTime, startDate)) {
+        if (isSameMonth(currentTime, startDate) && isBefore(startDate, currentTime)) {
             nextPaymentDate = startDate;
+        } else {
+            while (isBefore(nextPaymentDate, currentTime)) {
+                nextPaymentDate = addMonths(nextPaymentDate, 1);
+            }
         }
 
-        // Kiểm tra xem hôm nay có phải là ngày thanh toán không
-        if (!isSameDay(currentTime, nextPaymentDate) && isBefore(currentTime, nextPaymentDate)) {
-            throw new Error('Not yet time for the next rent payment.');
+        nextPaymentDate.setDate(startDate.getDate());
+        console.log(`Next payment date: ${nextPaymentDate}`);
+
+        const paymentWindowEnd = addDays(nextPaymentDate, 20);
+        console.log(`Payment window end: ${paymentWindowEnd}`);
+
+        if (isBefore(currentTime, nextPaymentDate) || isAfter(currentTime, paymentWindowEnd)) {
+            throw new Error('Today is not within the payment window for rent payment.');
         }
 
         // Ước lượng lượng gas cần thiết
@@ -321,14 +619,13 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
             gasPrice: web3.utils.toWei('30', 'gwei').toString(),
         });
 
-        // Chuyển số tiền thuê hàng tháng từ wei sang float
-        const amountAsFloat = Number(rental.monthlyRent);
+        console.log(`Transaction hash: ${receipt.transactionHash}`);
 
         // Lưu thông tin giao dịch vào cơ sở dữ liệu
         await prisma.transaction.create({
             data: {
                 contract_id: contractId,
-                amount: amountAsFloat,
+                amount: Number(rental.monthlyRent),
                 transaction_hash: receipt.transactionHash,
                 status: 'COMPLETED',
                 description: 'Monthly rent payment',
@@ -339,10 +636,12 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
             data: {
-                updated_at: new Date(), // 
-                status: 'ONGOING', // 
+                updated_at: new Date(),
+                status: 'ONGOING',
             }
         });
+
+        console.log(`Contract ${contractId} updated successfully.`);
 
         return updatedContract;
     } catch (error) {
@@ -351,14 +650,84 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
     }
 };
 
-// Hàm kiểm tra thông báo trước 30 ngày
+export const terminateForNonPayment = async (contractId: number, ownerId: number): Promise<PrismaContract> => {
+    try {
+        // Kiểm tra xem hợp đồng có quá hạn thanh toán hay không
+        await checkOverduePayments();
+
+        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
+        const contract = await prisma.contract.findUnique({
+            where: { contract_id: contractId },
+        });
+
+        if (!contract) {
+            throw new Error('Contract not found.');
+        }
+
+        // Kiểm tra xem hợp đồng đã quá hạn chưa
+        const currentDate = new Date();
+        const endDate = new Date(contract.end_date); // Giả sử bạn có trường `end_date` trong cơ sở dữ liệu hợp đồng
+        if (currentDate <= endDate) {
+            throw new Error('Contract is not overdue yet.');
+        }
+
+        // Lấy thông tin người dùng từ cơ sở dữ liệu
+        const owner = await prisma.user.findUnique({
+            where: { user_id: ownerId },
+        });
+
+        if (!owner || !owner.wallet_address) {
+            throw new Error('Owner not found or does not have a wallet address.');
+        }
+
+        const ownerAddress = owner.wallet_address.toLowerCase();
+
+        // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
+        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+            from: ownerAddress,
+        });
+
+        // Chuyển đổi trạng thái hợp đồng thành số nguyên
+        const rentalStatus = parseInt(rental.status, 10);
+        if (rentalStatus !== 2) { // ONGOING = 2
+            throw new Error('Contract is not in an ongoing state.');
+        }
+
+        // Kết thúc hợp đồng trên blockchain
+        const gasEstimate = await rentalContract.methods.terminateForNonPayment(contractId).estimateGas({
+            from: ownerAddress,
+        });
+
+        const receipt = await rentalContract.methods.terminateForNonPayment(contractId).send({
+            from: ownerAddress,
+            gas: gasEstimate.toString(),
+            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        });
+
+        // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
+        const updatedContract = await prisma.contract.update({
+            where: { contract_id: contractId },
+            data: {
+                status: 'ENDED',
+                updated_at: new Date(),
+            },
+        });
+
+        console.log('Contract terminated successfully:', receipt);
+        return updatedContract;
+    } catch (error) {
+        console.error('Error in terminateForNonPayment:', error);
+        throw error;
+    }
+};
+
 const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
     const today = new Date();
     const daysDifference = differenceInDays(cancellationDate, today);
     return daysDifference >= 30;
 };
 
-
+// Hàm hủy hợp đồng bởi người thuê
 export const cancelContractByRenter = async (contractId: number, renterUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
@@ -374,13 +743,13 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
         const notifyBefore30Days = isNotificationBefore30Days(cancellationDate);
         
          // Lấy thông tin người thuê từ cơ sở dữ liệu
-         const renter = await prisma.user.findUnique({
+        const renter = await prisma.user.findUnique({
             where: { user_id: renterUserId },
-            });
+        });
 
-            if (!renter || !renter.wallet_address) {
-                throw new Error('Renter not found or does not have a wallet address.');
-            }
+        if (!renter || !renter.wallet_address) {
+            throw new Error('Renter not found or does not have a wallet address.');
+        }
 
         const renterAddress = renter.wallet_address.toLowerCase();
 
@@ -407,6 +776,16 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
         if (!notifyBefore30Days) {
             // Nếu không thông báo trước 30 ngày, lấy tiền thuê hàng tháng làm extraCharge
             extraCharge = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
+
+            // Kiểm tra số dư tài khoản
+            const balance = await web3.eth.getBalance(renterAddress);
+            const extraChargeWei = web3.utils.toWei(extraCharge.toString(), 'wei');
+            console.log(`Renter Address: ${renterAddress}`);
+            console.log(`Balance (Wei): ${balance}`);
+            console.log(`Extra Charge (Wei): ${extraChargeWei}`);
+            if (Number(balance) < Number(web3.utils.toWei(extraCharge.toString(), 'wei'))) {
+                throw new Error('Insufficient balance to cancel contract.');
+            }
 
             // Ước lượng lượng gas cần thiết
             const gasEstimate = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).estimateGas({
@@ -495,7 +874,7 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
     }
 };
 
-
+// Hàm hủy hợp đồng bởi chủ nhà
 export const cancelContractByOwner = async (contractId: number, ownerUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
@@ -550,6 +929,12 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
             depositAmount = Number(web3.utils.fromWei(rental.depositAmount, 'wei'));
         }
 
+        // Kiểm tra số dư tài khoản
+        const balance = await web3.eth.getBalance(ownerAddress);
+        if (Number(balance) < Number(web3.utils.toWei((compensation + depositAmount).toString(), 'wei'))) {
+            throw new Error('Insufficient balance to cancel contract.');
+        }
+
         // Ước lượng gas cho việc hủy hợp đồng
         const gasEstimate = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).estimateGas({
             from: ownerAddress,
@@ -599,7 +984,7 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
     }
 };
 
-
+// lấy thông tin các giao dịch
 export const getContractTransactions = async (contractId: number, userId: number): Promise<any[]> => {
     try {
         // Lấy thông tin người dùng từ cơ sở dữ liệu
@@ -640,7 +1025,7 @@ export const getContractTransactions = async (contractId: number, userId: number
     }
 };
 
-// Hàm lấy chi tiết hợp đồng từ cơ sở dữ liệu
+// lấy chi tiết hợp đồng từ cơ sở dữ liệu
 export const getContractDetails = async (contractId: number, userId: number): Promise<any> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
@@ -703,8 +1088,6 @@ export const getContractDetails = async (contractId: number, userId: number): Pr
 //         throw new Error(`Failed to retrieve contract details: ${(error as Error).message}`);
 //     }
 // };
-
-
 
 
 
