@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+}
+
+model User {
+  user_id            Int                @id @map("_id")
+  name               String
+  avatar             String?
+  chat_conversations String[]           @db.ObjectId
+  status             UserStatus         @default(ACTIVE)
+  ChatConversation   ChatConversation[] @relation(fields: [chat_conversations], references: [id])
+  Chat               Chat[]             
+}
+
+model ChatConversation {
+  id  String   @id @default(auto()) @db.ObjectId @map("_id")
+  user_ids              Int[]
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+  Users                 User[]   @relation(fields: [user_ids], references: [user_id])
+  Chat                  Chat[]
+}
+
+model Chat {
+  chat_id              String   @id @default(auto()) @db.ObjectId @map("_id")
+  chat_conversation_id String   @db.ObjectId
+  user_id              Int
+  message              String 
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  User                 User     @relation(fields: [user_id], references: [user_id])
+  ChatConversation     ChatConversation @relation(fields: [chat_conversation_id], references: [id])
+}
