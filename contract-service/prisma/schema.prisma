@@ -65,6 +65,7 @@ enum Status {
   DEPOSITED
   ONGOING
   ENDED
+  OVERDUE
 }
 
 model Contract {
