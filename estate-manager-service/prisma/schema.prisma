@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Chat {
+  chatId    String        @id @default(auto()) @map("_id") @db.ObjectId
+  sender    UserBaseEmbed
+  receiver  UserBaseEmbed
+  message   String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("chats")
+}
+
+enum Status {
+  RECEIVED
+  READ
+  DELETED
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  body      String
+  status    Status   @default(RECEIVED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+
+  @@map("notifications")
+}
+
+type Address {
+  street   String
+  ward     String
+  district String
+  city     String
+}
+
+enum PropertyStatus {
+  PENDING // waiting for approval
+  ACTIVE // approved and available for rent
+  INACTIVE // not approved
+  REJECTED // rejected by admin
+  UNAVAILABLE // rented out
+}
+
+model Property {
+  propertyId       String              @id @map("_id")
+  owner            UserPropertyEmbed
+  title            String
+  description      String
+  images           String[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  address          Address
+  deposit          Float               @default(0)
+  minDuration      Int                 @default(0)
+  deleted          Boolean             @default(false)
+  price            Float?              @default(0)
+  agreementPrice   Boolean?            @default(false)
+  slug             String              @unique
+  latitude         Float?
+  longitude        Float?
+  status           PropertyStatus      @default(PENDING)
+  rentalConditions RentalCondition[]
+  attributes       PropertyAttribute[]
+
+  @@map("properties")
+}
+
+model RejectReason {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String   @db.ObjectId
+  reason     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("rejectReasons")
+}
+
+model Attribute {
+  id        String              @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  name      String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  deleted   Boolean             @default(false)
+  Property  PropertyAttribute[]
+
+  @@map("attributes")
+}
+
+model PropertyAttribute {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String
+  attributeId String    @db.ObjectId
+  Attribute   Attribute @relation(fields: [attributeId], references: [id])
+  Property    Property  @relation(fields: [propertyId], references: [propertyId])
+
+  @@unique([propertyId, attributeId])
+  @@map("propertyAttributes")
+}
+
+type RentalCondition {
+  type  String
+  value String
+}
+
+enum UserInteractionType {
+  VIEWED
+  FAVORITED
+}
+
+model UserPropertyInteraction {
+  interactionId   String                   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String                   @db.ObjectId
+  property        PropertyInteractionEmbed
+  interactionType UserInteractionType
+  deleted         Boolean                  @default(false)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@map("userPropertyInteractions")
+}
+
+type PropertyInteractionEmbed {
+  propertyId       String
+  title            String
+  description      String
+  images           String[]
+  price            Float?
+  rentalConditions RentalCondition[]
+  address          Address
+  owner            UserPropertyEmbed
+}
+
+model Review {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  content    String
+  rating     Int
+  medias     String[]      @default([])
+  parentId   String?       @db.ObjectId
+  propertyId String        @db.ObjectId
+  user       UserBaseEmbed
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deleted    Boolean       @default(false)
+
+  @@map("reviews")
+}
+
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+}
+
+enum UserType {
+  admin
+  renter
+  owner
+}
+
+model User {
+  userId        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  avatar        String?
+  email         String     @unique
+  password      String
+  phoneNumber   String?
+  userTypes     UserType[]
+  walletAddress String?
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("users")
+}
+
+type UserPropertyEmbed {
+  userId      String
+  name        String
+  avatar      String?
+  email       String
+  phoneNumber String?
+}
+
+type UserBaseEmbed {
+  userId String
+  name   String
+  avatar String
+}

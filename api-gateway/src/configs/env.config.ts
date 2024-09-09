@@ -5,10 +5,8 @@ dotenv.config();
 
 const EnvSchema = z.object({
     PORT: z.coerce.number(),
-    USER_PREFIX: z.string(),
-    USER_SERVICE_URL: z.string().url(),
-    PROPERTY_PREFIX: z.string(),
-    PROPERTY_SERVICE_URL: z.string().url(),
+    ESTATE_MANAGER_PREFIX: z.string(),
+    ESTATE_MANAGER_SERVICE_SERVICE_URL: z.string().url(),
     CONTRACT_PREFIX: z.string(),
     CONTRACT_SERVICE_URL: z.string().url(),
     CHAT_PREFIX: z.string(),

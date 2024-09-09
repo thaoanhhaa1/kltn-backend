@@ -20,10 +20,8 @@ app.use(
 );
 
 const {
-    USER_PREFIX,
-    USER_SERVICE_URL,
-    PROPERTY_PREFIX,
-    PROPERTY_SERVICE_URL,
+    ESTATE_MANAGER_PREFIX,
+    ESTATE_MANAGER_SERVICE_SERVICE_URL,
     CONTRACT_PREFIX,
     CONTRACT_SERVICE_URL,
     CHAT_PREFIX,
@@ -31,18 +29,9 @@ const {
 } = envConfig;
 
 app.use(
-    USER_PREFIX,
+    ESTATE_MANAGER_PREFIX,
     createProxyMiddleware({
-        target: USER_SERVICE_URL,
-        changeOrigin: true,
-        logger: console,
-    }),
-);
-
-app.use(
-    PROPERTY_PREFIX,
-    createProxyMiddleware({
-        target: PROPERTY_SERVICE_URL,
+        target: ESTATE_MANAGER_SERVICE_SERVICE_URL,
         changeOrigin: true,
         logger: console,
     }),

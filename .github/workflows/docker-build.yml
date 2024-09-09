@@ -109,7 +109,7 @@ jobs:
                        -H "Content-Type: application/json" \
                        -d '{"image": "${{ secrets.DOCKER_USERNAME }}/ikltncontractservice:latest"}'
 
-    build-chat-service:
+    build-chatbot-service:
         runs-on: ubuntu-latest
 
         steps:
@@ -120,7 +120,7 @@ jobs:
               run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
             - name: Build Docker image for chat service
-              run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ikltnchatservice:latest ./chat-service/.
+              run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ikltnchatservice:latest ./chatbot-service/.
 
             - name: Push Docker image to Docker Hub
               run: docker push ${{ secrets.DOCKER_USERNAME }}/ikltnchatservice:latest
@@ -140,10 +140,10 @@ jobs:
               run: |
                   sshpass -p ${{ secrets.VPS_PASSWORD }} ssh -tt -o StrictHostKeyChecking=no root@${{ secrets.VPS_IP }} << 'EOF'
                     # Stop container cũ
-                    docker stop chat-service
+                    docker stop chatbot-service
 
                     # Xóa container cũ
-                    docker rm chat-service
+                    docker rm chatbot-service
                     
                     # Xóa Docker image
                     docker rmi thaoanhhaa1/ikltnchatservice
@@ -152,7 +152,7 @@ jobs:
                     docker pull thaoanhhaa1/ikltnchatservice
 
                     # Run container mới
-                    docker run --name chat-service -p 8000:8000 -e QDRANT_URL=${{secrets.QDRANT_URL}} -e QDRANT_API_KEY=${{secrets.QDRANT_API_KEY}} -e QDRANT_PROPERTY_COLLECTION=${{secrets.QDRANT_PROPERTY_COLLECTION}} -e EMBEDDING_MODEL=${{secrets.EMBEDDING_MODEL}} -e GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}} -e GOOGLE_MODEL=${{secrets.GOOGLE_MODEL}} -e RABBIT_MQ_URL=${{secrets.RABBIT_MQ_URL}} -e RABBIT_MQ_PROPERTY_QUEUE=${{secrets.RABBIT_MQ_PROPERTY_QUEUE}} -e JWT_ACCESS_SECRET=${{secrets.JWT_ACCESS_SECRET}} -e MONGO_URL=${{secrets.MONGO_URL}} -e DATABASE_NAME=kltn-chat-service -d thaoanhhaa1/ikltnchatservice
+                    docker run --name chatbot-service -p 8000:8000 -e QDRANT_URL=${{secrets.QDRANT_URL}} -e QDRANT_API_KEY=${{secrets.QDRANT_API_KEY}} -e QDRANT_PROPERTY_COLLECTION=${{secrets.QDRANT_PROPERTY_COLLECTION}} -e EMBEDDING_MODEL=${{secrets.EMBEDDING_MODEL}} -e GOOGLE_API_KEY=${{secrets.GOOGLE_API_KEY}} -e GOOGLE_MODEL=${{secrets.GOOGLE_MODEL}} -e RABBIT_MQ_URL=${{secrets.RABBIT_MQ_URL}} -e RABBIT_MQ_PROPERTY_QUEUE=${{secrets.RABBIT_MQ_PROPERTY_QUEUE}} -e JWT_ACCESS_SECRET=${{secrets.JWT_ACCESS_SECRET}} -e MONGO_URL=${{secrets.MONGO_URL}} -e DATABASE_NAME=kltn-chatbot-service -d thaoanhhaa1/ikltnchatservice
 
                     exit
                   EOF
