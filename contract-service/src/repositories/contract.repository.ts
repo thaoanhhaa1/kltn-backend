@@ -3,10 +3,10 @@
 import Web3 from 'web3';
 import envConfig from '../configs/env.config';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
-import { Contract as PrismaContract, Status,PropertyStatus } from '@prisma/client';
+import { Contract as PrismaContract, Status, PropertyStatus } from '@prisma/client';
 import prisma from '../prisma/prismaClient';
 import { CreateContractReq } from '../schemas/contract.schema';
-import { startOfDay, endOfDay, isSameDay, isBefore, addMonths,  differenceInDays  } from 'date-fns';
+import { startOfDay, endOfDay, isSameDay, isBefore, addMonths, differenceInDays } from 'date-fns';
 
 // Khởi tạo Web3 và hợp đồng từ biến môi trường
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
@@ -23,35 +23,37 @@ const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contr
 // Định nghĩa hàm tạo hợp đồng trên blockchain
 const createBlockchainContract = async (
     ownerAddress: string,
-    renterAddress: string, 
-    startDate: number, 
-    endDate: number, 
-    monthlyRent: number, 
-    depositAmount: number
+    renterAddress: string,
+    startDate: number,
+    endDate: number,
+    monthlyRent: number,
+    depositAmount: number,
 ) => {
     try {
-        const receipt = await rentalContract.methods.createContract(
-            ownerAddress, // Địa chỉ chủ nhà
-            renterAddress, // Địa chỉ người thuê
-            startDate, // Ngày bắt đầu
-            endDate, // Ngày kết thúc
-            depositAmount, // Số tiền đặt cọc
-            monthlyRent // Giá thuê hàng tháng
-        ).send({ 
-            from: ownerAddress, 
-            gas: '3000000', 
-            gasPrice: web3.utils.toWei('20', 'gwei').toString()
-        });
-        
-        console.log("Blockchain contract created successfully:");
+        const receipt = await rentalContract.methods
+            .createContract(
+                ownerAddress, // Địa chỉ chủ nhà
+                renterAddress, // Địa chỉ người thuê
+                startDate, // Ngày bắt đầu
+                endDate, // Ngày kết thúc
+                depositAmount, // Số tiền đặt cọc
+                monthlyRent, // Giá thuê hàng tháng
+            )
+            .send({
+                from: ownerAddress,
+                gas: '3000000',
+                gasPrice: web3.utils.toWei('20', 'gwei').toString(),
+            });
+
+        console.log('Blockchain contract created successfully:');
         console.log(receipt);
 
-        return receipt; 
+        return receipt;
     } catch (error: unknown) {
         if (error instanceof Error) {
-            console.error("Error creating blockchain contract:", error.message);
+            console.error('Error creating blockchain contract:', error.message);
         } else {
-            console.error("Unknown error occurred while creating blockchain contract.");
+            console.error('Unknown error occurred while creating blockchain contract.');
         }
         throw error;
     }
@@ -61,11 +63,11 @@ const createBlockchainContract = async (
 export const createContract = async (contract: CreateContractReq): Promise<PrismaContract> => {
     // Lấy thông tin địa chỉ của chủ nhà và người thuê từ bảng `User`
     const owner = await prisma.user.findUnique({
-        where: { user_id: contract.owner_user_id }
+        where: { user_id: contract.owner_user_id },
     });
 
     const renter = await prisma.user.findUnique({
-        where: { user_id: contract.renter_user_id }
+        where: { user_id: contract.renter_user_id },
     });
 
     if (!owner || !renter) {
@@ -77,9 +79,9 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
         throw new Error('Owner or renter does not have a wallet address');
     }
 
-     // Lấy thông tin bất động sản từ cơ sở dữ liệu
-     const property = await prisma.property.findUnique({
-        where: { property_id: contract.property_id }
+    // Lấy thông tin bất động sản từ cơ sở dữ liệu
+    const property = await prisma.property.findUnique({
+        where: { property_id: contract.property_id },
     });
 
     if (!property) {
@@ -96,12 +98,12 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
 
     // Tạo hợp đồng trên blockchain
     const blockchainReceipt = await createBlockchainContract(
-        owner.wallet_address,    // Địa chỉ của chủ nhà
-        renter.wallet_address,   // Địa chỉ của người thuê
+        owner.wallet_address, // Địa chỉ của chủ nhà
+        renter.wallet_address, // Địa chỉ của người thuê
         startDateTimestamp,
         endDateTimestamp,
         contract.monthly_rent,
-        contract.deposit_amount
+        contract.deposit_amount,
     );
 
     if (!blockchainReceipt.transactionHash) {
@@ -122,7 +124,7 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
         created_at: new Date(),
         updated_at: new Date(),
         contract_terms: contract.contract_terms,
-        transaction_hash_contract: blockchainReceipt.transactionHash 
+        transaction_hash_contract: blockchainReceipt.transactionHash,
     };
 
     // Lưu thông tin hợp đồng vào cơ sở dữ liệu
@@ -130,15 +132,14 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
         data: contractData,
     });
 
-    console.log("Contract created and saved to database successfully:");
+    console.log('Contract created and saved to database successfully:');
     console.log(createdContract);
 
     return createdContract;
 };
 
-
 // Hàm thực hiện đặt cọc và cập nhật hợp đồng
-export const deposit = async (contractId: number, renterUserId: number): Promise<any> => {
+export const deposit = async (contractId: number, renterUserId: string): Promise<any> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -149,10 +150,9 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
             throw new Error('Contract not found.');
         }
 
-
         // Lấy thông tin người thuê từ cơ sở dữ liệu
         const renter = await prisma.user.findUnique({
-        where: { user_id: renterUserId },
+            where: { user_id: renterUserId },
         });
 
         if (!renter || !renter.wallet_address) {
@@ -163,9 +163,9 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
 
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
+            from: renterAddress, // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
         });
-        
+
         console.log('Rental Details:', rental);
 
         const depositAmount = rental.depositAmount;
@@ -187,7 +187,7 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
             from: renterAddress,
             value: depositAmount,
             gas: gasEstimate.toString(),
-            gasPrice: web3.utils.toWei('30', 'gwei').toString()
+            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
         });
         console.log('Transaction receipt:', receipt);
 
@@ -208,14 +208,13 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
             data: { status: PropertyStatus.UNAVAILABLE },
         });
 
-
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
-            data: { 
+            data: {
                 status: 'DEPOSITED', // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
-                updated_at: new Date() // Cập nhật thời gian
-            }
+                updated_at: new Date(), // Cập nhật thời gian
+            },
         });
         console.log('Updated Contract:', updatedContract);
 
@@ -226,8 +225,7 @@ export const deposit = async (contractId: number, renterUserId: number): Promise
     }
 };
 
-
-export const payMonthlyRent = async (contractId: number, renterUserId: number): Promise<PrismaContract> => {
+export const payMonthlyRent = async (contractId: number, renterUserId: string): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -240,19 +238,18 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         // Lấy thông tin người thuê từ cơ sở dữ liệu
         const renter = await prisma.user.findUnique({
             where: { user_id: renterUserId },
-            });
+        });
 
-            if (!renter || !renter.wallet_address) {
-                throw new Error('Renter not found or does not have a wallet address.');
-            }
+        if (!renter || !renter.wallet_address) {
+            throw new Error('Renter not found or does not have a wallet address.');
+        }
 
         const renterAddress = renter.wallet_address.toLowerCase();
-       
+
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
+            from: renterAddress, // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
         });
-        
 
         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
         if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
@@ -339,9 +336,9 @@ export const payMonthlyRent = async (contractId: number, renterUserId: number): 
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
             data: {
-                updated_at: new Date(), // 
-                status: 'ONGOING', // 
-            }
+                updated_at: new Date(), //
+                status: 'ONGOING', //
+            },
         });
 
         return updatedContract;
@@ -358,8 +355,11 @@ const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
     return daysDifference >= 30;
 };
 
-
-export const cancelContractByRenter = async (contractId: number, renterUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
+export const cancelContractByRenter = async (
+    contractId: number,
+    renterUserId: string,
+    cancellationDate: Date,
+): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -372,15 +372,15 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
 
         // Xác định thông báo trước 30 ngày
         const notifyBefore30Days = isNotificationBefore30Days(cancellationDate);
-        
-         // Lấy thông tin người thuê từ cơ sở dữ liệu
-         const renter = await prisma.user.findUnique({
-            where: { user_id: renterUserId },
-            });
 
-            if (!renter || !renter.wallet_address) {
-                throw new Error('Renter not found or does not have a wallet address.');
-            }
+        // Lấy thông tin người thuê từ cơ sở dữ liệu
+        const renter = await prisma.user.findUnique({
+            where: { user_id: renterUserId },
+        });
+
+        if (!renter || !renter.wallet_address) {
+            throw new Error('Renter not found or does not have a wallet address.');
+        }
 
         const renterAddress = renter.wallet_address.toLowerCase();
 
@@ -397,7 +397,8 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
         }
 
         // Kiểm tra trạng thái hợp đồng
-        if (rental.status === 3) { // Assuming 3 is for Ended status
+        if (rental.status === 3) {
+            // Assuming 3 is for Ended status
             throw new Error('Contract has already ended.');
         }
 
@@ -409,10 +410,12 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
             extraCharge = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
 
             // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).estimateGas({
-                from: renterAddress,
-                value: web3.utils.toWei(extraCharge.toString(), 'wei'),
-            });
+            const gasEstimate = await rentalContract.methods
+                .cancelContractByRenter(contractId, notifyBefore30Days)
+                .estimateGas({
+                    from: renterAddress,
+                    value: web3.utils.toWei(extraCharge.toString(), 'wei'),
+                });
 
             // Gọi hàm cancelContractByRenter trên smart contract
             const receipt = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).send({
@@ -447,9 +450,11 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
         } else {
             // Nếu thông báo trước 30 ngày
             // Ước lượng lượng gas cần thiết
-            const gasEstimate = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).estimateGas({
-                from: renterAddress,
-            });
+            const gasEstimate = await rentalContract.methods
+                .cancelContractByRenter(contractId, notifyBefore30Days)
+                .estimateGas({
+                    from: renterAddress,
+                });
 
             // Gọi hàm cancelContractByRenter trên smart contract
             const receipt = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).send({
@@ -495,8 +500,11 @@ export const cancelContractByRenter = async (contractId: number, renterUserId: n
     }
 };
 
-
-export const cancelContractByOwner = async (contractId: number, ownerUserId: number, cancellationDate: Date): Promise<PrismaContract> => {
+export const cancelContractByOwner = async (
+    contractId: number,
+    ownerUserId: string,
+    cancellationDate: Date,
+): Promise<PrismaContract> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -534,7 +542,8 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
         }
 
         // Kiểm tra trạng thái hợp đồng trước khi thực hiện hành động
-        if (Number(rental.status.toString()) === 3) { // Assuming 3 is for Ended status
+        if (Number(rental.status.toString()) === 3) {
+            // Assuming 3 is for Ended status
             throw new Error('Contract has already ended.');
         }
 
@@ -551,10 +560,12 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
         }
 
         // Ước lượng gas cho việc hủy hợp đồng
-        const gasEstimate = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).estimateGas({
-            from: ownerAddress,
-            value: web3.utils.toWei((compensation + depositAmount).toString(), 'wei'), // Tổng giá trị cần gửi
-        });
+        const gasEstimate = await rentalContract.methods
+            .cancelContractByOwner(contractId, notifyBefore30Days)
+            .estimateGas({
+                from: ownerAddress,
+                value: web3.utils.toWei((compensation + depositAmount).toString(), 'wei'), // Tổng giá trị cần gửi
+            });
 
         // Gọi hàm cancelContractByOwner trên smart contract
         const receipt = await rentalContract.methods.cancelContractByOwner(contractId, notifyBefore30Days).send({
@@ -599,8 +610,7 @@ export const cancelContractByOwner = async (contractId: number, ownerUserId: num
     }
 };
 
-
-export const getContractTransactions = async (contractId: number, userId: number): Promise<any[]> => {
+export const getContractTransactions = async (contractId: number, userId: string): Promise<any[]> => {
     try {
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const user = await prisma.user.findUnique({
@@ -628,7 +638,7 @@ export const getContractTransactions = async (contractId: number, userId: number
             to: transaction.to,
             amount: Number(transaction.amount), // Chuyển đổi BigInt sang number
             timestamp: new Date(Number(transaction.timestamp) * 1000).toISOString(), // Chuyển đổi BigInt sang number trước khi chuyển đổi timestamp
-            transactionType: transaction.transactionType
+            transactionType: transaction.transactionType,
         }));
 
         console.log('Blockchain Transactions:', transactions);
@@ -641,16 +651,16 @@ export const getContractTransactions = async (contractId: number, userId: number
 };
 
 // Hàm lấy chi tiết hợp đồng từ cơ sở dữ liệu
-export const getContractDetails = async (contractId: number, userId: number): Promise<any> => {
+export const getContractDetails = async (contractId: number, userId: string): Promise<any> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
             where: { contract_id: contractId },
             include: {
-                Owner: true,           // Lấy thông tin chủ sở hữu
-                Renter: true,          // Lấy thông tin người thuê
-                Property: true,        // Lấy thông tin tài sản
-                Transactions: true,    // Lấy danh sách giao dịch
+                Owner: true, // Lấy thông tin chủ sở hữu
+                Renter: true, // Lấy thông tin người thuê
+                Property: true, // Lấy thông tin tài sản
+                Transactions: true, // Lấy danh sách giao dịch
             },
         });
 
@@ -703,8 +713,3 @@ export const getContractDetails = async (contractId: number, userId: number): Pr
 //         throw new Error(`Failed to retrieve contract details: ${(error as Error).message}`);
 //     }
 // };
-
-
-
-
-

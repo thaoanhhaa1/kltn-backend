@@ -32,15 +32,15 @@ RabbitMQ.getInstance().subscribeToQueue({
         switch (type) {
             case USER_QUEUE.type.CREATED:
                 await createUserService({
-                    status: user.status,
-                    user_id: user.user_id,
-                    wallet_address: user.wallet_address,
+                    status: data.status,
+                    user_id: data.userId,
+                    wallet_address: data.walletAddress,
                 });
                 break;
             case USER_QUEUE.type.UPDATED:
-                await updateUserService(user.user_id, {
-                    status: user.status,
-                    wallet_address: user.wallet_address,
+                await updateUserService(data.userId, {
+                    status: data.status,
+                    wallet_address: data.walletAddress,
                 });
                 break;
         }

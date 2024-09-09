@@ -58,7 +58,7 @@ enum PropertyStatus {
 }
 
 model Property {
-  propertyId       String              @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId       String              @id @map("_id")
   owner            UserPropertyEmbed
   title            String
   description      String
@@ -69,7 +69,7 @@ model Property {
   deposit          Float               @default(0)
   minDuration      Int                 @default(0)
   deleted          Boolean             @default(false)
-  price            Float
+  price            Float?              @default(0)
   agreementPrice   Boolean?            @default(false)
   slug             String              @unique
   latitude         Float?
@@ -77,27 +77,38 @@ model Property {
   status           PropertyStatus      @default(PENDING)
   rentalConditions RentalCondition[]
   attributes       PropertyAttribute[]
-  rejectReasons    String[]
 
   @@map("properties")
 }
 
+model RejectReason {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String   @db.ObjectId
+  reason     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("rejectReasons")
+}
+
 model Attribute {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String              @id @default(auto()) @map("_id") @db.ObjectId
   type      String
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deleted   Boolean  @default(false)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  deleted   Boolean             @default(false)
+  Property  PropertyAttribute[]
 
   @@map("attributes")
 }
 
 model PropertyAttribute {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId  String   @db.ObjectId
-  attributeId String   @db.ObjectId
-  Property    Property @relation(fields: [propertyId], references: [propertyId])
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String
+  attributeId String    @db.ObjectId
+  Attribute   Attribute @relation(fields: [attributeId], references: [id])
+  Property    Property  @relation(fields: [propertyId], references: [propertyId])
 
   @@unique([propertyId, attributeId])
   @@map("propertyAttributes")
@@ -130,7 +141,7 @@ type PropertyInteractionEmbed {
   title            String
   description      String
   images           String[]
-  price            Float
+  price            Float?
   rentalConditions RentalCondition[]
   address          Address
   owner            UserPropertyEmbed
@@ -170,7 +181,7 @@ model User {
   avatar        String?
   email         String     @unique
   password      String
-  phoneNumber   String?    @unique
+  phoneNumber   String?
   userTypes     UserType[]
   walletAddress String?
   status        UserStatus @default(ACTIVE)
@@ -183,9 +194,9 @@ model User {
 type UserPropertyEmbed {
   userId      String
   name        String
-  avatar      String
+  avatar      String?
   email       String
-  phoneNumber String
+  phoneNumber String?
 }
 
 type UserBaseEmbed {

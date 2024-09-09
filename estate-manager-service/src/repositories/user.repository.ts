@@ -1,4 +1,4 @@
-import { IPagination } from '../interface/IPagination';
+import { IPagination } from '../interface/pagination';
 import prisma from '../prisma/prismaClient';
 import { RegisterInput } from '../schemas/auth.schema';
 import { IForgotPasswordParams, IUpdateUserParams, IUserId } from '../interface/user';
@@ -79,7 +79,7 @@ export const updateUser = (userId: IUserId, user: IUpdateUserParams) => {
 };
 
 export const findUserByPhone = async (phoneNumber: string) => {
-    return await prisma.user.findUnique({ where: { phoneNumber } });
+    return await prisma.user.findFirst({ where: { phoneNumber } });
 };
 
 export const updatePassword = (userId: IUserId, password: string) => {
@@ -117,4 +117,8 @@ export const updateWalletAddress = (userId: IUserId, walletAddress: string) => {
         data: { walletAddress },
         select: userDTOSelect,
     });
+};
+
+export const findUserById = (userId: IUserId) => {
+    return prisma.user.findUnique({ where: { userId }, select: userDTOSelect });
 };

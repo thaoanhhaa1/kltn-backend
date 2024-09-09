@@ -42,7 +42,7 @@ async def generate_response(request: Request):
     #     return {"response": f"Đã gửi yêu cầu xem lịch sử thanh toán. Vui lòng chờ trong giây lát."}
 
     user = request.state.user
-    user_id = int(user["id"])
+    user_id = (user["id"])
 
     chats = get_chats_by_user_id(user_id=user_id)
 
@@ -86,25 +86,25 @@ def property_callback(message):
     data_dict = data_dict["data"]
 
     if type == "PROPERTY_DELETED" or type == "PROPERTY_UPDATED":
-        qdrant_repo.delete_document(collection_name=property_collection, doc_id=data_dict["property_id"])
+        qdrant_repo.delete_document(collection_name=property_collection, doc_id=data_dict["propertyId"])
 
     if (type == "PROPERTY_UPDATED" and (data_dict["status"] == "ACTIVE" or data_dict["status"] == "UNAVAILABLE")):
-        data_dict["id"] = data_dict["property_id"]
+        data_dict["id"] = data_dict["propertyId"]
 
-        conditions = "\n".join(f"{condition["condition_type"]}: {condition["condition_value"]}" for condition in data_dict["conditions"])
+        conditions = "\n".join(f"{condition["type"]}: {condition["value"]}" for condition in data_dict["rentalConditions"])
         attributes = {}
 
         for attr in data_dict["attributes"]:
-            if attr["attribute_type"] not in attributes:
-                attributes[attr["attribute_type"]] = []
+            if attr["type"] not in attributes:
+                attributes[attr["type"]] = []
 
-            attributes[attr["attribute_type"]].append(attr["attribute_name"])
+            attributes[attr["type"]].append(attr["name"])
 
-        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['prices']}""";
+        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['price']}""";
 
         property_doc = to_document(data=data_dict, content=content, field_names=[
             "id", "title", "description", "latitude", "longitude", "address", "attributes",
-            "images", "conditions", "prices", "owner", "slug"
+            "images", "rentalConditions", "price", "owner", "slug"
         ])
 
         property_split_docs = split_document(property_doc)

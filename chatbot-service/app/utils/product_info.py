@@ -6,26 +6,28 @@ def document_to_product_info(product):
     }
 
     for attr in product.get('attributes', []):
-        attr_type = attr['attribute_type']
+        attr_type = attr['type']
         if attr_type in attributes_dict:
-            attributes_dict[attr_type].append(attr['attribute_name'])
+            attributes_dict[attr_type].append(attr['name'])
 
     return ({
         "title": product.get('title', ''),
         "description": product.get('description', ''),
-        "prices": product.get('prices', ''),
+        "prices": product.get('price', ''),
         "address": {
             "street": product['address'].get('street', ''),
             "ward": product['address'].get('ward', ''),
             "district": product['address'].get('district', ''),
             "city": product['address'].get('city', '')
         },
-        "conditions": [f"{cond['condition_type']}: {cond['condition_value']}" for cond in product.get('conditions', [])],
+        "conditions": [f"{cond['type']}: {cond['value']}" for cond in product.get('rentalConditions', [])],
         "attributes": attributes_dict,
         "slug": product.get('slug', '')
     })
 
 def format_product_infos(product_infos):
+    print(product_infos)
+
     return "\n\n".join([
             f"**Tiêu đề:** {p['title']}\n"
             f"**Mô tả:** {p['description']}\n"

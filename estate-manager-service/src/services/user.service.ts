@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { IPagination } from '../interface/IPagination';
+import { IPagination } from '../interface/pagination';
 import { IForgotPasswordParams, IUpdateUserParams, IUserId } from '../interface/user';
 import {
     countUsers,
@@ -49,12 +49,12 @@ export const updateUserService = async (userId: IUserId, user: IUpdateUserParams
     return updateUser(userId, user);
 };
 
-export const updatePasswordService = async (userId: IUserId, { old_password, password }: UpdatePasswordInput) => {
+export const updatePasswordService = async (userId: IUserId, { oldPassword, password }: UpdatePasswordInput) => {
     const user = await findPassword(userId);
 
     if (!user) throw new CustomError(404, 'User not found');
 
-    const isMatch = await bcrypt.compare(old_password, user.password);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch)
         throw new EntryError(400, 'Invalid password', [
             {

@@ -27,5 +27,5 @@ def delete_item(item_id: str):
 def list_items():
     return list(collection.find())
 
-def get_chats_by_user_id(user_id: int, top_k: int = 5):
+def get_chats_by_user_id(user_id: str, top_k: int = 5):
     return list(collection.find({"user_id": user_id}).sort("updated_at", -1).limit(top_k))

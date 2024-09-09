@@ -21,25 +21,21 @@ enum UserStatus {
 }
 
 model User {
-  user_id         Int      @id
-  wallet_address  String?  @unique
+  user_id         String     @id
+  wallet_address  String?    @unique
   status          UserStatus @default(ACTIVE)
-
-  // Thiết lập các mối quan hệ với bảng Contract
   OwnedContracts  Contract[] @relation("OwnerContracts")
   RentedContracts Contract[] @relation("RenterContracts")
 
   @@map("users")
 }
 
-
-
 model Address {
-  address_id String @id
-  street String
-  ward String
-  district String
-  city String
+  address_id String     @id
+  street     String
+  ward       String
+  district   String
+  city       String
   Properties Property[]
 }
 
@@ -52,12 +48,12 @@ enum PropertyStatus {
 }
 
 model Property {
-  property_id     String            @id @map("_id")
-  status          PropertyStatus    @default(PENDING)
-  deleted         Boolean?           @default(false)
-  address_id      String            
-  Address         Address           @relation(fields: [address_id], references: [address_id])
-  Contracts       Contract[]        @relation("PropertyContracts")
+  property_id String         @id @map("_id")
+  status      PropertyStatus @default(PENDING)
+  deleted     Boolean?       @default(false)
+  address_id  String
+  Address     Address        @relation(fields: [address_id], references: [address_id])
+  Contracts   Contract[]     @relation("PropertyContracts")
 }
 
 enum Status {
@@ -69,8 +65,8 @@ enum Status {
 
 model Contract {
   contract_id               Int           @id @default(autoincrement())
-  owner_user_id             Int
-  renter_user_id            Int
+  owner_user_id             String
+  renter_user_id            String
   property_id               String
   start_date                DateTime
   end_date                  DateTime
@@ -83,24 +79,19 @@ model Contract {
   contract_terms            String
   transaction_hash_contract String?
   Transactions              Transaction[] @relation("ContractTransactions")
-  
-  // Thiết lập các mối quan hệ với bảng User với tên mối quan hệ cụ thể
-  Owner                    User           @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
-  Renter                   User           @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
-
-  Property                 Property       @relation("PropertyContracts", fields: [property_id], references: [property_id])
+  Owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
+  Renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
+  Property                  Property      @relation("PropertyContracts", fields: [property_id], references: [property_id])
 }
-
 
 model Transaction {
-  id                      Int      @id @default(autoincrement())
-  contract_id             Int
-  amount                  Float
-  transaction_hash        String
-  status                  String
-  description             String?  // Trường mô tả nội dung giao dịch
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-  Contract                Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+  id               Int      @id @default(autoincrement())
+  contract_id      Int
+  amount           Float
+  transaction_hash String
+  status           String
+  description      String? // Trường mô tả nội dung giao dịch
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  Contract         Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
 }
-

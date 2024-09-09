@@ -24,6 +24,9 @@ const EnvSchema = z.object({
     FIREBASE_MESSAGING_SENDER_ID: z.string(),
     FIREBASE_APP_ID: z.string(),
     FIREBASE_MEASUREMENT_ID: z.string(),
+    ELASTICSEARCH_URL: z.string().url(),
+    ELASTICSEARCH_USERNAME: z.string(),
+    ELASTICSEARCH_PASSWORD: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

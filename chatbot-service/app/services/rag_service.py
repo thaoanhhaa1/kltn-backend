@@ -156,14 +156,14 @@ class RagService:
         must_filter = []
         if min_price is not None:
             must_filter.append(qdrant_models.FieldCondition(
-                key="metadata.prices",
+                key="metadata.price",
                 range=qdrant_models.Range(
                     gte=min_price
                 )
             ))
         if max_price is not None:
             must_filter.append(qdrant_models.FieldCondition(
-                key="metadata.prices",
+                key="metadata.price",
                 range=qdrant_models.Range(
                     lte=max_price
                 )
