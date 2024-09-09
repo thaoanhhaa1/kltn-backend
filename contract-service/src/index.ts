@@ -60,21 +60,19 @@ RabbitMQ.getInstance().subscribeToQueue({
         switch (type) {
             case PROPERTY_QUEUE.type.CREATED:
                 await createPropertyService({
-                    property_id: property.property_id,
+                    property_id: data.propertyId,
                     status: property.status,
-                    address_id: property.address_id,
                     deleted: false,
                     address: data.address,
                 });
                 break;
             case PROPERTY_QUEUE.type.DELETED:
-                await softDeletePropertyService(property.property_id);
+                await softDeletePropertyService(data.propertyId);
                 break;
             case PROPERTY_QUEUE.type.UPDATED:
-                await updatePropertyService(property.property_id, {
+                await updatePropertyService(data.propertyId, {
                     status: property.status,
                     deleted: property.deleted,
-                    address_id: property.address_id,
                     address: data.address,
                 });
                 break;

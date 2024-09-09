@@ -24,19 +24,21 @@ model User {
   user_id         String     @id
   wallet_address  String?    @unique
   status          UserStatus @default(ACTIVE)
-  OwnedContracts  Contract[] @relation("OwnerContracts")
-  RentedContracts Contract[] @relation("RenterContracts")
+  ownedContracts  Contract[] @relation("OwnerContracts")
+  rentedContracts Contract[] @relation("RenterContracts")
 
-  @@map("users")
+  @@map("`user`")
 }
 
 model Address {
-  address_id String     @id
+  address_id String     @id @default(uuid())
   street     String
   ward       String
   district   String
   city       String
-  Properties Property[]
+  properties Property[]
+
+  @@map("`address`")
 }
 
 enum PropertyStatus {
@@ -48,12 +50,14 @@ enum PropertyStatus {
 }
 
 model Property {
-  property_id String         @id @map("_id")
+  property_id String         @id
   status      PropertyStatus @default(PENDING)
   deleted     Boolean?       @default(false)
   address_id  String
-  Address     Address        @relation(fields: [address_id], references: [address_id])
-  Contracts   Contract[]     @relation("PropertyContracts")
+  address     Address        @relation(fields: [address_id], references: [address_id])
+  contracts   Contract[]     @relation("PropertyContracts")
+
+  @@map("`property`")
 }
 
 enum Status {
@@ -78,10 +82,12 @@ model Contract {
   deposit_amount            Float
   contract_terms            String
   transaction_hash_contract String?
-  Transactions              Transaction[] @relation("ContractTransactions")
-  Owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
-  Renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
-  Property                  Property      @relation("PropertyContracts", fields: [property_id], references: [property_id])
+  transactions              Transaction[] @relation("ContractTransactions")
+  owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
+  renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
+  property                  Property      @relation("PropertyContracts", fields: [property_id], references: [property_id])
+
+  @@map("`contract`")
 }
 
 model Transaction {
@@ -93,5 +99,7 @@ model Transaction {
   description      String? // Trường mô tả nội dung giao dịch
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
-  Contract         Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+  contract         Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+
+  @@map("`transaction`")
 }

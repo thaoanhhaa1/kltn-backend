@@ -657,10 +657,10 @@ export const getContractDetails = async (contractId: number, userId: string): Pr
         const contract = await prisma.contract.findUnique({
             where: { contract_id: contractId },
             include: {
-                Owner: true, // Lấy thông tin chủ sở hữu
-                Renter: true, // Lấy thông tin người thuê
-                Property: true, // Lấy thông tin tài sản
-                Transactions: true, // Lấy danh sách giao dịch
+                owner: true, // Lấy thông tin chủ sở hữu
+                renter: true, // Lấy thông tin người thuê
+                property: true, // Lấy thông tin tài sản
+                transactions: true, // Lấy danh sách giao dịch
             },
         });
 
