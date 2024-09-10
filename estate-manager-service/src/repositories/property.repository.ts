@@ -162,6 +162,9 @@ export const countNotDeletedProperties = async () => {
     return prisma.property.count({
         where: {
             deleted: false,
+            status: {
+                in: ['ACTIVE', 'UNAVAILABLE'],
+            },
         },
     });
 };
