@@ -1,17 +1,17 @@
 import { IProperty } from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 
-export const createProperty = async ({ address, ...property }: IProperty) => {
-    // const addressRes = await prisma.address.create({
-    //     data: address,
-    // });
-
+export const createProperty = ({ address, address_id, ...property }: IProperty) => {
     return prisma.property.create({
         data: {
             ...property,
-            // address_id: addressRes.address_id,
-            address: {
-                create: address,
+            Address: {
+                connectOrCreate: {
+                    where: {
+                        address_id,
+                    },
+                    create: address,
+                },
             },
         },
     });
@@ -28,18 +28,24 @@ export const softDeleteProperty = (property_id: string) => {
     });
 };
 
-export const updateProperty = async (property_id: string, { address, ...property }: Omit<IProperty, 'property_id'>) => {
-    const addressRes = await prisma.address.create({
-        data: address,
-    });
-
+export const updateProperty = (
+    property_id: string,
+    { address, address_id, ...property }: Omit<IProperty, 'property_id'>,
+) => {
     return prisma.property.update({
         where: {
             property_id,
         },
         data: {
             ...property,
-            address_id: addressRes.address_id,
+            Address: {
+                connectOrCreate: {
+                    where: {
+                        address_id,
+                    },
+                    create: address,
+                },
+            },
         },
     });
 };
