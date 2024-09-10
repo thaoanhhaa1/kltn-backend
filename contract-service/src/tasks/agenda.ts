@@ -2,9 +2,7 @@ import { Agenda, Job } from 'agenda';
 import { endContract } from '../repositories/contract.repository';
 import { checkOverduePayments } from './checkOverduePayments'; // Đảm bảo rằng bạn đã tạo file này
 import prisma from '../prisma/prismaClient';
-import envConfig from '../configs/env.config';
-
-const mongoConnectionString = envConfig.MONGO_CONNECTION
+const mongoConnectionString = 'mongodb+srv://hieu92145:17012002@cluster0.nxsfo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // Thay đổi URL này thành URL kết nối MongoDB của bạn
 
 const agenda = new Agenda({ db: { address: mongoConnectionString, collection: 'agendaJobs' } });
 

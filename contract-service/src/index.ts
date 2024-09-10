@@ -33,15 +33,15 @@ RabbitMQ.getInstance().subscribeToQueue({
         switch (type) {
             case USER_QUEUE.type.CREATED:
                 await createUserService({
-                    status: data.status,
-                    user_id: data.userId,
-                    wallet_address: data.walletAddress,
+                    status: user.status,
+                    user_id: user.user_id,
+                    wallet_address: user.wallet_address,
                 });
                 break;
             case USER_QUEUE.type.UPDATED:
-                await updateUserService(data.userId, {
-                    status: data.status,
-                    wallet_address: data.walletAddress,
+                await updateUserService(user.user_id, {
+                    status: user.status,
+                    wallet_address: user.wallet_address,
                 });
                 break;
         }
@@ -61,19 +61,21 @@ RabbitMQ.getInstance().subscribeToQueue({
         switch (type) {
             case PROPERTY_QUEUE.type.CREATED:
                 await createPropertyService({
-                    property_id: data.propertyId,
+                    property_id: property.property_id,
                     status: property.status,
+                    address_id: property.address_id,
                     deleted: false,
                     address: data.address,
                 });
                 break;
             case PROPERTY_QUEUE.type.DELETED:
-                await softDeletePropertyService(data.propertyId);
+                await softDeletePropertyService(property.property_id);
                 break;
             case PROPERTY_QUEUE.type.UPDATED:
-                await updatePropertyService(data.propertyId, {
+                await updatePropertyService(property.property_id, {
                     status: property.status,
                     deleted: property.deleted,
+                    address_id: property.address_id,
                     address: data.address,
                 });
                 break;
