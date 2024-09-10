@@ -54,12 +54,12 @@ export const otpRegister = async (req: Request, res: Response, next: NextFunctio
         console.log(`OTP: ${otpCode}`);
 
         const dataResponse: ResponseType = {
-            status: 200,
+            statusCode: 200,
             message: 'OTP sent successfully',
             success: true,
         };
 
-        res.status(200).json(dataResponse);
+        res.json(dataResponse);
     } catch (error) {
         next(error);
     }

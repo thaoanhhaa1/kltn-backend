@@ -12,10 +12,7 @@ const elasticClient = new Client({
     tls: {
         ca: fs.readFileSync(
             path.join(
-                __dirname
-                    .replace('build\\src\\configs', '')
-                    .replace('src\\configs', '')
-                    .replace('build/src/configs', ''),
+                __dirname.replace('build\\configs', '').replace('src\\configs', '').replace('build/configs', ''),
                 'http_ca.crt',
             ),
         ),

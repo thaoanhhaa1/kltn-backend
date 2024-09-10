@@ -176,17 +176,19 @@ enum UserType {
 }
 
 model User {
-  userId        String     @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  avatar        String?
-  email         String     @unique
-  password      String
-  phoneNumber   String?
-  userTypes     UserType[]
-  walletAddress String?
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  userId              String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  avatar              String?
+  email               String          @unique
+  password            String
+  phoneNumber         String?
+  userTypes           UserType[]
+  walletAddress       String?
+  status              UserStatus      @default(ACTIVE)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  RenterRentalRequest RentalRequest[] @relation("RenterRentalRequest")
+  OwnerRentalRequest  RentalRequest[] @relation("OwnerRentalRequest")
 
   @@map("users")
 }
@@ -203,4 +205,37 @@ type UserBaseEmbed {
   userId String
   name   String
   avatar String
+}
+
+type RentalRequestPropertEmbed {
+  propertyId String
+  title      String
+  images     String[]
+  slug       String
+}
+
+enum RentalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model RentalRequest {
+  requestId       String                    @id @default(auto()) @map("_id") @db.ObjectId
+  renterId        String                    @db.ObjectId
+  ownerId         String                    @db.ObjectId
+  property        RentalRequestPropertEmbed
+  status          RentalRequestStatus       @default(PENDING)
+  rentalPrice     Float
+  rentalDeposit   Float
+  rentalStartDate DateTime
+  rentalEndDate   DateTime
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  renter          User                      @relation(fields: [renterId], references: [userId], "RenterRentalRequest")
+  owner           User                      @relation(fields: [ownerId], references: [userId], "OwnerRentalRequest")
+
+  @@unique([renterId, property.propertyId])
+  @@map("rentalRequests")
 }
