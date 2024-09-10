@@ -64,7 +64,7 @@ export const otpToUser = async (req: Request, res: Response, next: NextFunction)
         console.log(`OTP: ${otpCode}`);
 
         const dataResponse: ResponseType = {
-            status: 200,
+            statusCode: 200,
             message: 'OTP sent successfully',
             success: true,
         };
@@ -163,7 +163,7 @@ export const updatePassword = async (req: AuthenticatedRequest, res: Response, n
         await updatePasswordService(userId, safeParse.data);
         const response: ResponseType = {
             message: 'Password updated successfully',
-            status: 200,
+            statusCode: 200,
             success: true,
         };
 
@@ -188,7 +188,7 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
 
         const response: ResponseType = {
             message: 'Password updated successfully',
-            status: 200,
+            statusCode: 200,
             success: true,
         };
 
@@ -232,7 +232,7 @@ export const updateWalletAddress = async (req: Request, res: Response, next: Nex
 
         const response: ResponseType = {
             message: 'Địa chỉ ví đã được cập nhật',
-            status: 200,
+            statusCode: 200,
             success: true,
         };
 
