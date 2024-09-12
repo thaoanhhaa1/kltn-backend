@@ -17,4 +17,5 @@ CREATE TABLE "Contract" (
     "deposit_amount" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "Contract_pkey" PRIMARY KEY ("contract_id")
+
 );
