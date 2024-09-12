@@ -1,5 +1,5 @@
 import { Address, Property } from '@prisma/client';
 
-export type IProperty = Property & {
+export type IProperty = Omit<Property, 'address_id'> & {
     address: Address;
 };
