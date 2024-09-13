@@ -4,6 +4,7 @@ import { IForgotPasswordParams, IUpdateUserParams, IUserId } from '../interface/
 import {
     countUsers,
     findPassword,
+    findUserById,
     findUserByPhone,
     findUserDTOByEmail,
     forgotPassword,
@@ -84,5 +85,13 @@ export const updateWalletAddressService = async (userId: IUserId, wallet_address
         return await updateWalletAddress(userId, wallet_address);
     } catch (error) {
         throw new CustomError(400, 'Ví đã được sử dụng');
+    }
+};
+
+export const findUserByIdService = async (userId: IUserId) => {
+    try {
+        return await findUserById(userId);
+    } catch (error) {
+        throw new CustomError(404, 'Không tìm thấy người dùng');
     }
 };

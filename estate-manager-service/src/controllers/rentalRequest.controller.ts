@@ -1,6 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createRentalRequestSchema } from '../schemas/rentalRequest.schema';
+import { createNotificationService } from '../services/notification.service';
 import {
     createRentalRequestService,
     getRentalRequestByOwnerService,
@@ -10,6 +11,7 @@ import {
     ownerUpdateRentalRequestStatusService,
     renterUpdateRentalRequestStatusService,
 } from '../services/rentalRequest.service';
+import { findUserByIdService } from '../services/user.service';
 import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
@@ -33,6 +35,19 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
 
         const rentalRequest = await createRentalRequestService(safeParse.data);
 
+        findUserByIdService(userId)
+            .then((user) =>
+                createNotificationService({
+                    title: 'Yêu cầu thuê nhà mới',
+                    body: `Bạn có một yêu cầu thuê nhà mới từ ${user?.name}`,
+                    to: rentalRequest.ownerId,
+                    type: 'RENTAL_REQUEST',
+                    from: userId,
+                }),
+            )
+            .then(() => console.log('Notification created'))
+            .catch((error) => console.log('Notification error', error));
+
         res.status(201).json(rentalRequest);
     } catch (error) {
         next(error);
@@ -42,8 +57,13 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
 export const getRentalRequestsByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const take = Number(req.query.take || 10);
+        const skip = Number(req.query.skip || 0);
 
-        const rentalRequests = await getRentalRequestsByRenterService(userId);
+        const rentalRequests = await getRentalRequestsByRenterService(userId, {
+            skip,
+            take,
+        });
 
         res.json(rentalRequests);
     } catch (error) {
@@ -54,8 +74,13 @@ export const getRentalRequestsByRenter = async (req: AuthenticatedRequest, res: 
 export const getRentalRequestsByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const take = Number(req.query.take || 10);
+        const skip = Number(req.query.skip || 0);
 
-        const rentalRequests = await getRentalRequestsByOwnerService(userId);
+        const rentalRequests = await getRentalRequestsByOwnerService(userId, {
+            skip,
+            take,
+        });
 
         res.json(rentalRequests);
     } catch (error) {

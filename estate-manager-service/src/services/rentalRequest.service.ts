@@ -1,7 +1,14 @@
-import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interface/rentalRequest';
+import { IPagination, IPaginationResponse } from '../interface/pagination';
+import {
+    IOwnerUpdateRentalRequestStatus,
+    IRentalRequest,
+    IRenterUpdateRentalRequestStatus,
+} from '../interface/rentalRequest';
 import { IUserId } from '../interface/user';
 import { getPropertyBySlug } from '../repositories/property.repository';
 import {
+    countRentalRequestsByOwner,
+    countRentalRequestsByRenter,
     createRentalRequest,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
@@ -11,18 +18,50 @@ import {
     renterUpdateRentalRequestStatus,
 } from '../repositories/rentalRequest.repository';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
+import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
+import getPageInfo from '../utils/getPageInfo';
 
-export const createRentalRequestService = (params: ICreateRentalRequest) => {
-    return createRentalRequest(params);
+export const createRentalRequestService = ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
+    return createRentalRequest({
+        ...rest,
+        rentalEndDate: convertDateToDB(rentalEndDate),
+        rentalStartDate: convertDateToDB(rentalStartDate),
+    });
 };
 
-export const getRentalRequestsByRenterService = (renterId: IUserId) => {
-    return getRentalRequestsByRenter(renterId);
+export const getRentalRequestsByRenterService = async (renterId: IUserId, pagination: IPagination) => {
+    const [rentalRequests, count] = await Promise.all([
+        getRentalRequestsByRenter(renterId, pagination),
+        countRentalRequestsByRenter(renterId),
+    ]);
+
+    const result: IPaginationResponse<IRentalRequest> = {
+        data: rentalRequests,
+        pageInfo: getPageInfo({
+            ...pagination,
+            count,
+        }),
+    };
+
+    return result;
 };
 
-export const getRentalRequestsByOwnerService = (ownerId: IUserId) => {
-    return getRentalRequestsByOwner(ownerId);
+export const getRentalRequestsByOwnerService = async (ownerId: IUserId, pagination: IPagination) => {
+    const [rentalRequests, count] = await Promise.all([
+        getRentalRequestsByOwner(ownerId, pagination),
+        countRentalRequestsByOwner(ownerId),
+    ]);
+
+    const result: IPaginationResponse<IRentalRequest> = {
+        data: rentalRequests,
+        pageInfo: getPageInfo({
+            ...pagination,
+            count,
+        }),
+    };
+
+    return result;
 };
 
 export const getRentalRequestByRenterService = async (renterId: IUserId, slug: string) => {
