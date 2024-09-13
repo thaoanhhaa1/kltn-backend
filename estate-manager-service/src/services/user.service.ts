@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { IPagination } from '../interface/pagination';
-import { IForgotPasswordParams, IUpdateUserParams, IUserId } from '../interface/user';
+import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyRequest } from '../interface/user';
+import prisma from '../prisma/prismaClient';
 import {
     countUsers,
     findPassword,
@@ -13,7 +14,9 @@ import {
     updatePassword,
     updateUser,
     updateWalletAddress,
+    verifyUser,
 } from '../repositories/user.repository';
+import { findByCardId, verifyUserDetail } from '../repositories/userDetail.repository';
 import { UpdatePasswordInput } from '../schemas/user.schema';
 import CustomError, { EntryError } from '../utils/error.util';
 
@@ -59,8 +62,8 @@ export const updatePasswordService = async (userId: IUserId, { oldPassword, pass
     if (!isMatch)
         throw new EntryError(400, 'Invalid password', [
             {
-                field: 'old_password',
-                error: 'Old password is incorrect',
+                field: 'oldPassword',
+                error: 'Mật khẩu không đúng',
             },
         ]);
 
@@ -93,5 +96,21 @@ export const findUserByIdService = async (userId: IUserId) => {
         return await findUserById(userId);
     } catch (error) {
         throw new CustomError(404, 'Không tìm thấy người dùng');
+    }
+};
+
+export const verifyUserService = async (userId: IUserId, { name, ...rest }: IVerifyRequest) => {
+    try {
+        const userDetail = await findByCardId(rest.cardId);
+
+        if (userDetail) throw new CustomError(400, 'CCCD đã được sử dụng');
+
+        const [user] = await prisma.$transaction([verifyUser(userId, { name }), verifyUserDetail(userId, rest)]);
+
+        return user;
+    } catch (error) {
+        console.log(error);
+
+        throw new CustomError(400, 'Không thể xác thực người dùng');
     }
 };
