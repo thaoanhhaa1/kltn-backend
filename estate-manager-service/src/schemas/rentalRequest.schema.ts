@@ -36,7 +36,10 @@ export const createRentalRequestSchema = z
             .refine((date) => {
                 const currentDate = new Date();
                 const startDate = new Date(date);
-                return startDate >= currentDate;
+                return {
+                    message: 'Ngày bắt đầu phải lớn hơn hoặc bằng ngày hiện tại',
+                    success: startDate >= currentDate,
+                };
             }),
         rentalEndDate: z
             .string({
@@ -46,11 +49,17 @@ export const createRentalRequestSchema = z
             .refine((date) => {
                 const currentDate = new Date();
                 const endDate = new Date(date);
-                return endDate >= currentDate;
+                return {
+                    message: 'Ngày kết thu phải lớn hơn ngày bắt đầu',
+                    success: endDate > currentDate,
+                };
             }),
     })
     .refine((data) => {
-        return new Date(data.rentalStartDate) < new Date(data.rentalEndDate);
+        return {
+            message: 'Ngày kết thúc phải lớn hơn ngày bắt đầu',
+            success: new Date(data.rentalEndDate) > new Date(data.rentalStartDate),
+        };
     });
 
 export type ICreateRentalRequest = z.infer<typeof createRentalRequestSchema>;
