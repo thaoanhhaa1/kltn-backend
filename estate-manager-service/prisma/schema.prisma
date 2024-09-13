@@ -30,14 +30,22 @@ enum Status {
   DELETED
 }
 
+enum NotificationType {
+  RENTAL_REQUEST
+  PROPERTY
+  REVIEW
+}
+
 model Notification {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
   title     String
   body      String
-  status    Status   @default(RECEIVED)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String   @db.ObjectId
+  status    Status           @default(RECEIVED)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  from      String?          @db.ObjectId
+  to        String           @db.ObjectId
+  type      NotificationType
 
   @@map("notifications")
 }
@@ -236,6 +244,5 @@ model RentalRequest {
   renter          User                      @relation(fields: [renterId], references: [userId], "RenterRentalRequest")
   owner           User                      @relation(fields: [ownerId], references: [userId], "OwnerRentalRequest")
 
-  @@unique([renterId, property.propertyId])
   @@map("rentalRequests")
 }

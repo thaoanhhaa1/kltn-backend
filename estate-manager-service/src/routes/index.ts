@@ -1,6 +1,7 @@
 import express from 'express';
 import attribute from './attribute.route';
 import authRoute from './auth.route';
+import notificationRoute from './notification.route';
 import property from './property.route';
 import propertyInteraction from './propertyInteraction.route';
 import rentalRequest from './rentalRequest.route';
@@ -14,5 +15,6 @@ router.use('/attributes', attribute);
 router.use('/properties', property);
 router.use('/property-interactions', propertyInteraction);
 router.use('/rental-requests', rentalRequest);
+router.use('/notifications', notificationRoute);
 
 export default router;

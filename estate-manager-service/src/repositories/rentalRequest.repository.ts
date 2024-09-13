@@ -1,20 +1,72 @@
+import { IPagination } from '../interface/pagination';
 import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interface/rentalRequest';
 import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 
-export const createRentalRequest = ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
+export const createRentalRequest = async ({
+    ownerId,
+    property,
+    rentalDeposit,
+    rentalEndDate,
+    rentalPrice,
+    rentalStartDate,
+    renterId,
+}: ICreateRentalRequest) => {
+    const rentalRequest = await prisma.rentalRequest.findFirst({
+        where: {
+            renterId,
+            property: {
+                is: {
+                    propertyId: property.propertyId,
+                },
+            },
+            status: 'PENDING',
+        },
+    });
+
+    if (rentalRequest)
+        return prisma.rentalRequest.update({
+            where: {
+                requestId: rentalRequest.requestId,
+            },
+            data: {
+                rentalDeposit,
+                rentalEndDate,
+                rentalPrice,
+                rentalStartDate,
+                status: 'PENDING',
+            },
+        });
+
     return prisma.rentalRequest.create({
         data: {
-            ...rest,
-            rentalEndDate: new Date(rentalEndDate),
-            rentalStartDate: new Date(rentalStartDate),
+            property,
+            rentalDeposit,
+            rentalEndDate,
+            rentalPrice,
+            rentalStartDate,
+            renterId,
+            ownerId,
         },
     });
 };
 
-export const getRentalRequestsByRenter = (renterId: IUserId) => {
+export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
+        where: {
+            renterId,
+            status: {
+                not: 'CANCELLED',
+            },
+        },
+        skip,
+        take,
+    });
+};
+
+export const countRentalRequestsByRenter = (renterId: IUserId) => {
+    return prisma.rentalRequest.count({
         where: {
             renterId,
             status: {
@@ -24,8 +76,24 @@ export const getRentalRequestsByRenter = (renterId: IUserId) => {
     });
 };
 
-export const getRentalRequestsByOwner = (ownerId: IUserId) => {
+export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
+        where: {
+            ownerId,
+            status: {
+                not: 'CANCELLED',
+            },
+        },
+        skip,
+        take,
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+};
+
+export const countRentalRequestsByOwner = (ownerId: IUserId) => {
+    return prisma.rentalRequest.count({
         where: {
             ownerId,
             status: {
