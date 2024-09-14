@@ -1,4 +1,4 @@
-import { ICreateNotification } from '../interface/notification';
+import { ICreateNotification, IUpdateNotificationStatus } from '../interface/notification';
 import { IPagination } from '../interface/pagination';
 import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
@@ -19,6 +19,9 @@ export const getNotificationsByUserId = (userId: IUserId, pagination: IPaginatio
         },
         take: pagination.take,
         skip: pagination.skip,
+        orderBy: {
+            createdAt: 'desc',
+        },
     });
 };
 
@@ -38,6 +41,20 @@ export const countNotificationsByUserId = (userId: IUserId) => {
             status: {
                 not: 'DELETED',
             },
+        },
+    });
+};
+
+export const updateNotificationStatus = ({ notificationIds, status, userId }: IUpdateNotificationStatus) => {
+    return prisma.notification.updateMany({
+        where: {
+            id: {
+                in: notificationIds,
+            },
+            to: userId,
+        },
+        data: {
+            status,
         },
     });
 };

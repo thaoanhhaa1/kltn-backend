@@ -1,4 +1,5 @@
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Status } from '@prisma/client';
+import { IUserId } from './user';
 
 export interface ICreateNotification {
     title: string;
@@ -6,4 +7,10 @@ export interface ICreateNotification {
     from?: string;
     to: string;
     type: NotificationType;
+}
+
+export interface IUpdateNotificationStatus {
+    notificationIds: Array<string>;
+    status: Status;
+    userId: IUserId;
 }
