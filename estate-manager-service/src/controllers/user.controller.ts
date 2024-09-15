@@ -5,9 +5,11 @@ import otp from '../configs/otp.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
 import { USER_QUEUE } from '../constants/rabbitmq';
+import { IVerifyRequest } from '../interface/user';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { otpSchema } from '../schemas/otp.schema';
 import { forgotPasswordSchema, updatePasswordSchema, updateSchema } from '../schemas/user.schema';
+import { verifyIDCard } from '../services/fpt.service';
 import {
     forgotPasswordService,
     getAllOwnersCbbService,
@@ -17,11 +19,12 @@ import {
     updatePasswordService,
     updateUserService,
     updateWalletAddressService,
+    verifyUserService,
 } from '../services/user.service';
 import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
-import { uploadFile } from '../utils/uploadToFirebase.util';
+import { uploadFile } from './../../../user-service/src/utils/uploadToFirebase.util';
 
 export const otpToUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -237,6 +240,57 @@ export const updateWalletAddress = async (req: Request, res: Response, next: Nex
         };
 
         res.json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const verifyUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const cards = req.files;
+        const { front, back } = cards as { [fieldName: string]: Express.Multer.File[] };
+        const fontImage = front[0];
+        const backImage = back[0];
+
+        const [frontRes, backRes, frontUrl, backUrl] = await Promise.all([
+            verifyIDCard(fontImage),
+            verifyIDCard(backImage),
+            uploadFile({
+                file: fontImage,
+                folder: 'user-service',
+            }),
+            uploadFile({
+                file: backImage,
+                folder: 'user-service',
+            }),
+        ]);
+        const frontData = frontRes.data[0];
+        const backData = backRes.data[0];
+
+        if (!frontData.name) throw new CustomError(400, 'Ảnh mặt trước không hợp lệ');
+        if (!backData.issue_date) throw new CustomError(400, 'Ảnh mặt sau không hợp lệ');
+
+        const userData: IVerifyRequest = {
+            name: frontData.name,
+            address: {
+                city: frontData.address_entities.province,
+                district: frontData.address_entities.district,
+                street: frontData.address_entities.street,
+                ward: frontData.address_entities.ward,
+            },
+            cardId: frontData.id,
+            doe: frontData.doe,
+            issueDate: backData.issue_date,
+            issueLoc: backData.issue_loc,
+            idCardBack: backUrl,
+            idCardFront: frontUrl,
+        };
+
+        const result = await verifyUserService(userId, userData);
+
+        res.json(result);
     } catch (error) {
         next(error);
     }

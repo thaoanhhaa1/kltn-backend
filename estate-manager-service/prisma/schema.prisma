@@ -31,6 +31,7 @@ enum Status {
 }
 
 enum NotificationType {
+  RENTER_RENTAL_REQUEST
   RENTAL_REQUEST
   PROPERTY
   REVIEW
@@ -193,12 +194,28 @@ model User {
   userTypes           UserType[]
   walletAddress       String?
   status              UserStatus      @default(ACTIVE)
+  isVerified          Boolean         @default(false)
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   RenterRentalRequest RentalRequest[] @relation("RenterRentalRequest")
   OwnerRentalRequest  RentalRequest[] @relation("OwnerRentalRequest")
 
   @@map("users")
+}
+
+model UserDetail {
+  userId      String    @id @map("_id") @db.ObjectId
+  cardId      String?
+  issueLoc    String?
+  issueDate   DateTime?
+  address     Address?
+  doe         DateTime?
+  idCardFront String?
+  idCardBack  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("userDetails")
 }
 
 type UserPropertyEmbed {

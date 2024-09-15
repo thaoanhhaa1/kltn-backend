@@ -27,6 +27,8 @@ const EnvSchema = z.object({
     ELASTICSEARCH_URL: z.string().url(),
     ELASTICSEARCH_USERNAME: z.string(),
     ELASTICSEARCH_PASSWORD: z.string(),
+    FPT_API_KEY: z.string(),
+    FPT_ENDPOINT: z.string().url(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
