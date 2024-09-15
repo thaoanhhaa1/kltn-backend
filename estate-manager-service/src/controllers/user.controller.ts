@@ -24,7 +24,7 @@ import {
 import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
-import { uploadFile } from './../../../user-service/src/utils/uploadToFirebase.util';
+import { uploadFile } from '../utils/uploadToFirebase.util';
 
 export const otpToUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
