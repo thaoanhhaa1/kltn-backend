@@ -1,4 +1,5 @@
 import express from 'express';
+import upload from '../configs/multer.config';
 import {
     forgotPassword,
     getAllOwnersCbb,
@@ -8,10 +9,11 @@ import {
     updatePassword,
     updateUser,
     updateWalletAddress,
+    verifyUser,
 } from '../controllers/user.controller';
 import authMiddleware from '../middlewares/auth.middleware';
+import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
 import roleMiddleware from '../middlewares/role.middleware';
-import upload from '../configs/multer.config';
 
 const router = express.Router();
 
@@ -22,6 +24,22 @@ router.patch('/wallet', authMiddleware, updateWalletAddress);
 router.post('/otp', otpToUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/update-password', authMiddleware, updatePassword);
+router.post(
+    '/verify',
+    authMiddleware,
+    hasAnyRoleMiddleware(['owner', 'renter']),
+    upload.fields([
+        {
+            name: 'front',
+            maxCount: 1,
+        },
+        {
+            name: 'back',
+            maxCount: 1,
+        },
+    ]),
+    verifyUser,
+);
 
 router.get('/me', authMiddleware, getMyInfo);
 router.get('/owners/cbb', authMiddleware, roleMiddleware('admin'), getAllOwnersCbb);

@@ -1,5 +1,5 @@
-import { Notification } from '@prisma/client';
-import { ICreateNotification } from '../interface/notification';
+import { Notification, Status } from '@prisma/client';
+import { ICreateNotification, IUpdateNotificationStatus } from '../interface/notification';
 import { IPagination, IPaginationResponse } from '../interface/pagination';
 import { IUserId } from '../interface/user';
 import {
@@ -7,6 +7,7 @@ import {
     countNotificationsByUserId,
     createNotification,
     getNotificationsByUserId,
+    updateNotificationStatus,
 } from '../repositories/notification.repository';
 import getPageInfo from '../utils/getPageInfo';
 
@@ -34,4 +35,8 @@ export const getNotificationsByUserIdService = async (userId: IUserId, paginatio
 
 export const countNewNotificationsByUserIdService = (userId: IUserId) => {
     return countNewNotificationsByUserId(userId);
+};
+
+export const updateNotificationStatusService = (params: IUpdateNotificationStatus) => {
+    return updateNotificationStatus(params);
 };
