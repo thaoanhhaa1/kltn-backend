@@ -1,15 +1,17 @@
 import { IPagination, IPaginationResponse } from '../interface/pagination';
 import {
+    IGenerateContract,
     IOwnerUpdateRentalRequestStatus,
     IRentalRequest,
     IRenterUpdateRentalRequestStatus,
 } from '../interface/rentalRequest';
 import { IUserId } from '../interface/user';
-import { getPropertyBySlug } from '../repositories/property.repository';
+import { getPropertyById, getPropertyBySlug } from '../repositories/property.repository';
 import {
     countRentalRequestsByOwner,
     countRentalRequestsByRenter,
     createRentalRequest,
+    getRentalRequestById,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
@@ -17,8 +19,11 @@ import {
     ownerUpdateRentalRequestStatus,
     renterUpdateRentalRequestStatus,
 } from '../repositories/rentalRequest.repository';
+import { findOwnerId, findUserById } from '../repositories/user.repository';
+import { findUserDetailByUserId } from '../repositories/userDetail.repository';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 import { convertDateToDB } from '../utils/convertDate';
+import { createContract } from '../utils/createContract.util';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
 
@@ -105,5 +110,48 @@ export const renterUpdateRentalRequestStatusService = async (params: IRenterUpda
         return await renterUpdateRentalRequestStatus(params);
     } catch (error) {
         throw new CustomError(400, 'Cập nhật trạng thái yêu cầu thuê không thành công');
+    }
+};
+
+export const generateContractService = async ({ ownerId, propertyId, renterId, requestId }: IGenerateContract) => {
+    try {
+        const [owner, ownerDetail, renter, renterDetail, property, rentalRequest] = await Promise.all([
+            findOwnerId(ownerId),
+            findUserDetailByUserId(ownerId),
+            findUserById(renterId),
+            findUserDetailByUserId(renterId),
+            getPropertyById(propertyId),
+            getRentalRequestById(requestId),
+        ]);
+
+        if (!owner) throw new CustomError(404, 'Chủ nhà không tồn tại');
+        if (!renter) throw new CustomError(404, 'Người thuê không tồn tại');
+        if (!ownerDetail) throw new CustomError(404, 'Chủ nhà chưa xác thực thông tin');
+        if (!renterDetail) throw new CustomError(404, 'Người thuê chưa xác thực thông tin');
+        if (!property) throw new CustomError(404, 'Bất động sản không tồn tại');
+        if (!rentalRequest) throw new CustomError(404, 'Yêu cầu thuê không tồn tại');
+
+        return {
+            contractContent: createContract({
+                city: property.address.city,
+                date: new Date(),
+                owner,
+                ownerDetail,
+                renter,
+                renterDetail,
+                property,
+                rentalRequest,
+            }),
+            ownerId,
+            renterId,
+            propertyId,
+            startDate: rentalRequest.rentalStartDate,
+            endDate: rentalRequest.rentalEndDate,
+            monthlyRent: rentalRequest.rentalPrice,
+            depositAmount: rentalRequest.rentalDeposit,
+        };
+    } catch (error) {
+        console.log(error);
+        throw new CustomError(400, 'Tạo hợp đồng không thành công');
     }
 };

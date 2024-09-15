@@ -165,3 +165,11 @@ export const renterUpdateRentalRequestStatus = ({ renterId, slug, status }: IRen
         },
     });
 };
+
+export const getRentalRequestById = (requestId: string) => {
+    return prisma.rentalRequest.findUnique({
+        where: {
+            requestId,
+        },
+    });
+};

@@ -124,6 +124,18 @@ export const findUserById = (userId: IUserId) => {
     return prisma.user.findUnique({ where: { userId }, select: userDTOSelect });
 };
 
+export const findOwnerId = (userId: IUserId) => {
+    return prisma.user.findUnique({
+        where: {
+            userId,
+            userTypes: {
+                hasSome: ['owner'],
+            },
+        },
+        select: userDTOSelect,
+    });
+};
+
 export const verifyUser = (userId: IUserId, { name }: IVerifyUser) => {
     return prisma.user.update({
         where: { userId },

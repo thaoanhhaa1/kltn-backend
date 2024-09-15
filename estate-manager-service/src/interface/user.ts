@@ -22,3 +22,5 @@ export interface IVerifyRequest {
 
 export type IVerifyUser = Pick<IVerifyRequest, 'name'>;
 export type IVerifyUserDetail = Pick<IVerifyRequest, 'cardId' | 'issueLoc' | 'issueDate' | 'address' | 'doe'>;
+
+export type IUserDTO = Omit<User, 'password' | 'status'>;

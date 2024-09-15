@@ -24,3 +24,11 @@ export const findByCardId = (cardId: string) => {
         },
     });
 };
+
+export const findUserDetailByUserId = (userId: IUserId) => {
+    return prisma.userDetail.findFirst({
+        where: {
+            userId,
+        },
+    });
+};
