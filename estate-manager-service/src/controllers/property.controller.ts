@@ -44,6 +44,7 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
             ...req.body,
             images: imageUrls,
             ...(typeof req.body.conditions === 'string' && { conditions: JSON.parse(req.body.conditions) }),
+            ...(typeof req.body.type === 'string' && { type: JSON.parse(req.body.type) }),
         });
 
         if (!safePare.success)
@@ -261,6 +262,7 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             bedroom,
             bathroom,
             furniture,
+            floor,
             city,
             district,
             ward,
@@ -350,6 +352,31 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                             match: {
                                 'rentalConditions.type': {
                                     query: 'Nội thất',
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
+        if (floor) {
+            filter.push({
+                bool: {
+                    must: [
+                        {
+                            match: {
+                                'rentalConditions.value': {
+                                    query: `${floor} tầng`,
+                                    operator: 'and',
+                                },
+                            },
+                        },
+                        {
+                            match: {
+                                'rentalConditions.type': {
+                                    query: 'Số tầng',
                                     operator: 'and',
                                 },
                             },

@@ -1,4 +1,20 @@
 import { PropertyStatus } from '@prisma/client';
+import slug from 'slug';
+import { v4 } from 'uuid';
+import { IPagination, IPaginationResponse } from '../interface/pagination';
+import {
+    ICreateProperty,
+    IDeleteProperty,
+    IGetPropertiesWithOwnerId,
+    IOwnerFilterProperties,
+    IPropertyId,
+    IResProperty,
+    IResRepositoryProperty,
+    IUpdatePropertiesStatus,
+    IUpdateProperty,
+    IUpdatePropertyStatus,
+} from '../interface/property';
+import prisma from '../prisma/prismaClient';
 import {
     countNotDeletedProperties,
     countNotDeletedPropertiesByOwnerId,
@@ -14,29 +30,12 @@ import {
     updateProperty,
     updatePropertyStatus,
 } from '../repositories/property.repository';
+import { addRejectReason } from '../repositories/rejectReason.repository';
+import { findUserById } from '../repositories/user.repository';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
-import prisma from '../prisma/prismaClient';
-import { addRejectReason } from '../repositories/rejectReason.repository';
-import {
-    ICreateProperty,
-    IDeleteProperty,
-    IGetPropertiesWithOwnerId,
-    IOwnerFilterProperties,
-    IPropertyId,
-    IResProperty,
-    IResRepositoryProperty,
-    IUpdatePropertiesStatus,
-    IUpdateProperty,
-    IUpdatePropertyStatus,
-} from '../interface/property';
-import { IPagination, IPaginationResponse } from '../interface/pagination';
 import getPageInfo from '../utils/getPageInfo';
-import { getAttributeByIds } from '../repositories/attribute.repository';
-import { findUserById } from '../repositories/user.repository';
-import slug from 'slug';
 import { options } from '../utils/slug.util';
-import { v4 } from 'uuid';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
     const { attributes, ...rest } = property;

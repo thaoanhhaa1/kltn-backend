@@ -4,48 +4,56 @@ import { z } from 'zod';
 export const propertySchema = z
     .object({
         title: z.string({
-            required_error: 'Title is required',
+            required_error: 'Tiêu đề không được để trống',
         }),
         description: z.string({
-            required_error: 'Description is required',
+            required_error: 'Mô tả không được để trống',
         }),
         city: z.string({
-            required_error: 'City is required',
+            required_error: 'Tỉnh/Thành phố không được để trống',
         }),
         district: z.string({
-            required_error: 'District is required',
+            required_error: 'Quận/Huyện không được để trống',
         }),
         ward: z.string({
-            required_error: 'Ward is required',
+            required_error: 'Phường/Xã không được để trống',
         }),
         street: z.string({
-            required_error: 'Street is required',
+            required_error: 'Địa chỉ không được để trống',
         }),
         conditions: z
             .array(
                 z.object({
                     type: z.string({
-                        required_error: 'Condition type is required',
+                        required_error: 'Loại điều kiện không được để trống',
                     }),
                     value: z.string({
-                        required_error: 'Condition value is required',
+                        required_error: 'Giá trị điều kiện không được để trống',
                     }),
                 }),
             )
             .default([]),
-        price: z.coerce.number().min(0, 'Price must be greater than 0').optional(),
+        price: z.coerce.number().min(0, 'Giá phải lớn hơn 0').optional(),
         attributeIds: z.array(z.string()).default([]),
         images: z
             .array(z.string(), {
-                required_error: 'Images are required',
+                required_error: 'Ít nhất một ảnh là bắt buộc',
             })
-            .min(1, 'At least one image is required'),
-        startDate: z.string().date('Format date is YYYY-MM-DD').optional(),
+            .min(1, 'Ít nhất một ảnh là bắt buộc'),
+        startDate: z.string().date('Định dạng ngày phải là YYYY-MM-DD').optional(),
         latitude: z.coerce.number().optional(),
         longitude: z.coerce.number().optional(),
-        deposit: z.coerce.number().min(0, 'Deposit must be greater than 0').optional(),
-        minDuration: z.coerce.number().min(0, 'Min duration must be greater than 0').optional(),
+        deposit: z.coerce.number().min(0, 'Tiền cọc phải lớn hơn 0').optional(),
+        minDuration: z.coerce.number().min(0, 'Thời gian thuê tối thiểu phải lớn hơn 0').optional(),
         agreementPrice: z.coerce.boolean().optional(),
+        type: z.object({
+            id: z.string({
+                required_error: 'Loại bất động sản không được để trống',
+            }),
+            name: z.string({
+                required_error: 'Loại bất động sản không được để trống',
+            }),
+        }),
     })
     .refine(
         (data) => {
@@ -60,7 +68,7 @@ export const propertySchema = z
             return true;
         },
         {
-            message: 'Latitude and longitude are required',
+            message: 'Latitude và longitude là bắt buộc',
         },
     )
     .refine((data) => {
