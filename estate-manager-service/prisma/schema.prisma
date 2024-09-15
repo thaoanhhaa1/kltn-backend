@@ -83,11 +83,26 @@ model Property {
   slug             String              @unique
   latitude         Float?
   longitude        Float?
+  type             PropertyTypeEmbed
   status           PropertyStatus      @default(PENDING)
   rentalConditions RentalCondition[]
   attributes       PropertyAttribute[]
 
   @@map("properties")
+}
+
+type PropertyTypeEmbed {
+  id   String
+  name String
+}
+
+model PropertyType {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("propertyTypes")
 }
 
 model RejectReason {
