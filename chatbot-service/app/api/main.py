@@ -100,11 +100,11 @@ def property_callback(message):
 
             attributes[attr["type"]].append(attr["name"])
 
-        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['price']}""";
+        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nLoại nhà: {data_dict['type']["name"]}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['price']}""";
 
         property_doc = to_document(data=data_dict, content=content, field_names=[
             "id", "title", "description", "latitude", "longitude", "address", "attributes",
-            "images", "rentalConditions", "price", "owner", "slug"
+            "images", "rentalConditions", "price", "owner", "slug", "type"
         ])
 
         property_split_docs = split_document(property_doc)
