@@ -69,7 +69,7 @@ enum Status {
 }
 
 model Contract {
-  contract_id               Int           @id @default(autoincrement())
+  contract_id               String        @id @default(uuid())
   owner_user_id             String
   renter_user_id            String
   property_id               String
@@ -93,7 +93,7 @@ model Contract {
 
 model Transaction {
   id               Int      @id @default(autoincrement())
-  contract_id      Int
+  contract_id      String
   amount           Float
   transaction_hash String
   status           String

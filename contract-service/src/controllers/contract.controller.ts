@@ -43,7 +43,7 @@ export const deposit = async (req: AuthenticatedRequest, res: Response, next: Ne
         const { contractId, renterUserId } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId)) || typeof renterUserId !== 'string') {
+        if (typeof contractId !== 'string' || typeof renterUserId !== 'string') {
             return res
                 .status(400)
                 .json({ message: 'Contract ID and renter ID are required and must be valid.' });
@@ -64,7 +64,7 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
         const { contractId, renterUserId } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId)) || typeof renterUserId !== 'string') {
+        if (typeof contractId !== 'string'|| typeof renterUserId !== 'string') {
             return res
                 .status(400)
                 .json({ message: 'Contract ID and renter ID are required and must be valid.' });
@@ -90,7 +90,7 @@ export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Resp
 
         // Kiểm tra dữ liệu đầu vào
         if (
-            typeof contractId !== 'number' ||
+            typeof contractId !== 'string' ||
             typeof ownerUserId !== 'string' ||
             isNaN(parsedCancellationDate.getTime())
         ) {
@@ -112,7 +112,7 @@ export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Res
 
         // Kiểm tra dữ liệu đầu vào
         if (
-            typeof contractId !== 'number' ||
+            typeof contractId !== 'string' ||
             typeof renterUserId !== 'string' ||
             isNaN(parsedCancellationDate.getTime())
         ) {
@@ -133,8 +133,8 @@ export const getContractTransactions = async (req: AuthenticatedRequest, res: Re
         const { userId } = req.query;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId))) {
-            return res.status(400).json({ message: 'Contract ID is required and must be a valid number.' });
+        if (typeof userId !== 'string') {
+            return res.status(400).json({ message: 'Contract ID is required and must be a valid string.' });
         }
 
         if (typeof userId !== 'string') {
@@ -142,7 +142,7 @@ export const getContractTransactions = async (req: AuthenticatedRequest, res: Re
         }
 
         // Gọi hàm service để lấy danh sách giao dịch
-        const transactions = await getContractTransactionsService(Number(contractId), userId);
+        const transactions = await getContractTransactionsService(contractId, userId);
 
         // Trả về danh sách giao dịch
         res.status(200).json(transactions);
@@ -159,8 +159,8 @@ export const getContractDetails = async (req: AuthenticatedRequest, res: Respons
         const { userId } = req.query;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId))) {
-            return res.status(400).json({ message: 'Contract ID is required and must be a valid number.' });
+        if (typeof userId !== 'string') {
+            return res.status(400).json({ message: 'Contract ID is required and must be a valid strring.' });
         }
 
         if (typeof userId !== 'string') {
@@ -168,7 +168,7 @@ export const getContractDetails = async (req: AuthenticatedRequest, res: Respons
         }
 
         // Gọi hàm service để lấy chi tiết hợp đồng
-        const contractDetails = await getContractDetailsService(Number(contractId), userId);
+        const contractDetails = await getContractDetailsService(contractId, userId);
 
         // Trả về chi tiết hợp đồng
         res.status(200).json(contractDetails);
@@ -183,12 +183,12 @@ export const endContract = async (req: AuthenticatedRequest, res: Response, next
         const { contractId, userId } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId)) || typeof userId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID must be a valid number and user ID must be a valid string.' });
+        if (typeof contractId !== 'string' || typeof userId !== 'string') {
+            return res.status(400).json({ message: 'Contract ID and user ID must be a valid string.' });
         }
 
         // Gọi hàm service để kết thúc hợp đồng
-        const result = await endContractService(Number(contractId), userId);
+        const result = await endContractService(contractId, userId);
 
         // Trả về kết quả thành công
         res.status(200).json(result);
@@ -203,12 +203,12 @@ export const terminateForNonPayment = async (req: AuthenticatedRequest, res: Res
         const { contractId, ownerUserId } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
-        if (isNaN(Number(contractId)) || typeof ownerUserId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID must be a valid number and owner ID must be a valid string.' });
+        if (typeof contractId !== 'string' || typeof ownerUserId !== 'string') {
+            return res.status(400).json({ message: 'Contract ID and owner ID must be a valid string.' });
         }
 
         // Gọi hàm service để hủy hợp đồng do không thanh toán
-        const updatedContract = await terminateForNonPaymentService(Number(contractId), ownerUserId);
+        const updatedContract = await terminateForNonPaymentService(contractId, ownerUserId);
 
         // Phản hồi với dữ liệu hợp đồng đã cập nhật
         res.status(200).json(updatedContract);

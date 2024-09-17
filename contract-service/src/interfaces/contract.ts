@@ -1,6 +1,6 @@
 export interface CreateContractReq {
-    owner_user_id: number;        // ID của chủ nhà
-    renter_user_id: number;       // ID của người thuê
+    owner_user_id: string;        // ID của chủ nhà
+    renter_user_id: string;       // ID của người thuê
     property_id: string;          // ID tài sản
     start_date: Date;             // Ngày bắt đầu hợp đồng
     end_date: Date;               // Ngày kết thúc hợp đồng
