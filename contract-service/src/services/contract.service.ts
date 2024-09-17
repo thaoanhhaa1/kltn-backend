@@ -29,7 +29,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
     }
 };
 
-export const depositService = async (contractId: number, renterUserId: IUserId): Promise<PrismaContract> => {
+export const depositService = async (contractId: string, renterUserId: IUserId): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện đặt cọc và tạo hợp đồng
         return await depositInRepo(contractId, renterUserId);
@@ -40,7 +40,7 @@ export const depositService = async (contractId: number, renterUserId: IUserId):
 };
 
 // Hàm để thanh toán tiền thuê hàng tháng
-export const payMonthlyRentService = async (contractId: number, renterUserId: IUserId): Promise<PrismaContract> => {
+export const payMonthlyRentService = async (contractId: string, renterUserId: IUserId): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện thanh toán tiền thuê
         return await payMonthlyRentInRepo(contractId, renterUserId);
@@ -52,7 +52,7 @@ export const payMonthlyRentService = async (contractId: number, renterUserId: IU
 
 // Hàm để hủy hợp đồng bởi người thuê
 export const cancelContractByRenterService = async (
-    contractId: number,
+    contractId: string,
     renterUserId: IUserId,
     cancellationDate: Date,
 ): Promise<PrismaContract> => {
@@ -67,7 +67,7 @@ export const cancelContractByRenterService = async (
 
 // Hàm để hủy hợp đồng bởi chủ nhà
 export const cancelContractByOwnerService = async (
-    contractId: number,
+    contractId: string,
     ownerUserId: IUserId,
     cancellationDate: Date,
 ): Promise<PrismaContract> => {
@@ -81,7 +81,7 @@ export const cancelContractByOwnerService = async (
 };
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
-export const getContractTransactionsService = async (contractId: number, userId: IUserId): Promise<any[]> => {
+export const getContractTransactionsService = async (contractId: string, userId: IUserId): Promise<any[]> => {
     try {
         // Gọi phương thức repository để lấy danh sách giao dịch
         return await getContractTransactionsInRepo(contractId, userId);
@@ -92,7 +92,7 @@ export const getContractTransactionsService = async (contractId: number, userId:
 };
 
 // Hàm để lấy chi tiết hợp đồng
-export const getContractDetailsService = async (contractId: number, userId: IUserId): Promise<any> => {
+export const getContractDetailsService = async (contractId: string, userId: IUserId): Promise<any> => {
     try {
         // Gọi phương thức repository để lấy chi tiết hợp đồng
         return await getContractDetailsInRepo(contractId, userId);
@@ -103,7 +103,7 @@ export const getContractDetailsService = async (contractId: number, userId: IUse
 };
 
 // Hàm để kết thúc hợp đồng
-export const endContractService = async (contractId: number, userId: string): Promise<PrismaContract> => {
+export const endContractService = async (contractId: string, userId: string): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện hủy hợp đồng
         return await endContractInRepo(contractId, userId);
@@ -115,7 +115,7 @@ export const endContractService = async (contractId: number, userId: string): Pr
 
 
 // Hàm để hủy hợp đồng do không thanh toán
-export const terminateForNonPaymentService = async (contractId: number, ownerUserId: string): Promise<PrismaContract> => {
+export const terminateForNonPaymentService = async (contractId: string, ownerUserId: string): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện hủy hợp đồng do không thanh toán
         return await terminateForNonPaymentInRepo(contractId, ownerUserId);
