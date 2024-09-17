@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     createRentalRequest,
+    generateContract,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
@@ -13,6 +14,7 @@ import roleMiddleware from '../middlewares/role.middleware';
 
 const router = express.Router();
 
+router.post('/generate-contract', authMiddleware, roleMiddleware('owner'), generateContract);
 router.post('/', authMiddleware, roleMiddleware('renter'), createRentalRequest);
 
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getRentalRequestsByRenter);

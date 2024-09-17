@@ -18,8 +18,10 @@ const emailTemplates = async (template: string, receiver: string, subject: strin
 
         const dirname = __dirname
             .replace('/build/src/configs', '')
-            .replace('\\build\\src\\configs', '')
-            .replace('\\src\\configs', '');
+            .replace('\\build\\configs', '')
+            .replace('\\configs', '');
+
+        console.log(dirname);
 
         const email = new Email({
             message: {

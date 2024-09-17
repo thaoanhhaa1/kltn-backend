@@ -11,6 +11,7 @@ const EnvSchema = z.object({
     RABBIT_MQ_URL: z.string(),
     RENTAL_CONTRACT_ADDRESS: z.string(),
     MONGO_CONNECTION: z.string(),
+    GANACHE_URL: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

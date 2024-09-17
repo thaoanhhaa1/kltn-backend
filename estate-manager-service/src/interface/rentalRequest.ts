@@ -31,3 +31,10 @@ export interface IRentalRequest {
         slug: string;
     };
 }
+
+export interface IGenerateContract {
+    requestId: string;
+    renterId: string;
+    ownerId: string;
+    propertyId: string;
+}
