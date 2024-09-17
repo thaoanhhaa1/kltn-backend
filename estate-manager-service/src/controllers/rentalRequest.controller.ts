@@ -4,6 +4,7 @@ import { createRentalRequestSchema } from '../schemas/rentalRequest.schema';
 import { createNotificationService } from '../services/notification.service';
 import {
     createRentalRequestService,
+    generateContractService,
     getRentalRequestByOwnerService,
     getRentalRequestByRenterService,
     getRentalRequestsByOwnerService,
@@ -157,6 +158,27 @@ export const renterUpdateRentalRequestStatus = async (req: AuthenticatedRequest,
             message: 'Cập nhật trạng thái yêu cầu thuê thành công',
             statusCode: 200,
         };
+
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const generateContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { propertyId, renterId, requestId } = req.body;
+
+        if (!propertyId || !renterId || !requestId) {
+            throw new CustomError(400, 'Dữ liệu không hợp lệ');
+        }
+
+        const result = await generateContractService({
+            ownerId: req.user!.id,
+            propertyId,
+            renterId,
+            requestId,
+        });
 
         res.json(result);
     } catch (error) {

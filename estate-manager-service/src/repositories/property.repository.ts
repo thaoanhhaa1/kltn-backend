@@ -224,6 +224,15 @@ export const getPropertyBySlug = async (slug: string) => {
     });
 };
 
+export const getPropertyById = async (propertyId: string) => {
+    return prisma.property.findUnique({
+        where: {
+            propertyId,
+        },
+        include: propertyInclude,
+    });
+};
+
 export const deletePropertyById = async ({ ownerId, propertyId }: IDeleteProperty) => {
     return prisma.property.update({
         where: {
@@ -295,8 +304,6 @@ export const updatePropertyStatus = async ({ propertyId, status, userId, isAdmin
 };
 
 export const updatePropertiesStatus = ({ properties, status, ownerId }: IUpdatePropertiesStatus) => {
-    console.log('🚀 ~ updatePropertiesStatus ~ ownerId:', ownerId);
-    console.log('🚀 ~ updatePropertiesStatus ~ properties:', properties);
     return prisma.property.updateMany({
         where: {
             propertyId: {

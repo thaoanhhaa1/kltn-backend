@@ -1,16 +1,27 @@
 // //contract.repository.ts
 
+import { Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
+import {
+    addDays,
+    addMonths,
+    differenceInDays,
+    endOfDay,
+    isAfter,
+    isBefore,
+    isSameDay,
+    isSameMonth,
+    startOfDay,
+} from 'date-fns';
 import Web3 from 'web3';
-import envConfig from '../configs/env.config';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
-import { Contract as PrismaContract, Status, PropertyStatus } from '@prisma/client';
+// import RentalContractABI from '../../contractRental/build/contracts/staging/RentalContract.json'; // ABI của hợp đồng
+import envConfig from '../configs/env.config';
 import prisma from '../prisma/prismaClient';
 import { CreateContractReq } from '../schemas/contract.schema';
-import { startOfDay, endOfDay, isSameDay,addWeeks, isSameMonth,isBefore, addMonths,  differenceInDays,addDays, isAfter  } from 'date-fns';
-import { checkOverduePayments } from '../tasks/checkOverduePayments'; 
+import { checkOverduePayments } from '../tasks/checkOverduePayments';
 
 // Khởi tạo Web3 và hợp đồng từ biến môi trường
-const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'));
+const web3 = new Web3(new Web3.providers.HttpProvider(envConfig.GANACHE_URL));
 
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
@@ -166,7 +177,7 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
 //         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
 //             from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
 //         });
-        
+
 //         console.log('Rental Details:', rental);
 
 //         const depositAmount = rental.depositAmount;
@@ -218,7 +229,7 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
 //         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
 //         const updatedContract = await prisma.contract.update({
 //             where: { contract_id: contractId },
-//             data: { 
+//             data: {
 //                 status: 'DEPOSITED', // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
 //                 updated_at: new Date() // Cập nhật thời gian
 //             }
@@ -253,6 +264,7 @@ export const deposit = async (contractId: number, renterUserId: string): Promise
         }
 
         const renterAddress = renter.wallet_address.toLowerCase();
+        console.log('🚀 ~ deposit ~ renterAddress:', renterAddress);
 
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -310,7 +322,7 @@ export const deposit = async (contractId: number, renterUserId: string): Promise
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
-            data: { 
+            data: {
                 status: 'DEPOSITED',
                 updated_at: new Date(),
             },
@@ -380,7 +392,8 @@ export const payMonthlyRent = async (contractId: number, renterUserId: string): 
 
         const rentalStatus = parseInt(rental.status, 10);
 
-        if (rentalStatus === 0 || rentalStatus === 3) { // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
+        if (rentalStatus === 0 || rentalStatus === 3) {
+            // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
             throw new Error('Rental period not started or already ended.');
         }
 
@@ -453,7 +466,7 @@ export const payMonthlyRent = async (contractId: number, renterUserId: string): 
             data: {
                 updated_at: new Date(),
                 status: 'ONGOING',
-            }
+            },
         });
 
         console.log(`Contract ${contractId} updated successfully.`);
@@ -749,7 +762,7 @@ export const cancelContractByOwner = async (
 //         }
 
 //         const userAddress = user.wallet_address.toLowerCase();
-       
+
 //         // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
 //         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
 //             from: userAddress,
@@ -899,7 +912,8 @@ export const endContract = async (contractId: number, userId: string): Promise<a
         // Log trạng thái hợp đồng
         console.log('Rental status:', rentalStatus);
 
-        if (rentalStatus === 0) { // NotCreated
+        if (rentalStatus === 0) {
+            // NotCreated
             const threeDaysAfterCreation = addDays(new Date(contract.created_at), 3);
             const currentDate = new Date();
 
@@ -937,7 +951,8 @@ export const endContract = async (contractId: number, userId: string): Promise<a
             } else {
                 throw new Error('Contract cannot be ended before three days of creation.');
             }
-        } else if (rentalStatus === 1 || rentalStatus === 2) { // Deposited or Ongoing
+        } else if (rentalStatus === 1 || rentalStatus === 2) {
+            // Deposited or Ongoing
             // Kiểm tra xem ngày hiện tại có phải là ngày kết thúc hợp đồng hay không
             const currentDate = new Date();
             const endDate = new Date(contract.end_date);
@@ -987,7 +1002,8 @@ export const endContract = async (contractId: number, userId: string): Promise<a
 
             console.log('Contract ended successfully:', updatedContract);
             return updatedContract;
-        } else if (rentalStatus === 3) { // Ended
+        } else if (rentalStatus === 3) {
+            // Ended
             throw new Error('Contract is already ended.');
         } else {
             throw new Error('Contract is not in a valid state for ending.');
@@ -1037,7 +1053,8 @@ export const terminateForNonPayment = async (contractId: number, ownerId: string
 
         // Chuyển đổi trạng thái hợp đồng thành số nguyên
         const rentalStatus = parseInt(rental.status, 10);
-        if (rentalStatus !== 2) { // ONGOING = 2
+        if (rentalStatus !== 2) {
+            // ONGOING = 2
             throw new Error('Contract is not in an ongoing state.');
         }
 
