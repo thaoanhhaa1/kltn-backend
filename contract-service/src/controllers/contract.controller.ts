@@ -10,7 +10,9 @@ import {
     getContractTransactionsService,
     getContractDetailsService,
     endContractService,
-    terminateForNonPaymentService
+    terminateForNonPaymentService,
+    getContractsByOwnerService,
+    getContractsByRenterService,
     // getAllContractsService,
     // getContractByIdService,
     // getContractsByOwnerIdService,
@@ -44,17 +46,13 @@ export const deposit = async (req: AuthenticatedRequest, res: Response, next: Ne
 
         // Kiểm tra dữ liệu đầu vào
         if (typeof contractId !== 'string' || typeof renterUserId !== 'string') {
-            return res
-                .status(400)
-                .json({ message: 'Contract ID and renter ID are required and must be valid.' });
+            return res.status(400).json({ message: 'Contract ID and renter ID are required and must be valid.' });
         }
 
         const result = await depositService(contractId, renterUserId);
 
-        
         res.status(200).json(result);
     } catch (error) {
-        
         next(error);
     }
 };
@@ -64,10 +62,8 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
         const { contractId, renterUserId } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
-        if (typeof contractId !== 'string'|| typeof renterUserId !== 'string') {
-            return res
-                .status(400)
-                .json({ message: 'Contract ID and renter ID are required and must be valid.' });
+        if (typeof contractId !== 'string' || typeof renterUserId !== 'string') {
+            return res.status(400).json({ message: 'Contract ID and renter ID are required and must be valid.' });
         }
 
         // Gọi hàm service để thực hiện thanh toán tiền thuê
@@ -218,5 +214,26 @@ export const terminateForNonPayment = async (req: AuthenticatedRequest, res: Res
     }
 };
 
+export const getContractsByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
 
+        const contracts = await getContractsByOwnerService(userId);
 
+        res.status(200).json(contracts);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getContractsByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const contracts = await getContractsByRenterService(userId);
+
+        res.status(200).json(contracts);
+    } catch (error) {
+        next(error);
+    }
+};

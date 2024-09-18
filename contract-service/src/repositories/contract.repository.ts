@@ -1,18 +1,26 @@
-// //contract.repository.ts
-
-import Web3 from 'web3';
-import envConfig from '../configs/env.config';
+import { Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
+import {
+    addDays,
+    addMonths,
+    differenceInDays,
+    endOfDay,
+    isAfter,
+    isBefore,
+    isSameDay,
+    isSameMonth,
+    startOfDay,
+} from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
-import { Contract as PrismaContract, Status, PropertyStatus } from '@prisma/client';
+import envConfig from '../configs/env.config';
+import web3 from '../configs/web3.config';
+import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { CreateContractReq } from '../schemas/contract.schema';
-import { startOfDay, endOfDay, isSameDay,addWeeks, isSameMonth,isBefore, addMonths,  differenceInDays,addDays, isAfter  } from 'date-fns';
-import { checkOverduePayments } from '../tasks/checkOverduePayments'; 
-import { v4 as uuidv4 } from 'uuid';
-
-
-// Khởi tạo Web3 và hợp đồng từ biến môi trường
-const web3 = new Web3(new Web3.providers.HttpProvider(envConfig.GANACHE_URL));
+import { checkOverduePayments } from '../tasks/checkOverduePayments';
+import convertVNDToWei from '../utils/convertVNDToWei.util';
+import RabbitMQ from '../configs/rabbitmq.config';
+import { CONTRACT_QUEUE } from '../constants/rabbitmq';
 
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
@@ -47,30 +55,34 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
     const renterWalletAddress = renter.wallet_address;
 
     // Ước lượng phí gas
-    const gasEstimate = await rentalContract.methods.createContract(
-        contractId,
-        contract.property_id,
-        ownerWalletAddress,
-        renterWalletAddress,
-        contract.deposit_amount,
-        contract.monthly_rent
-    ).estimateGas({ from: ownerWalletAddress });
+    const gasEstimate = await rentalContract.methods
+        .createContract(
+            contractId,
+            contract.property_id,
+            ownerWalletAddress,
+            renterWalletAddress,
+            contract.deposit_amount,
+            contract.monthly_rent,
+        )
+        .estimateGas({ from: ownerWalletAddress });
 
     console.log('Estimated Gas:', gasEstimate);
 
-     // Tạo hợp đồng trên blockchain
-    const receipt = await rentalContract.methods.createContract(
-        contractId,
-        contract.property_id,
-        ownerWalletAddress,
-        renterWalletAddress,
-        contract.deposit_amount,
-        contract.monthly_rent
-    ).send({ 
-        from: ownerWalletAddress,
-        gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString()
-    });
+    // Tạo hợp đồng trên blockchain
+    const receipt = await rentalContract.methods
+        .createContract(
+            contractId,
+            contract.property_id,
+            ownerWalletAddress,
+            renterWalletAddress,
+            contract.deposit_amount,
+            contract.monthly_rent,
+        )
+        .send({
+            from: ownerWalletAddress,
+            gas: gasEstimate.toString(),
+            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        });
 
     // Lưu hợp đồng vào cơ sở dữ liệu
     const newContract = await prisma.contract.create({
@@ -116,12 +128,13 @@ export const deposit = async (contractId: string, renterUserId: string): Promise
 
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
+            from: renterAddress, // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
         });
 
         console.log('Rental Details:', rental);
 
         const depositAmount = rental.depositAmount;
+        const depositAmountInWei = await convertVNDToWei(Number(depositAmount));
 
         // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
         if (renterAddress !== rental.renter.toLowerCase()) {
@@ -130,23 +143,23 @@ export const deposit = async (contractId: string, renterUserId: string): Promise
 
         // Kiểm tra số dư của người thuê
         const renterBalance = await web3.eth.getBalance(renterAddress);
-        if (Number(renterBalance) < Number(rental.depositAmount)) {
+        if (Number(renterBalance) < Number(depositAmountInWei)) {
             throw new Error('Insufficient balance to pay deposit amount.');
         }
 
         // Ước lượng lượng gas cần thiết
         const gasEstimate = await rentalContract.methods.deposit(contractId).estimateGas({
             from: renterAddress,
-            value: depositAmount,
+            value: depositAmountInWei,
         });
         console.log('Estimated Gas:', gasEstimate);
 
         // Gọi hàm deposit trên smart contract
         const receipt = await rentalContract.methods.deposit(contractId).send({
             from: renterAddress,
-            value: depositAmount,
+            value: depositAmountInWei,
             gas: gasEstimate.toString(),
-            gasPrice: web3.utils.toWei('30', 'gwei').toString()
+            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
         });
         console.log('Transaction receipt:', receipt);
 
@@ -167,13 +180,21 @@ export const deposit = async (contractId: string, renterUserId: string): Promise
             data: { status: PropertyStatus.UNAVAILABLE },
         });
 
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.UNAVAILABLE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+        });
+
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
             where: { contract_id: contractId },
-            data: { 
+            data: {
                 status: Status.DEPOSITED, // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
-                updated_at: new Date() // Cập nhật thời gian
-            }
+                updated_at: new Date(), // Cập nhật thời gian
+            },
         });
         console.log('Updated Contract:', updatedContract);
 
@@ -240,18 +261,16 @@ export const payMonthlyRent = async (contractId: string, renterUserId: string): 
 
         const rentalStatus = parseInt(rental.status, 10);
 
-        if (rentalStatus === 0 || rentalStatus === 3) { // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
+        if (rentalStatus === 0 || rentalStatus === 3) {
+            // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
             throw new Error('Rental period not started or already ended.');
         }
 
-        // Kiểm tra số tiền thuê hàng tháng có chính xác không
-        if (web3.utils.toWei(contract.monthly_rent.toString(), 'wei') !== rental.monthlyRent.toString()) {
-            throw new Error('Incorrect rent amount.');
-        }
+        const monthlyRentInWei = await convertVNDToWei(Number(rental.monthlyRent));
 
         // Kiểm tra số dư của người thuê
         const renterBalance = await web3.eth.getBalance(renterAddress);
-        if (Number(renterBalance) < Number(rental.monthlyRent)) {
+        if (Number(renterBalance) < Number(monthlyRentInWei)) {
             throw new Error('Insufficient balance to pay rent.');
         }
 
@@ -283,13 +302,13 @@ export const payMonthlyRent = async (contractId: string, renterUserId: string): 
         // Ước lượng lượng gas cần thiết
         const gasEstimate = await rentalContract.methods.payRent(contractId).estimateGas({
             from: renterAddress,
-            value: rental.monthlyRent,
+            value: monthlyRentInWei,
         });
 
         // Gọi hàm payRent trên smart contract
         const receipt = await rentalContract.methods.payRent(contractId).send({
             from: renterAddress,
-            value: rental.monthlyRent,
+            value: monthlyRentInWei,
             gas: gasEstimate.toString(),
             gasPrice: web3.utils.toWei('30', 'gwei').toString(),
         });
@@ -313,7 +332,7 @@ export const payMonthlyRent = async (contractId: string, renterUserId: string): 
             data: {
                 updated_at: new Date(),
                 status: Status.ONGOING,
-            }
+            },
         });
 
         console.log(`Contract ${contractId} updated successfully.`);
@@ -608,7 +627,7 @@ const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
 //         }
 
 //         const userAddress = user.wallet_address.toLowerCase();
-       
+
 //         // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
 //         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
 //             from: userAddress,
@@ -907,25 +926,26 @@ export const cancelContractByRenter = async (
             throw new Error('Contract has already ended.');
         }
 
-        let extraCharge = 0;
+        let extraCharge = '';
         let depositLoss = 0;
 
         if (!notifyBefore30Days) {
             // Nếu không thông báo trước 30 ngày, lấy tiền thuê hàng tháng làm extraCharge
-            extraCharge = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
+            // extraCharge = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
+            extraCharge = await convertVNDToWei(Number(rental.monthlyRent));
 
             // Ước lượng lượng gas cần thiết
             const gasEstimate = await rentalContract.methods
                 .cancelContractByRenter(contractId, notifyBefore30Days)
                 .estimateGas({
                     from: renterAddress,
-                    value: web3.utils.toWei(extraCharge.toString(), 'wei'),
+                    value: extraCharge,
                 });
 
             // Gọi hàm cancelContractByRenter trên smart contract
             const receipt = await rentalContract.methods.cancelContractByRenter(contractId, notifyBefore30Days).send({
                 from: renterAddress,
-                value: web3.utils.toWei(extraCharge.toString(), 'wei'),
+                value: extraCharge,
                 gas: gasEstimate.toString(),
                 gasPrice: web3.utils.toWei('30', 'gwei').toString(),
             });
@@ -934,7 +954,7 @@ export const cancelContractByRenter = async (
             await prisma.transaction.create({
                 data: {
                     contract_id: contractId,
-                    amount: extraCharge,
+                    amount: rental.monthlyRent,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
                     description: 'Contract cancellation with extra charge',
@@ -942,11 +962,11 @@ export const cancelContractByRenter = async (
             });
 
             // Tiền cọc sẽ được chuyển cho chủ hợp đồng
-            depositLoss = Number(web3.utils.fromWei(rental.depositAmount, 'wei'));
+            depositLoss = Number(await convertVNDToWei(Number(rental.depositAmount)));
             await prisma.transaction.create({
                 data: {
                     contract_id: contractId,
-                    amount: depositLoss,
+                    amount: rental.depositAmount,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
                     description: 'Deposit transferred to owner upon contract cancellation',
@@ -972,7 +992,7 @@ export const cancelContractByRenter = async (
             await prisma.transaction.create({
                 data: {
                     contract_id: contractId,
-                    amount: Number(web3.utils.fromWei(rental.depositAmount, 'wei')),
+                    amount: rental.depositAmount,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
                     description: 'Contract cancellation with deposit refund',
@@ -995,6 +1015,14 @@ export const cancelContractByRenter = async (
             data: {
                 status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
             },
+        });
+
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.ACTIVE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
         });
 
         console.log('Contract successfully cancelled by renter.');
@@ -1050,7 +1078,8 @@ export const cancelContractByOwner = async (
         const rentalStatus = parseInt(rental.status, 10);
 
         // Kiểm tra trạng thái hợp đồng trước khi thực hiện hành động
-        if (rentalStatus === 3) { // Assuming 3 is for Ended status
+        if (rentalStatus === 3) {
+            // Assuming 3 is for Ended status
             throw new Error('Contract has already ended.');
         }
 
@@ -1059,11 +1088,11 @@ export const cancelContractByOwner = async (
 
         // Xác định số tiền bồi thường và tiền cọc cần hoàn trả
         if (!notifyBefore30Days) {
-            compensation = Number(web3.utils.fromWei(rental.monthlyRent, 'wei'));
+            compensation = Number(await convertVNDToWei(Number(rental.monthlyRent)));
         }
 
         if (contract.status === 'DEPOSITED' || contract.status === 'ONGOING') {
-            depositAmount = Number(web3.utils.fromWei(rental.depositAmount, 'wei'));
+            depositAmount = Number(await convertVNDToWei(Number(rental.depositAmount)));
         }
 
         // Ước lượng gas cho việc hủy hợp đồng
@@ -1110,6 +1139,14 @@ export const cancelContractByOwner = async (
             },
         });
 
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.ACTIVE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+        });
+
         return updatedContract;
     } catch (error) {
         console.error('Error in cancelContractByOwner:', error);
@@ -1150,7 +1187,8 @@ export const endContract = async (contractId: string, userId: string): Promise<a
         // Log trạng thái hợp đồng
         console.log('Rental status:', rentalStatus);
 
-        if (rentalStatus === 0) { // NotCreated
+        if (rentalStatus === 0) {
+            // NotCreated
             const threeDaysAfterCreation = addDays(new Date(contract.created_at), 3);
             const currentDate = new Date();
 
@@ -1183,12 +1221,21 @@ export const endContract = async (contractId: string, userId: string): Promise<a
                     },
                 });
 
+                RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+                    data: {
+                        propertyId: contract.property_id,
+                        status: PropertyStatus.ACTIVE,
+                    },
+                    type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+                });
+
                 console.log('Contract ended successfully:', receipt);
                 return updatedContract;
             } else {
                 throw new Error('Contract cannot be ended before three days of creation.');
             }
-        } else if (rentalStatus === 1 || rentalStatus === 2) { // Deposited or Ongoing
+        } else if (rentalStatus === 1 || rentalStatus === 2) {
+            // Deposited or Ongoing
             // Kiểm tra xem ngày hiện tại có phải là ngày kết thúc hợp đồng hay không
             const currentDate = new Date();
             const endDate = new Date(contract.end_date);
@@ -1223,6 +1270,14 @@ export const endContract = async (contractId: string, userId: string): Promise<a
                 data: {
                     status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
                 },
+            });
+
+            RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+                data: {
+                    propertyId: contract.property_id,
+                    status: PropertyStatus.ACTIVE,
+                },
+                type: CONTRACT_QUEUE.type.UPDATE_STATUS,
             });
 
             console.log('Contract ended successfully:', receipt);
@@ -1275,7 +1330,8 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
 
         // Chuyển đổi trạng thái hợp đồng thành số nguyên
         const rentalStatus = parseInt(rental.status, 10);
-        if (rentalStatus !== 2) { // ONGOING = 2
+        if (rentalStatus !== 2) {
+            // ONGOING = 2
             throw new Error('Contract is not in an ongoing state.');
         }
 
@@ -1305,6 +1361,14 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
             data: {
                 status: PropertyStatus.ACTIVE,
             },
+        });
+
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.ACTIVE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
         });
 
         console.log('Contract terminated successfully:', receipt);
@@ -1429,14 +1493,14 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
                     select: {
                         user_id: true,
                         wallet_address: true,
-                    }
+                    },
                 },
                 renter: {
                     select: {
                         user_id: true,
                         wallet_address: true,
-                    }
-                }
+                    },
+                },
             },
         });
 
@@ -1466,9 +1530,11 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
         }
 
         // Chuyển đổi các BigInt thành chuỗi nếu cần
-        contractDetailsFromBlockchain = JSON.parse(JSON.stringify(contractDetailsFromBlockchain, (key, value) =>
-            typeof value === 'bigint' ? value.toString() : value
-        ));
+        contractDetailsFromBlockchain = JSON.parse(
+            JSON.stringify(contractDetailsFromBlockchain, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value,
+            ),
+        );
 
         // Kết hợp dữ liệu từ cơ sở dữ liệu và blockchain
         const combinedContractDetails = {
@@ -1488,11 +1554,24 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
         };
 
         return combinedContractDetails;
-
     } catch (error) {
         console.error('Error in getContractDetails:', error);
         throw new Error(`Failed to get contract details: ${(error as Error).message}`);
     }
 };
 
+export const getContractsByOwner = (ownerId: IUserId) => {
+    return prisma.contract.findMany({
+        where: {
+            owner_user_id: ownerId,
+        },
+    });
+};
 
+export const getContractsByRenter = (renterId: IUserId) => {
+    return prisma.contract.findMany({
+        where: {
+            renter_user_id: renterId,
+        },
+    });
+};

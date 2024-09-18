@@ -9,6 +9,8 @@ import {
     getContractDetails,
     endContract,
     terminateForNonPayment,
+    getContractsByOwner,
+    getContractsByRenter,
     // deleteContractById,
     // getAllContracts,
     // getContractById,
@@ -37,7 +39,12 @@ router.post('/cancel/renter', authMiddleware, roleMiddleware('renter'), cancelCo
 router.post('/cancel/owner', authMiddleware, roleMiddleware('owner'), cancelContractByOwner);
 
 // Route để lấy danh sách giao dịch của hợp đồng
-router.get('/:contractId/transactions', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractTransactions);
+router.get(
+    '/:contractId/transactions',
+    authMiddleware,
+    hasAnyRoleMiddleware(['owner', 'renter']),
+    getContractTransactions,
+);
 
 // Route để lấy chi tiết hợp đồng
 router.get('/:contractId/details', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetails);
@@ -53,5 +60,8 @@ router.post('/terminate', authMiddleware, roleMiddleware('owner'), terminateForN
 // router.get('/:contractId', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractById);
 // router.put('/:contractId', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), updateContractById);
 // router.delete('/:contractId', authMiddleware, deleteContractById);
+
+router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
+router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenter);
 
 export default router;

@@ -12,6 +12,10 @@ const EnvSchema = z.object({
     RENTAL_CONTRACT_ADDRESS: z.string(),
     MONGO_CONNECTION: z.string(),
     GANACHE_URL: z.string(),
+    COINGECKO_API_KEY: z.string(),
+    COINGECKO_ENDPOINT: z.string(),
+    KV_REST_API_URL: z.string(),
+    KV_REST_API_TOKEN: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

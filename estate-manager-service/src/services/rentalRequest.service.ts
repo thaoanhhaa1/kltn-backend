@@ -19,7 +19,7 @@ import {
     ownerUpdateRentalRequestStatus,
     renterUpdateRentalRequestStatus,
 } from '../repositories/rentalRequest.repository';
-import { findOwnerId, findUserById } from '../repositories/user.repository';
+import { findOwnerId, findUserById, isConnectToWallet } from '../repositories/user.repository';
 import { findUserDetailByUserId } from '../repositories/userDetail.repository';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 import { convertDateToDB } from '../utils/convertDate';
@@ -27,7 +27,14 @@ import { createContract } from '../utils/createContract.util';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
 
-export const createRentalRequestService = ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
+export const createRentalRequestService = async ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
+    const renterId = rest.renterId;
+
+    const [isConnect, userDetail] = await Promise.all([isConnectToWallet(renterId), findUserDetailByUserId(renterId)]);
+
+    if (!isConnect) throw new CustomError(400, 'Tài khoản chưa kết nối ví điện tử');
+    if (!userDetail) throw new CustomError(400, 'Tài khoản chưa xác thực thông tin');
+
     return createRentalRequest({
         ...rest,
         rentalEndDate: convertDateToDB(rentalEndDate),
@@ -151,7 +158,6 @@ export const generateContractService = async ({ ownerId, propertyId, renterId, r
             depositAmount: rentalRequest.rentalDeposit,
         };
     } catch (error) {
-        console.log(error);
-        throw new CustomError(400, 'Tạo hợp đồng không thành công');
+        throw error;
     }
 };

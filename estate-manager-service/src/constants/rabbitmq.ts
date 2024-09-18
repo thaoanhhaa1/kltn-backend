@@ -23,3 +23,17 @@ export const PROPERTY_QUEUE = {
         DELETED: 'PROPERTY_DELETED',
     },
 };
+
+export const CONTRACT_QUEUE = {
+    name: 'contract-service-property-queue',
+    exchange: {
+        name: 'contract-service-exchange',
+        type: 'fanout',
+    },
+    type: {
+        CREATED: 'PROPERTY_CREATED',
+        UPDATED: 'PROPERTY_UPDATED',
+        DELETED: 'PROPERTY_DELETED',
+        UPDATE_STATUS: 'PROPERTY_UPDATE_STATUS',
+    },
+};

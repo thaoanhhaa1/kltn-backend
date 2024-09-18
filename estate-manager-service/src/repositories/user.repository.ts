@@ -157,3 +157,12 @@ export const updateStatus = (userId: IUserId, status: UserStatus) => {
         select: adminSelect,
     });
 };
+
+export const isConnectToWallet = (userId: IUserId) => {
+    return prisma.user.findUnique({
+        where: { userId, walletAddress: { not: null } },
+        select: {
+            walletAddress: true,
+        },
+    });
+};

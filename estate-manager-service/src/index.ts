@@ -1,9 +1,11 @@
 import express from 'express';
-import router from './routes';
-import envConfig from './configs/env.config';
-import errorHandler from './middlewares/error.middleware';
-import RabbitMQ from './configs/rabbitmq.config';
 import elasticClient from './configs/elastic.config';
+import envConfig from './configs/env.config';
+import RabbitMQ from './configs/rabbitmq.config';
+import { CONTRACT_QUEUE, PROPERTY_QUEUE } from './constants/rabbitmq';
+import errorHandler from './middlewares/error.middleware';
+import { updateStatus } from './repositories/property.repository';
+import router from './routes';
 import { getNotPendingPropertiesService } from './services/property.service';
 
 const app = express();
@@ -53,6 +55,27 @@ elasticClient
     .catch((err) => {
         console.error('Elasticsearch connection error:', err);
     });
+
+RabbitMQ.getInstance().consumeQueue(CONTRACT_QUEUE.name, async (message) => {
+    if (!message) return;
+
+    const { type, data } = JSON.parse(message.content.toString());
+
+    if (type === CONTRACT_QUEUE.type.UPDATE_STATUS) {
+        const { propertyId, status } = data;
+
+        const property = await updateStatus(propertyId, status);
+
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: PROPERTY_QUEUE.exchange,
+            message: {
+                type: PROPERTY_QUEUE.type.UPDATED,
+                data: property,
+            },
+            name: PROPERTY_QUEUE.name,
+        });
+    }
+});
 
 const PORT = envConfig.PORT || 4001;
 app.listen(PORT, () => {
