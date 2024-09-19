@@ -1,6 +1,7 @@
 // contract.service.ts
 
 import { Contract as PrismaContract } from '@prisma/client';
+import { v4 } from 'uuid';
 import { IUserId } from '../interfaces/user';
 import {
     cancelContractByOwner as cancelContractByOwnerInRepo,
@@ -15,13 +16,56 @@ import {
     payMonthlyRent as payMonthlyRentInRepo,
     terminateForNonPayment as terminateForNonPaymentInRepo,
 } from '../repositories/contract.repository';
+import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
 import CustomError from '../utils/error.util';
+import { createSmartContractService } from './blockchain.service';
+import { createTransactionService } from './transaction.service';
 
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
     try {
-        return await createContractInRepo(contract);
+        const [owner, renter] = await Promise.all([
+            findUserById(contract.owner_user_id),
+            findUserById(contract.renter_user_id),
+        ]);
+
+        if (!owner || !owner.wallet_address) {
+            throw new CustomError(400, 'Không tìm thấy chủ nhà hoặc chủ nhà chưa có địa chỉ ví.');
+        }
+
+        if (!renter || !renter.wallet_address) {
+            throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
+        }
+
+        const contractId = v4();
+
+        const receipt = await createSmartContractService({
+            ...contract,
+            contract_id: contractId,
+            owner_wallet_address: owner.wallet_address,
+            renter_wallet_address: renter.wallet_address,
+        });
+
+        const result = await createContractInRepo({
+            ...contract,
+            owner_wallet_address: owner.wallet_address,
+            renter_wallet_address: renter.wallet_address,
+            contract_id: contractId,
+            transaction_hash: receipt.transactionHash,
+        });
+
+        createTransactionService({
+            amount: contract.deposit_amount,
+            contract_id: contractId,
+            title: 'Thanh toán tiền đặt cọc',
+            description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
+            status: 'PENDING',
+        })
+            .then(() => console.log('Transaction created'))
+            .catch((error) => console.error('Error creating transaction:', error));
+
+        return result;
     } catch (error) {
         console.error('Error creating contract:', error);
         throw new Error('Could not create contract');

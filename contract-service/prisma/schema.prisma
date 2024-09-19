@@ -22,6 +22,9 @@ enum UserStatus {
 
 model User {
   user_id         String     @id
+  name            String?
+  avatar          String?
+  email           String?
   wallet_address  String?    @unique
   status          UserStatus @default(ACTIVE)
   ownedContracts  Contract[] @relation("OwnerContracts")
@@ -51,6 +54,9 @@ enum PropertyStatus {
 
 model Property {
   property_id String         @id
+  title       String
+  slug        String
+  images      String[]
   status      PropertyStatus @default(PENDING)
   deleted     Boolean?       @default(false)
   address_id  String
@@ -91,16 +97,25 @@ model Contract {
   @@map("`contract`")
 }
 
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 model Transaction {
-  id               Int      @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   contract_id      String
   amount           Float
-  transaction_hash String
-  status           String
+  amount_eth       Float?
+  fee              Float?
+  transaction_hash String?
+  status           TransactionStatus
+  title            String
   description      String? // Trường mô tả nội dung giao dịch
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-  contract         Contract @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+  contract         Contract          @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
 
   @@map("`transaction`")
 }

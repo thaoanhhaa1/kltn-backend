@@ -10,17 +10,16 @@ import {
     isSameMonth,
     startOfDay,
 } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
+import RabbitMQ from '../configs/rabbitmq.config';
 import web3 from '../configs/web3.config';
+import { CONTRACT_QUEUE } from '../constants/rabbitmq';
+import { IContract } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
-import { CreateContractReq } from '../schemas/contract.schema';
 import { checkOverduePayments } from '../tasks/checkOverduePayments';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
-import RabbitMQ from '../configs/rabbitmq.config';
-import { CONTRACT_QUEUE } from '../constants/rabbitmq';
 
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
@@ -31,63 +30,15 @@ if (!web3.utils.isAddress(contractAddress)) {
 
 const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contractAddress);
 
-export const createContract = async (contract: CreateContractReq): Promise<PrismaContract> => {
-    const contractId = uuidv4(); // Tạo UUID cho contract_id
-
-    // Truy vấn cơ sở dữ liệu để lấy thông tin người dùng
-    const owner = await prisma.user.findUnique({
-        where: { user_id: contract.owner_user_id },
-    });
-
-    const renter = await prisma.user.findUnique({
-        where: { user_id: contract.renter_user_id },
-    });
-
-    if (!owner || !owner.wallet_address) {
-        throw new Error('Owner not found or does not have a wallet address.');
-    }
-
-    if (!renter || !renter.wallet_address) {
-        throw new Error('Renter not found or does not have a wallet address.');
-    }
-
-    const ownerWalletAddress = owner.wallet_address;
-    const renterWalletAddress = renter.wallet_address;
-
-    // Ước lượng phí gas
-    const gasEstimate = await rentalContract.methods
-        .createContract(
-            contractId,
-            contract.property_id,
-            ownerWalletAddress,
-            renterWalletAddress,
-            contract.deposit_amount,
-            contract.monthly_rent,
-        )
-        .estimateGas({ from: ownerWalletAddress });
-
-    console.log('Estimated Gas:', gasEstimate);
-
-    // Tạo hợp đồng trên blockchain
-    const receipt = await rentalContract.methods
-        .createContract(
-            contractId,
-            contract.property_id,
-            ownerWalletAddress,
-            renterWalletAddress,
-            contract.deposit_amount,
-            contract.monthly_rent,
-        )
-        .send({
-            from: ownerWalletAddress,
-            gas: gasEstimate.toString(),
-            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-        });
-
+export const createContract = async (
+    contract: IContract & {
+        transaction_hash: string;
+    },
+): Promise<PrismaContract> => {
     // Lưu hợp đồng vào cơ sở dữ liệu
-    const newContract = await prisma.contract.create({
+    return prisma.contract.create({
         data: {
-            contract_id: contractId,
+            contract_id: contract.contract_id,
             owner_user_id: contract.owner_user_id,
             renter_user_id: contract.renter_user_id,
             property_id: contract.property_id,
@@ -97,11 +48,9 @@ export const createContract = async (contract: CreateContractReq): Promise<Prism
             deposit_amount: contract.deposit_amount,
             contract_terms: contract.contract_terms,
             status: Status.WAITING,
-            transaction_hash_contract: receipt.transactionHash,
+            transaction_hash_contract: contract.transaction_hash,
         },
     });
-
-    return newContract;
 };
 
 export const deposit = async (contractId: string, renterUserId: string): Promise<PrismaContract> => {
@@ -170,7 +119,7 @@ export const deposit = async (contractId: string, renterUserId: string): Promise
                 amount: Number(depositAmount),
                 transaction_hash: receipt.transactionHash,
                 status: 'COMPLETED',
-                description: 'Deposit transaction',
+                title: 'Deposit transaction',
             },
         });
 
@@ -322,7 +271,7 @@ export const payMonthlyRent = async (contractId: string, renterUserId: string): 
                 amount: Number(rental.monthlyRent),
                 transaction_hash: receipt.transactionHash,
                 status: 'COMPLETED',
-                description: 'Monthly rent payment',
+                title: 'Monthly rent payment',
             },
         });
 
@@ -957,7 +906,7 @@ export const cancelContractByRenter = async (
                     amount: rental.monthlyRent,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
-                    description: 'Contract cancellation with extra charge',
+                    title: 'Contract cancellation with extra charge',
                 },
             });
 
@@ -969,7 +918,7 @@ export const cancelContractByRenter = async (
                     amount: rental.depositAmount,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
-                    description: 'Deposit transferred to owner upon contract cancellation',
+                    title: 'Deposit transferred to owner upon contract cancellation',
                 },
             });
         } else {
@@ -995,7 +944,7 @@ export const cancelContractByRenter = async (
                     amount: rental.depositAmount,
                     transaction_hash: receipt.transactionHash,
                     status: 'COMPLETED',
-                    description: 'Contract cancellation with deposit refund',
+                    title: 'Contract cancellation with deposit refund',
                 },
             });
         }
@@ -1118,7 +1067,7 @@ export const cancelContractByOwner = async (
                 amount: compensation + depositAmount,
                 transaction_hash: receipt.transactionHash,
                 status: 'COMPLETED',
-                description: notifyBefore30Days ? 'Contract cancellation' : 'Contract cancellation with compensation',
+                title: notifyBefore30Days ? 'Contract cancellation' : 'Contract cancellation with compensation',
             },
         });
 
@@ -1565,6 +1514,15 @@ export const getContractsByOwner = (ownerId: IUserId) => {
         where: {
             owner_user_id: ownerId,
         },
+        include: {
+            owner: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    user_id: true,
+                },
+            },
+        },
     });
 };
 
@@ -1572,6 +1530,15 @@ export const getContractsByRenter = (renterId: IUserId) => {
     return prisma.contract.findMany({
         where: {
             renter_user_id: renterId,
+        },
+        include: {
+            renter: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    user_id: true,
+                },
+            },
         },
     });
 };
