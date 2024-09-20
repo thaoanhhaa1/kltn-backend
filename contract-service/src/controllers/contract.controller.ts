@@ -2,28 +2,24 @@ import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
-    createContractService,
-    depositService,
-    payMonthlyRentService,
     cancelContractByOwnerService,
     cancelContractByRenterService,
-    getContractTransactionsService,
-    getContractDetailsService,
+    createContractService,
+    depositService,
     endContractService,
-    terminateForNonPaymentService,
+    getContractDetailsService,
     getContractsByOwnerService,
     getContractsByRenterService,
-    // getAllContractsService,
-    // getContractByIdService,
-    // getContractsByOwnerIdService,
-    // getContractsByRenterIdService,
-    // softDeleteContractByIdService,
-    // updateContractByIdService,
+    getContractTransactionsService,
+    payMonthlyRentService,
+    terminateForNonPaymentService,
 } from '../services/contract.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
+import CustomError from '../utils/error.util';
 
 export const createContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
+        const userId = req.user!.id;
         const safeParse = createContractReq.safeParse(req.body);
 
         if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
@@ -31,7 +27,10 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
         const contractData = safeParse.data;
 
         // Gọi hàm service để tạo hợp đồng
-        const createdContract = await createContractService(contractData);
+        const createdContract = await createContractService({
+            ...contractData,
+            owner_user_id: userId,
+        });
 
         // Phản hồi với dữ liệu hợp đồng đã tạo
         res.status(201).json(createdContract);
@@ -42,14 +41,17 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
 
 export const deposit = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { contractId, renterUserId } = req.body;
+        const userId = req.user!.id;
+        const { transactionId, contractId } = req.body;
 
-        // Kiểm tra dữ liệu đầu vào
-        if (typeof contractId !== 'string' || typeof renterUserId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID and renter ID are required and must be valid.' });
-        }
+        if (!transactionId) throw new CustomError(400, 'Mã giao dịch không được để trống');
+        if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
 
-        const result = await depositService(contractId, renterUserId);
+        const result = await depositService({
+            contractId,
+            renterId: userId,
+            transactionId,
+        });
 
         res.status(200).json(result);
     } catch (error) {
@@ -59,20 +61,21 @@ export const deposit = async (req: AuthenticatedRequest, res: Response, next: Ne
 
 export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { contractId, renterUserId } = req.body;
+        const { contractId, transactionId } = req.body;
 
-        // Kiểm tra dữ liệu đầu vào
-        if (typeof contractId !== 'string' || typeof renterUserId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID and renter ID are required and must be valid.' });
-        }
+        if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
+        if (!transactionId) throw new CustomError(400, 'Mã giao dịch không được để trống');
 
-        // Gọi hàm service để thực hiện thanh toán tiền thuê
-        const updatedContract = await payMonthlyRentService(contractId, renterUserId);
+        const userId = req.user!.id;
 
-        // Phản hồi với dữ liệu hợp đồng đã cập nhật
+        const updatedContract = await payMonthlyRentService({
+            contractId,
+            renterId: userId,
+            transactionId,
+        });
+
         res.status(200).json(updatedContract);
     } catch (error) {
-        // Chuyển lỗi cho middleware xử lý lỗi
         next(error);
     }
 };

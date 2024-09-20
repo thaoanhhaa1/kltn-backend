@@ -74,7 +74,6 @@ contract RentalContract {
         Contract storage contractInfo = contracts[_contractID];
 
         require(contractInfo.status == RentalStatus.NotCreated, "Contract status is not valid for deposit");
-        require(msg.value == contractInfo.depositAmount, "Incorrect deposit amount");
         require(address(msg.sender).balance >= msg.value, "Insufficient balance of renter");
 
         contractInfo.status = RentalStatus.Deposited;
@@ -88,7 +87,6 @@ contract RentalContract {
         Contract storage contractInfo = contracts[_contractID];
 
         require(contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing, "Rental period not valid");
-        require(msg.value == contractInfo.monthlyRent, "Incorrect rent amount");
         require(address(msg.sender).balance >= msg.value, "Insufficient balance of renter");
 
         if (contractInfo.status == RentalStatus.Deposited) {

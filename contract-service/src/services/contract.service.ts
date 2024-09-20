@@ -1,14 +1,20 @@
 // contract.service.ts
 
-import { Contract as PrismaContract } from '@prisma/client';
+import { Contract as PrismaContract, PropertyStatus } from '@prisma/client';
+import { isAfter } from 'date-fns';
 import { v4 } from 'uuid';
+import RabbitMQ from '../configs/rabbitmq.config';
+import { CONTRACT_QUEUE } from '../constants/rabbitmq';
+import { IDeposit } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
+import prisma from '../prisma/prismaClient';
 import {
     cancelContractByOwner as cancelContractByOwnerInRepo,
     cancelContractByRenter as cancelContractByRenterInRepo,
     createContract as createContractInRepo,
     deposit as depositInRepo,
     endContract as endContractInRepo,
+    findContractById,
     getContractDetails as getContractDetailsInRepo,
     getContractsByOwner,
     getContractsByRenter,
@@ -16,10 +22,17 @@ import {
     payMonthlyRent as payMonthlyRentInRepo,
     terminateForNonPayment as terminateForNonPaymentInRepo,
 } from '../repositories/contract.repository';
+import { updatePropertyStatus } from '../repositories/property.repository';
+import { createTransaction, getTransactionById, paymentTransaction } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
 import CustomError from '../utils/error.util';
-import { createSmartContractService } from './blockchain.service';
+import {
+    createSmartContractService,
+    depositSmartContractService,
+    payMonthlyRentSmartContractService,
+} from './blockchain.service';
+import { getCoinPriceService } from './coingecko.service';
 import { createTransactionService } from './transaction.service';
 
 // Hàm để tạo hợp đồng
@@ -56,6 +69,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
         });
 
         createTransactionService({
+            from_id: renter.user_id,
             amount: contract.deposit_amount,
             contract_id: contractId,
             title: 'Thanh toán tiền đặt cọc',
@@ -72,21 +86,116 @@ export const createContractService = async (contract: CreateContractReq): Promis
     }
 };
 
-export const depositService = async (contractId: string, renterUserId: IUserId): Promise<PrismaContract> => {
+export const depositService = async ({ contractId, renterId, transactionId }: IDeposit): Promise<PrismaContract> => {
     try {
-        // Gọi phương thức repository để thực hiện đặt cọc và tạo hợp đồng
-        return await depositInRepo(contractId, renterUserId);
+        const [contract, renter, transaction] = await Promise.all([
+            findContractById(contractId),
+            findUserById(renterId),
+            getTransactionById(transactionId),
+        ]);
+
+        if (!transaction) throw new CustomError(404, 'Không tìm thấy giao dịch');
+        if (transaction.status !== 'PENDING') throw new CustomError(400, 'Giao dịch đã được xử lý');
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
+        if (transaction.contract_id !== contractId) throw new CustomError(400, 'Giao dịch không thuộc hợp đồng này');
+        if (contract.renter_user_id !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+        if (!renter.wallet_address) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+
+        const [receipt, ethVnd] = await Promise.all([
+            depositSmartContractService({
+                contractId,
+                renterAddress: renter.wallet_address,
+            }),
+            getCoinPriceService({
+                coin: 'ethereum',
+                currency: 'vnd',
+            }),
+        ]);
+
+        const [, , transactionResult] = await prisma.$transaction([
+            paymentTransaction({
+                amount_eth: transaction.amount / ethVnd,
+                fee: Number(receipt.gasUsed) / 1e18,
+                id: transactionId,
+                transaction_hash: receipt.transactionHash,
+            }),
+            updatePropertyStatus(contract.property_id, 'UNAVAILABLE'),
+            depositInRepo(contractId),
+        ]);
+
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.UNAVAILABLE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+        });
+
+        if (isAfter(new Date(), contract.start_date)) {
+            createTransaction({
+                amount: contract.monthly_rent,
+                contract_id: contract.contract_id,
+                status: 'PENDING',
+                title: `Thanh toán tiền thuê tháng ${contract.start_date.getMonth() + 1}`,
+                description: `Thanh toán tiền thuê tháng ${contract.start_date.getMonth() + 1} cho hợp đồng **${
+                    contract.contract_id
+                }**`,
+                from_id: contract.renter_user_id,
+                to_id: contract.owner_user_id,
+            })
+                .then(() => console.log('Transaction created'))
+                .catch((error) => console.error('Error creating transaction:', error));
+        }
+
+        return transactionResult;
     } catch (error) {
         console.error('Error processing deposit and creating contract:', error);
-        throw new Error('Could not process deposit and create contract');
+        throw error;
     }
 };
 
 // Hàm để thanh toán tiền thuê hàng tháng
-export const payMonthlyRentService = async (contractId: string, renterUserId: IUserId): Promise<PrismaContract> => {
+export const payMonthlyRentService = async ({ contractId, renterId, transactionId }: IDeposit) => {
     try {
+        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
+        const [contract, renter, transaction] = await Promise.all([
+            findContractById(contractId),
+            findUserById(renterId),
+            getTransactionById(transactionId),
+        ]);
+
+        if (!transaction) throw new CustomError(404, 'Không tìm thấy giao dịch');
+        if (transaction.status !== 'PENDING') throw new CustomError(400, 'Giao dịch đã được xử lý');
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
+        if (!renter.wallet_address) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+        if (contract.renter_user_id !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+
+        const [receipt, ethVnd] = await Promise.all([
+            payMonthlyRentSmartContractService({
+                contractId,
+                renterAddress: renter.wallet_address,
+            }),
+
+            getCoinPriceService({
+                coin: 'ethereum',
+                currency: 'vnd',
+            }),
+        ]);
+
+        const [transactionResult] = await prisma.$transaction([
+            paymentTransaction({
+                amount_eth: transaction.amount / ethVnd,
+                fee: Number(receipt.gasUsed) / 1e18,
+                id: transactionId,
+                transaction_hash: receipt.transactionHash,
+            }),
+            payMonthlyRentInRepo(contractId),
+        ]);
+
         // Gọi phương thức repository để thực hiện thanh toán tiền thuê
-        return await payMonthlyRentInRepo(contractId, renterUserId);
+        return transactionResult;
     } catch (error) {
         console.error('Error processing monthly rent payment:', error);
         throw new Error('Could not process monthly rent payment');

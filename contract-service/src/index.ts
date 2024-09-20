@@ -1,4 +1,4 @@
-import { Property, User } from '@prisma/client';
+import { Property } from '@prisma/client';
 import express from 'express';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
@@ -6,6 +6,7 @@ import { PROPERTY_QUEUE, USER_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
+import { createMonthlyRentTask } from './services/task.service';
 import { createUserService, updateUserService } from './services/user.service';
 import { startAgenda } from './tasks/agenda';
 
@@ -101,6 +102,8 @@ startAgenda()
     .catch((err) => {
         console.error('Error starting agenda:', err);
     });
+
+createMonthlyRentTask();
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

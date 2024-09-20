@@ -2,6 +2,8 @@ import RentalContractABI from '../../contractRental/build/contracts/RentalContra
 import envConfig from '../configs/env.config';
 import web3 from '../configs/web3.config';
 import { IContract } from '../interfaces/contract';
+import convertVNDToWei from '../utils/convertVNDToWei.util';
+import CustomError from '../utils/error.util';
 
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
@@ -32,6 +34,86 @@ export const createSmartContractService = async ({
         gas: gasEstimate.toString(),
         gasPrice: web3.utils.toWei('30', 'gwei').toString(),
     });
+
+    return receipt;
+};
+
+export const depositSmartContractService = async ({
+    contractId,
+    renterAddress,
+}: {
+    contractId: string;
+    renterAddress: string;
+}) => {
+    const contract: any = await rentalContract.methods.getContractDetails(contractId).call({
+        from: renterAddress,
+    });
+    console.log('contract.depositAmount', contract.depositAmount);
+
+    const depositAmountInWei = await convertVNDToWei(Number(contract.depositAmount));
+
+    // Kiểm tra số dư của người thuê
+    const renterBalance = await web3.eth.getBalance(renterAddress);
+    if (Number(renterBalance) < Number(depositAmountInWei))
+        throw new CustomError(400, 'Số dư không đủ để thanh toán số tiền đặt cọc.');
+
+    // Ước lượng lượng gas cần thiết
+    const gasEstimate = await rentalContract.methods.deposit(contractId).estimateGas({
+        from: renterAddress,
+        value: depositAmountInWei,
+    });
+    console.log('Estimated Gas:', gasEstimate);
+
+    // Gọi hàm deposit trên smart contract
+    const receipt = await rentalContract.methods.deposit(contractId).send({
+        from: renterAddress,
+        value: depositAmountInWei,
+        gas: gasEstimate.toString(),
+        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+    });
+    console.log('Transaction receipt:', receipt);
+
+    return receipt;
+};
+
+export const payMonthlyRentSmartContractService = async ({
+    contractId,
+    renterAddress,
+}: {
+    contractId: string;
+    renterAddress: string;
+}) => {
+    const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+        from: renterAddress,
+    });
+
+    const rentalStatus = parseInt(rental.status, 10);
+
+    if (rentalStatus === 0 || rentalStatus === 3)
+        throw new CustomError(400, 'Chưa đến thời gian thanh toán hoặc hợp đồng đã kết thúc.');
+
+    const monthlyRentInWei = await convertVNDToWei(Number(rental.monthlyRent));
+
+    // Kiểm tra số dư của người thuê
+    const renterBalance = await web3.eth.getBalance(renterAddress);
+    if (Number(renterBalance) < Number(monthlyRentInWei))
+        throw new CustomError(400, 'Số dư không đủ để thanh toán tiền thuê.');
+
+    // Ước lượng lượng gas cần thiết
+    const gasEstimate = await rentalContract.methods.payRent(contractId).estimateGas({
+        from: renterAddress,
+        value: monthlyRentInWei,
+    });
+    console.log('🚀 ~ gasEstimate ~ gasEstimate:', gasEstimate);
+
+    // Gọi hàm payRent trên smart contract
+    const receipt = await rentalContract.methods.payRent(contractId).send({
+        from: renterAddress,
+        value: monthlyRentInWei,
+        gas: gasEstimate.toString(),
+        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+    });
+    console.log('🚀 ~ receipt ~ receipt:', receipt);
 
     return receipt;
 };

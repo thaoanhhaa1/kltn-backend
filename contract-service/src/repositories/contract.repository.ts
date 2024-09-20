@@ -1,15 +1,5 @@
 import { Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
-import {
-    addDays,
-    addMonths,
-    differenceInDays,
-    endOfDay,
-    isAfter,
-    isBefore,
-    isSameDay,
-    isSameMonth,
-    startOfDay,
-} from 'date-fns';
+import { addDays, differenceInDays, isAfter, isSameDay } from 'date-fns';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -53,244 +43,35 @@ export const createContract = async (
     });
 };
 
-export const deposit = async (contractId: string, renterUserId: string): Promise<PrismaContract> => {
-    try {
-        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
-        const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
-        });
-
-        if (!contract) {
-            throw new Error('Contract not found.');
-        }
-
-        // Lấy thông tin người thuê từ cơ sở dữ liệu
-        const renter = await prisma.user.findUnique({
-            where: { user_id: renterUserId },
-        });
-
-        if (!renter || !renter.wallet_address) {
-            throw new Error('Renter not found or does not have a wallet address.');
-        }
-
-        const renterAddress = renter.wallet_address.toLowerCase();
-
-        // Lấy thông tin hợp đồng từ hợp đồng thông minh
-        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress, // Đảm bảo rằng địa chỉ gọi hàm là người thuê hợp đồng
-        });
-
-        console.log('Rental Details:', rental);
-
-        const depositAmount = rental.depositAmount;
-        const depositAmountInWei = await convertVNDToWei(Number(depositAmount));
-
-        // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
-        if (renterAddress !== rental.renter.toLowerCase()) {
-            throw new Error('Renter address mismatch.');
-        }
-
-        // Kiểm tra số dư của người thuê
-        const renterBalance = await web3.eth.getBalance(renterAddress);
-        if (Number(renterBalance) < Number(depositAmountInWei)) {
-            throw new Error('Insufficient balance to pay deposit amount.');
-        }
-
-        // Ước lượng lượng gas cần thiết
-        const gasEstimate = await rentalContract.methods.deposit(contractId).estimateGas({
-            from: renterAddress,
-            value: depositAmountInWei,
-        });
-        console.log('Estimated Gas:', gasEstimate);
-
-        // Gọi hàm deposit trên smart contract
-        const receipt = await rentalContract.methods.deposit(contractId).send({
-            from: renterAddress,
-            value: depositAmountInWei,
-            gas: gasEstimate.toString(),
-            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-        });
-        console.log('Transaction receipt:', receipt);
-
-        // Lưu thông tin giao dịch vào cơ sở dữ liệu
-        await prisma.transaction.create({
-            data: {
-                contract_id: contractId,
-                amount: Number(depositAmount),
-                transaction_hash: receipt.transactionHash,
-                status: 'COMPLETED',
-                title: 'Deposit transaction',
-            },
-        });
-
-        // Cập nhật trạng thái bất động sản thành UNAVAILABLE
-        await prisma.property.update({
-            where: { property_id: contract.property_id },
-            data: { status: PropertyStatus.UNAVAILABLE },
-        });
-
-        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
-            data: {
-                propertyId: contract.property_id,
-                status: PropertyStatus.UNAVAILABLE,
-            },
-            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
-        });
-
-        // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
-        const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
-            data: {
-                status: Status.DEPOSITED, // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
-                updated_at: new Date(), // Cập nhật thời gian
-            },
-        });
-        console.log('Updated Contract:', updatedContract);
-
-        return updatedContract;
-    } catch (error) {
-        console.error('Error in deposit:', error);
-        throw new Error(`Failed to process deposit: ${(error as Error).message}`);
-    }
+export const findContractById = async (contractId: string) => {
+    return prisma.contract.findUnique({
+        where: { contract_id: contractId },
+    });
 };
 
-export const payMonthlyRent = async (contractId: string, renterUserId: string): Promise<PrismaContract> => {
-    try {
-        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
-        const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
-        });
+export const deposit = (contractId: string) => {
+    return prisma.contract.update({
+        where: { contract_id: contractId },
+        data: {
+            status: Status.DEPOSITED, // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
+        },
+    });
+};
 
-        if (!contract) {
-            throw new Error('Contract not found.');
-        }
+export const updateStatusContract = (contractId: string, status: Status) => {
+    return prisma.contract.update({
+        where: { contract_id: contractId },
+        data: { status },
+    });
+};
 
-        // Lấy thông tin người thuê từ cơ sở dữ liệu
-        const renter = await prisma.user.findUnique({
-            where: { user_id: renterUserId },
-        });
-
-        if (!renter || !renter.wallet_address) {
-            throw new Error('Renter not found or does not have a wallet address.');
-        }
-
-        const renterAddress = renter.wallet_address.toLowerCase();
-
-        // Lấy thông tin hợp đồng từ hợp đồng thông minh
-        const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: renterAddress,
-        });
-
-        // Kiểm tra xem renterAddress có trùng với renter trên hợp đồng không
-        if (renterAddress.toLowerCase() !== rental.renter.toLowerCase()) {
-            throw new Error('Renter address mismatch.');
-        }
-
-        const currentTime = new Date();
-        console.log(`Current time: ${currentTime}`);
-
-        // Kiểm tra lịch sử giao dịch xem đã có thanh toán nào trong ngày chưa
-        const existingPaymentToday = await prisma.transaction.findFirst({
-            where: {
-                contract_id: contractId,
-                created_at: {
-                    gte: startOfDay(currentTime),
-                    lt: endOfDay(currentTime),
-                },
-                description: 'Monthly rent payment',
-            },
-        });
-
-        if (existingPaymentToday) {
-            throw new Error('Rent payment already made for today.');
-        }
-
-        const startDate = new Date(contract.start_date);
-        console.log(`Start date: ${startDate}`);
-
-        const rentalStatus = parseInt(rental.status, 10);
-
-        if (rentalStatus === 0 || rentalStatus === 3) {
-            // RENTAL_STATUS_NOT_CREATED = 0; RENTAL_STATUS_ENDED = 3
-            throw new Error('Rental period not started or already ended.');
-        }
-
-        const monthlyRentInWei = await convertVNDToWei(Number(rental.monthlyRent));
-
-        // Kiểm tra số dư của người thuê
-        const renterBalance = await web3.eth.getBalance(renterAddress);
-        if (Number(renterBalance) < Number(monthlyRentInWei)) {
-            throw new Error('Insufficient balance to pay rent.');
-        }
-
-        // Tính toán ngày thanh toán tiếp theo
-        let nextPaymentDate = new Date(startDate);
-
-        if (isBefore(currentTime, startDate)) {
-            throw new Error('Cannot pay before the contract start date.');
-        }
-
-        if (isSameMonth(currentTime, startDate) && isBefore(startDate, currentTime)) {
-            nextPaymentDate = startDate;
-        } else {
-            while (isBefore(nextPaymentDate, currentTime)) {
-                nextPaymentDate = addMonths(nextPaymentDate, 1);
-            }
-        }
-
-        nextPaymentDate.setDate(startDate.getDate());
-        console.log(`Next payment date: ${nextPaymentDate}`);
-
-        const paymentWindowEnd = addDays(nextPaymentDate, 14);
-        console.log(`Payment window end: ${paymentWindowEnd}`);
-
-        if (isBefore(currentTime, nextPaymentDate) || isAfter(currentTime, paymentWindowEnd)) {
-            throw new Error('Today is not within the payment window for rent payment.');
-        }
-
-        // Ước lượng lượng gas cần thiết
-        const gasEstimate = await rentalContract.methods.payRent(contractId).estimateGas({
-            from: renterAddress,
-            value: monthlyRentInWei,
-        });
-
-        // Gọi hàm payRent trên smart contract
-        const receipt = await rentalContract.methods.payRent(contractId).send({
-            from: renterAddress,
-            value: monthlyRentInWei,
-            gas: gasEstimate.toString(),
-            gasPrice: web3.utils.toWei('30', 'gwei').toString(),
-        });
-
-        console.log(`Transaction hash: ${receipt.transactionHash}`);
-
-        // Lưu thông tin giao dịch vào cơ sở dữ liệu
-        await prisma.transaction.create({
-            data: {
-                contract_id: contractId,
-                amount: Number(rental.monthlyRent),
-                transaction_hash: receipt.transactionHash,
-                status: 'COMPLETED',
-                title: 'Monthly rent payment',
-            },
-        });
-
-        // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu sau khi thanh toán thành công
-        const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
-            data: {
-                updated_at: new Date(),
-                status: Status.ONGOING,
-            },
-        });
-
-        console.log(`Contract ${contractId} updated successfully.`);
-
-        return updatedContract;
-    } catch (error) {
-        console.error('Error in payMonthlyRent:', error);
-        throw new Error(`Failed to process monthly rent payment: ${(error as Error).message}`);
-    }
+export const payMonthlyRent = (contractId: string) => {
+    return prisma.contract.update({
+        where: { contract_id: contractId },
+        data: {
+            status: Status.ONGOING,
+        },
+    });
 };
 
 const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
@@ -1539,6 +1320,14 @@ export const getContractsByRenter = (renterId: IUserId) => {
                     user_id: true,
                 },
             },
+        },
+    });
+};
+
+export const getContractsByStatus = (status: Status) => {
+    return prisma.contract.findMany({
+        where: {
+            status,
         },
     });
 };

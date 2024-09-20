@@ -1,3 +1,6 @@
+import { Contract, Transaction } from '@prisma/client';
+import { IUserId } from './user';
+
 export interface CreateContractReq {
     owner_user_id: string; // ID của chủ nhà
     renter_user_id: string; // ID của người thuê
@@ -13,4 +16,10 @@ export interface IContract extends CreateContractReq {
     contract_id: string;
     owner_wallet_address: string;
     renter_wallet_address: string;
+}
+
+export interface IDeposit {
+    contractId: Contract['contract_id'];
+    renterId: IUserId;
+    transactionId: Transaction['id'];
 }

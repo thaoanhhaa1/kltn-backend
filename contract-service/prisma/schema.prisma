@@ -101,10 +101,13 @@ enum TransactionStatus {
   PENDING
   COMPLETED
   FAILED
+  OVERDUE
 }
 
 model Transaction {
   id               Int               @id @default(autoincrement())
+  from_id          String?
+  to_id            String?
   contract_id      String
   amount           Float
   amount_eth       Float?
@@ -113,6 +116,7 @@ model Transaction {
   status           TransactionStatus
   title            String
   description      String? // Trường mô tả nội dung giao dịch
+  end_date         DateTime? // Trường ngày kết thúc giao dịch
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
   contract         Contract          @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
