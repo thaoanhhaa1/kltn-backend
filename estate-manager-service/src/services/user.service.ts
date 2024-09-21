@@ -12,6 +12,7 @@ import {
     getAllOwnersCbb,
     getUsers,
     updatePassword,
+    updateStatus,
     updateUser,
     updateWalletAddress,
     verifyUser,
@@ -113,4 +114,8 @@ export const verifyUserService = async (userId: IUserId, { name, ...rest }: IVer
 
         throw new CustomError(400, 'Không thể xác thực người dùng');
     }
+};
+
+export const blockUserService = (userId: IUserId) => {
+    return updateStatus(userId, 'BLOCKED');
 };

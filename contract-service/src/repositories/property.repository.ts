@@ -1,11 +1,7 @@
 import { IProperty } from '../interfaces/property';
 import prisma from '../prisma/prismaClient';
 
-export const createProperty = async ({ address, ...property }: IProperty) => {
-    // const addressRes = await prisma.address.create({
-    //     data: address,
-    // });
-
+export const createProperty = ({ address, ...property }: IProperty) => {
     return prisma.property.create({
         data: {
             ...property,
@@ -40,6 +36,17 @@ export const updateProperty = async (property_id: string, { address, ...property
         data: {
             ...property,
             address_id: addressRes.address_id,
+        },
+    });
+};
+
+export const updatePropertyStatus = (property_id: string, status: IProperty['status']) => {
+    return prisma.property.update({
+        where: {
+            property_id,
+        },
+        data: {
+            status,
         },
     });
 };

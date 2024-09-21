@@ -2,16 +2,17 @@ import { NextFunction, Request, Response } from 'express';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import { verifyToken } from '../utils/jwt.util';
+import { IUserId } from '../interfaces/user';
 
 export interface JWTInput {
-    id: number;
+    id: IUserId;
     email: string;
     userTypes: string[];
 }
 
 export interface AuthenticatedRequest extends Request {
     user?: {
-        id: number;
+        id: IUserId;
         email: string;
         userTypes: string[];
     };
