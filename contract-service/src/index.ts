@@ -1,4 +1,4 @@
-import { Property, User } from '@prisma/client';
+import { Property } from '@prisma/client';
 import express from 'express';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
@@ -6,6 +6,7 @@ import { PROPERTY_QUEUE, USER_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
+import { createMonthlyRentTask } from './services/task.service';
 import { createUserService, updateUserService } from './services/user.service';
 import { startAgenda } from './tasks/agenda';
 
@@ -28,21 +29,25 @@ RabbitMQ.getInstance().subscribeToQueue({
         if (!message) return;
 
         const { type, data } = JSON.parse(message.content.toString());
-        const user: User = data;
+
+        const user_id = data.userId;
+        const rest = {
+            email: data.email,
+            avatar: data.avatar,
+            name: data.name,
+            status: data.status,
+            wallet_address: data.walletAddress,
+        };
 
         switch (type) {
             case USER_QUEUE.type.CREATED:
                 await createUserService({
-                    status: data.status,
+                    ...rest,
                     user_id: data.userId,
-                    wallet_address: data.walletAddress,
                 });
                 break;
             case USER_QUEUE.type.UPDATED:
-                await updateUserService(data.userId, {
-                    status: data.status,
-                    wallet_address: data.walletAddress,
-                });
+                await updateUserService(user_id, rest);
                 break;
         }
     },
@@ -62,6 +67,9 @@ RabbitMQ.getInstance().subscribeToQueue({
             case PROPERTY_QUEUE.type.CREATED:
                 await createPropertyService({
                     property_id: data.propertyId,
+                    title: data.title,
+                    images: data.images,
+                    slug: data.slug,
                     status: property.status,
                     deleted: false,
                     address: data.address,
@@ -72,6 +80,9 @@ RabbitMQ.getInstance().subscribeToQueue({
                 break;
             case PROPERTY_QUEUE.type.UPDATED:
                 await updatePropertyService(data.propertyId, {
+                    title: data.title,
+                    images: data.images,
+                    slug: data.slug,
                     status: property.status,
                     deleted: property.deleted,
                     address: data.address,
@@ -84,11 +95,15 @@ RabbitMQ.getInstance().subscribeToQueue({
 const PORT = envConfig.PORT || 3000;
 
 // Khởi động công việc theo lịch
-startAgenda().then(() => {
-    console.log('Agenda started and job scheduled.');
-}).catch(err => {
-    console.error('Error starting agenda:', err);
-});
+startAgenda()
+    .then(() => {
+        console.log('Agenda started and job scheduled.');
+    })
+    .catch((err) => {
+        console.error('Error starting agenda:', err);
+    });
+
+createMonthlyRentTask();
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

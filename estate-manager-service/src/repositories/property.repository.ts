@@ -1,4 +1,5 @@
-import { Property } from '@prisma/client';
+import { PropertyStatus } from '@prisma/client';
+import { v4 } from 'uuid';
 import { IPagination } from '../interface/pagination';
 import {
     IDeleteProperty,
@@ -13,7 +14,6 @@ import {
 import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { ICreatePropertyReq } from '../schemas/property.schema';
-import { v4 } from 'uuid';
 
 const propertyInclude = {
     attributes: {
@@ -110,13 +110,15 @@ export const createProperty = async ({
                 ward,
                 street,
             },
-            attributes: {
-                createMany: {
-                    data: attributeIds.map((attributeId) => ({
-                        attributeId,
-                    })),
+            ...(attributeIds.length && {
+                attributes: {
+                    createMany: {
+                        data: attributeIds.map((attributeId) => ({
+                            attributeId,
+                        })),
+                    },
                 },
-            },
+            }),
             rentalConditions: conditions,
             propertyId: v4(),
         },
@@ -369,6 +371,18 @@ export const getPropertyInteractionEmbedById = (propertyId: IPropertyId) => {
             address: true,
             owner: true,
         },
+    });
+};
+
+export const updateStatus = (propertyId: IPropertyId, status: PropertyStatus) => {
+    return prisma.property.update({
+        where: {
+            propertyId,
+        },
+        data: {
+            status,
+        },
+        include: propertyInclude,
     });
 };
 

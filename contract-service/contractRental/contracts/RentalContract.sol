@@ -33,17 +33,17 @@ contract RentalContract {
     event ContractEnded(string indexed contractID, address indexed renter, uint depositRefundAmount, uint timestamp);
 
     modifier onlyOwner(string memory _contractID) {
-        require(msg.sender == contracts[_contractID].owner, "Only the owner can perform this action");
+        require(msg.sender == contracts[_contractID].owner, unicode"Chỉ chủ nhà mới có thể thực hiện hành động này");
         _;
     }
 
     modifier onlyRenter(string memory _contractID) {
-        require(msg.sender == contracts[_contractID].renter, "Only the renter can perform this action");
+        require(msg.sender == contracts[_contractID].renter, unicode"Chỉ người thuê mới có thể thực hiện hành động này");
         _;
     }
 
     modifier onlyContractOwner(address _owner) {
-        require(msg.sender == _owner, "Only the contract owner can create the contract");
+        require(msg.sender == _owner, unicode"Chỉ chủ hợp đồng mới có thể tạo hợp đồng");
         _;
     }
 
@@ -55,7 +55,7 @@ contract RentalContract {
         uint _depositAmount,
         uint _monthlyRent
     ) public onlyContractOwner(_owner) {
-        require(_owner != address(0) && _renter != address(0), "Invalid address");
+        require(_owner != address(0) && _renter != address(0), unicode"Địa chỉ không hợp lệ");
 
         contracts[_contractID] = Contract({
             contractID: _contractID,
@@ -73,34 +73,32 @@ contract RentalContract {
     function deposit(string memory _contractID) public payable onlyRenter(_contractID) {
         Contract storage contractInfo = contracts[_contractID];
 
-        require(contractInfo.status == RentalStatus.NotCreated, "Contract status is not valid for deposit");
-        require(msg.value == contractInfo.depositAmount, "Incorrect deposit amount");
-        require(address(msg.sender).balance >= msg.value, "Insufficient balance of renter");
+        require(contractInfo.status == RentalStatus.NotCreated, unicode"Trạng thái hợp đồng không hợp lệ để đặt cọc");
+        require(address(msg.sender).balance >= msg.value, unicode"Số dư không đủ để đặt cọc");
 
         contractInfo.status = RentalStatus.Deposited;
 
-        _recordTransaction(_contractID, msg.sender, contractInfo.owner, msg.value, "Deposit");
+        _recordTransaction(_contractID, msg.sender, contractInfo.owner, msg.value, unicode"Đặt cọc");
 
-        emit TransactionRecorded(_contractID, msg.sender, contractInfo.owner, msg.value, block.timestamp, "Deposit");
+        emit TransactionRecorded(_contractID, msg.sender, contractInfo.owner, msg.value, block.timestamp, unicode"Đặt cọc");
     }
 
     function payRent(string memory _contractID) public payable onlyRenter(_contractID) {
         Contract storage contractInfo = contracts[_contractID];
 
-        require(contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing, "Rental period not valid");
-        require(msg.value == contractInfo.monthlyRent, "Incorrect rent amount");
-        require(address(msg.sender).balance >= msg.value, "Insufficient balance of renter");
+        require(contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing, unicode"Trạng thái hợp đồng không hợp lệ để thanh toán tiền thuê");
+        require(address(msg.sender).balance >= msg.value, unicode"Số dư không đủ để thanh toán tiền thuê");
 
         if (contractInfo.status == RentalStatus.Deposited) {
             contractInfo.status = RentalStatus.Ongoing;
         }
 
         (bool success, ) = contractInfo.owner.call{value: msg.value}("");
-        require(success, "Rent payment transfer failed");
+        require(success, unicode"Chuyển tiền thất bại");
 
-        _recordTransaction(_contractID, msg.sender, contractInfo.owner, msg.value, "Rent Payment");
+        _recordTransaction(_contractID, msg.sender, contractInfo.owner, msg.value, unicode"Thanh toán tiền thuê");
 
-        emit TransactionRecorded(_contractID, msg.sender, contractInfo.owner, msg.value, block.timestamp, "Rent Payment");
+        emit TransactionRecorded(_contractID, msg.sender, contractInfo.owner, msg.value, block.timestamp, unicode"Thanh toán tiền thuê");
     }
 
     function endContract(string memory _contractID) public {
@@ -110,16 +108,16 @@ contract RentalContract {
             contractInfo.status = RentalStatus.Ended;
         } else if (contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing) {
             if (contractInfo.depositAmount > 0) {
-                require(address(this).balance >= contractInfo.depositAmount, "Contract balance insufficient for deposit refund");
+                require(address(this).balance >= contractInfo.depositAmount, unicode"Số dư hợp đồng không đủ để hoàn trả tiền cọc");
 
                 (bool success, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
-                require(success, "Deposit refund transfer failed");
+                require(success, unicode"Chuyển tiền cọc thất bại");
 
-                _recordTransaction(_contractID, contractInfo.owner, contractInfo.renter, contractInfo.depositAmount, "Refund");
+                _recordTransaction(_contractID, contractInfo.owner, contractInfo.renter, contractInfo.depositAmount, unicode"Tiền cọc hoàn trả");
             }
             contractInfo.status = RentalStatus.Ended;
         } else {
-            revert("Contract is not in a valid state for ending");
+            revert(unicode"Hợp đồng không ở trạng thái hợp lệ để kết thúc");
         }
         emit ContractEnded(_contractID, contractInfo.renter, contractInfo.depositAmount, block.timestamp);
     }
@@ -136,13 +134,13 @@ contract RentalContract {
 
     function getContractDetails(string memory _contractID) public view returns (Contract memory) {
         Contract memory contractInfo = contracts[_contractID];
-        require(msg.sender == contractInfo.owner || msg.sender == contractInfo.renter, "Only the contract owner or renter can view the contract details");
+        require(msg.sender == contractInfo.owner || msg.sender == contractInfo.renter, unicode"Chỉ chủ hợp đồng hoặc người thuê mới có thể xem chi tiết hợp đồng");
         return contractInfo;
     }
 
     function getContractTransactions(string memory _contractID) public view returns (Transaction[] memory) {
         Contract memory contractInfo = contracts[_contractID];
-        require(msg.sender == contractInfo.owner || msg.sender == contractInfo.renter, "Only the contract owner or renter can view the transactions");
+        require(msg.sender == contractInfo.owner || msg.sender == contractInfo.renter, unicode"Chỉ chủ hợp đồng hoặc người thuê mới có thể xem giao dịch");
         return contractTransactions[_contractID];
     }
 
@@ -150,27 +148,27 @@ contract RentalContract {
         Contract storage contractInfo = contracts[_contractId];
 
         // Chỉ cho phép khi trạng thái hợp đồng là Deposited hoặc Ongoing
-        require(contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing, "Contract must be active");
+        require(contractInfo.status == RentalStatus.Ongoing, unicode"Hợp đồng phải ở trạng thái đang hoạt động");
 
         // Xử lý logic mất tiền cọc nếu không thanh toán đúng hạn
         if (contractInfo.depositAmount > 0) {
-            require(address(this).balance >= contractInfo.depositAmount, "Contract balance insufficient for deposit forfeit");
+            require(address(this).balance >= contractInfo.depositAmount, unicode"Số dư hợp đồng không đủ để mất tiền cọc");
 
             // Chuyển tiền cọc cho chủ nhà
             (bool success, ) = contractInfo.owner.call{value: contractInfo.depositAmount}("");
-            require(success, "Deposit transfer to owner failed");
+            require(success, unicode"Chuyển tiền cọc thất bại");
 
             // Lưu giao dịch
-            _recordTransaction(_contractId, address(this), contractInfo.owner, contractInfo.depositAmount, "Deposit Forfeited");
+            _recordTransaction(_contractId, address(this), contractInfo.owner, contractInfo.depositAmount, unicode"Tiền cọc bị mất");
         }
 
         // Đánh dấu hợp đồng đã kết thúc
         contractInfo.status = RentalStatus.Ended;
-        emit ContractTerminated(_contractId, "Non-payment");
+        emit ContractEnded(_contractId, contractInfo.renter, contractInfo.depositAmount, block.timestamp);
 
     }
 
-    function cancelContractByRenter(string memory _contractId, bool notifyBefore30Days) public payable onlyRenter(_contractId) {
+    function cancelContractByRenter(string memory _contractId, bool notifyBefore30Days, uint depositAmount) public payable onlyRenter(_contractId) {
         Contract storage contractInfo = contracts[_contractId];
 
         uint depositLoss = 0;
@@ -178,61 +176,60 @@ contract RentalContract {
 
         if (!notifyBefore30Days) {
             // Tính phí bổ sung và chuyển tiền cọc nếu không thông báo trước 30 ngày
-            extraCharge = contractInfo.monthlyRent;
-            require(msg.value == extraCharge, "Incorrect extra charge amount");
-            require(address(msg.sender).balance >= extraCharge, "Insufficient balance of renter");
+            // extraCharge = contractInfo.monthlyRent;
+            // require(msg.value == extraCharge, "Incorrect extra charge amount");
+            // require(address(msg.sender).balance >= extraCharge, "Insufficient balance of renter");
 
-            (bool successExtraCharge, ) = contractInfo.owner.call{value: extraCharge}("");
-            require(successExtraCharge, "Extra charge transfer failed");
+            // (bool successExtraCharge, ) = contractInfo.owner.call{value: extraCharge}("");
+            // require(successExtraCharge, "Extra charge transfer failed");
 
-            _recordTransaction(_contractId, msg.sender, contractInfo.owner, extraCharge, "Extra Charge");
+            // _recordTransaction(_contractId, msg.sender, contractInfo.owner, extraCharge, "Extra Charge");
 
-            depositLoss = contractInfo.depositAmount;
-            require(address(this).balance >= depositLoss, "Contract balance insufficient");
+            depositLoss = depositAmount;
+            require(address(this).balance >= depositLoss, unicode"Số dư hợp đồng không đủ để hoàn trả tiền cọc");
 
-            (bool successDeposit, ) = contractInfo.owner.call{value: depositLoss}("");
-            require(successDeposit, "Deposit transfer failed");
+            (bool successDeposit, ) = contractInfo.owner.call{value: depositLoss}(""); // Chuyển tiền cọc từ người thuê cho chủ nhà
+            require(successDeposit, unicode"Chuyển tiền cọc thất bại");
 
-            _recordTransaction(_contractId, msg.sender, contractInfo.owner, depositLoss, "Deposit Loss");
+            _recordTransaction(_contractId, msg.sender, contractInfo.owner, depositLoss, unicode"Tiền cọc bị mất");
         } else {
             // Hoàn trả tiền cọc nếu thông báo trước 30 ngày
-            require(address(this).balance >= contractInfo.depositAmount, "Contract balance insufficient");
+            require(address(this).balance >= depositAmount, unicode"Số dư hợp đồng không đủ để hoàn trả tiền cọc");
 
-            (bool successRefund, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
-            require(successRefund, "Deposit refund transfer failed");
+            (bool successRefund, ) = contractInfo.renter.call{value: depositAmount}("");
+            require(successRefund, unicode"Chuyển tiền cọc thất bại");
 
-            _recordTransaction(_contractId, contractInfo.owner, msg.sender, contractInfo.depositAmount, "Deposit Refund");
+            _recordTransaction(_contractId, contractInfo.owner, msg.sender, depositAmount, unicode"Tiền cọc hoàn trả");
         }
 
         contractInfo.status = RentalStatus.Ended;
         emit ContractCancelledByRenter(_contractId, msg.sender, depositLoss, extraCharge, block.timestamp);
     }
 
-    function cancelContractByOwner(string memory _contractId, bool notifyBefore30Days) public payable onlyOwner(_contractId) {
+    function cancelContractByOwner(string memory _contractId, bool notifyBefore30Days, uint monthlyRent, uint depositAmount) public payable onlyOwner(_contractId) {
         Contract storage contractInfo = contracts[_contractId];
 
         uint compensation = 0;
 
         if (!notifyBefore30Days) {
             // Tính bồi thường và chuyển cho người thuê nếu không thông báo trước 30 ngày
-            compensation = contractInfo.monthlyRent;
-            require(msg.value == compensation, "Incorrect compensation amount");
-            require(address(msg.sender).balance >= compensation, "Owner's balance insufficient for compensation");
+            compensation = monthlyRent;
+            require(address(msg.sender).balance >= compensation, unicode"Số dư không đủ để bồi thường cho người thuê");
 
             (bool successCompensation, ) = contractInfo.renter.call{value: compensation}("");
-            require(successCompensation, "Compensation transfer failed");
+            require(successCompensation, unicode"Chuyển tiền bồi thường thất bại");
 
-            _recordTransaction(_contractId, msg.sender, contractInfo.renter, compensation, "Compensation");
+            _recordTransaction(_contractId, msg.sender, contractInfo.renter, compensation, unicode"Bồi thường cho người thuê");
         }
 
         if (contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing) {
             // Hoàn trả tiền cọc cho người thuê nếu hợp đồng vẫn còn hiệu lực
-            require(address(this).balance >= contractInfo.depositAmount, "Contract balance insufficient for deposit refund");
+            require(address(this).balance >= depositAmount, unicode"Số dư hợp đồng không đủ để hoàn trả tiền cọc");
 
             (bool successDeposit, ) = contractInfo.renter.call{value: contractInfo.depositAmount}("");
-            require(successDeposit, "Deposit refund transfer failed");
+            require(successDeposit, unicode"Chuyển tiền cọc thất bại");
 
-            _recordTransaction(_contractId, msg.sender, contractInfo.renter, contractInfo.depositAmount, "Deposit Refund");
+            _recordTransaction(_contractId, msg.sender, contractInfo.renter, depositAmount, unicode"Tiền cọc hoàn trả");
         }
 
         contractInfo.status = RentalStatus.Ended;

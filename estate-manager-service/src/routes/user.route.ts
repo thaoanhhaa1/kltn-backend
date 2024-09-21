@@ -1,6 +1,7 @@
 import express from 'express';
 import upload from '../configs/multer.config';
 import {
+    blockUser,
     forgotPassword,
     getAllOwnersCbb,
     getMyInfo,
@@ -40,6 +41,7 @@ router.post(
     ]),
     verifyUser,
 );
+router.post('/block', authMiddleware, roleMiddleware('admin'), blockUser);
 
 router.get('/me', authMiddleware, getMyInfo);
 router.get('/owners/cbb', authMiddleware, roleMiddleware('admin'), getAllOwnersCbb);

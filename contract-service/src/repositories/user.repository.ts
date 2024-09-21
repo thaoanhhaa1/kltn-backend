@@ -16,3 +16,14 @@ export const updateUser = (userId: IUserId, user: Omit<User, 'user_id'>) => {
         data: user,
     });
 };
+
+export const findUserById = (userId: IUserId) => {
+    return prisma.user.findFirst({
+        where: {
+            user_id: userId,
+            wallet_address: {
+                not: null,
+            },
+        },
+    });
+};

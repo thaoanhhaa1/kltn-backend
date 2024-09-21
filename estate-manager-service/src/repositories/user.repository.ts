@@ -2,6 +2,7 @@ import { IPagination } from '../interface/pagination';
 import prisma from '../prisma/prismaClient';
 import { RegisterInput } from '../schemas/auth.schema';
 import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyUser } from '../interface/user';
+import { UserStatus } from '@prisma/client';
 
 const userDTOSelect = {
     userId: true,
@@ -144,5 +145,24 @@ export const verifyUser = (userId: IUserId, { name }: IVerifyUser) => {
             isVerified: true,
         },
         select: userDTOSelect,
+    });
+};
+
+export const updateStatus = (userId: IUserId, status: UserStatus) => {
+    return prisma.user.update({
+        where: { userId },
+        data: {
+            status,
+        },
+        select: adminSelect,
+    });
+};
+
+export const isConnectToWallet = (userId: IUserId) => {
+    return prisma.user.findUnique({
+        where: { userId, walletAddress: { not: null } },
+        select: {
+            walletAddress: true,
+        },
     });
 };
