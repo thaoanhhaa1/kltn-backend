@@ -2,8 +2,8 @@ import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
-    cancelContractByOwnerService,
-    cancelContractByRenterService,
+    // cancelContractByOwnerService,
+    // cancelContractByRenterService,
     createContractService,
     depositService,
     endContractService,
@@ -80,50 +80,46 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
     }
 };
 
-export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { contractId, ownerUserId, cancellationDate } = req.body;
+// export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//     try {
+//         const { contractId, ownerUserId, cancellationDate } = req.body;
 
-        // Chuyển đổi cancellationDate từ chuỗi thành đối tượng Date
-        const parsedCancellationDate = new Date(cancellationDate);
+//         // Chuyển đổi cancellationDate từ chuỗi thành đối tượng Date
+//         const parsedCancellationDate = new Date(cancellationDate);
 
-        // Kiểm tra dữ liệu đầu vào
-        if (
-            typeof contractId !== 'string' ||
-            typeof ownerUserId !== 'string' ||
-            isNaN(parsedCancellationDate.getTime())
-        ) {
-            throw new Error('Contract ID, ownerUserId, and cancellationDate are required and must be valid.');
-        }
-        const updatedContract = await cancelContractByOwnerService(contractId, ownerUserId, parsedCancellationDate);
-        res.status(200).json(updatedContract);
-    } catch (error) {
-        // Chuyển lỗi cho middleware xử lý lỗi
-        next(error);
-    }
-};
+//         // Kiểm tra dữ liệu đầu vào
+//         if (
+//             typeof contractId !== 'string' ||
+//             typeof ownerUserId !== 'string' ||
+//             isNaN(parsedCancellationDate.getTime())
+//         ) {
+//             throw new Error('Contract ID, ownerUserId, and cancellationDate are required and must be valid.');
+//         }
+//         const updatedContract = await cancelContractByOwnerService(contractId, ownerUserId, parsedCancellationDate);
+//         res.status(200).json(updatedContract);
+//     } catch (error) {
+//         // Chuyển lỗi cho middleware xử lý lỗi
+//         next(error);
+//     }
+// };
 
-export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { contractId, renterUserId, cancellationDate } = req.body;
+// export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//     try {
+//         const { contractId, cancellationDate } = req.body;
+//         const userId = req.user!.id;
 
-        const parsedCancellationDate = new Date(cancellationDate);
+//         const parsedCancellationDate = new Date(cancellationDate);
 
-        // Kiểm tra dữ liệu đầu vào
-        if (
-            typeof contractId !== 'string' ||
-            typeof renterUserId !== 'string' ||
-            isNaN(parsedCancellationDate.getTime())
-        ) {
-            throw new Error('Contract ID, renter ID, and notifyBefore30Days are required and must be valid.');
-        }
-        const updatedContract = await cancelContractByRenterService(contractId, renterUserId, cancellationDate);
-        res.status(200).json(updatedContract);
-    } catch (error) {
-        // Chuyển lỗi cho middleware xử lý lỗi
-        next(error);
-    }
-};
+//         if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
+//         if (!cancellationDate) throw new CustomError(400, 'Ngày hủy không được để trống');
+
+//         const updatedContract = await cancelContractByRenterService(contractId, userId, cancellationDate);
+//         res.status(200).json(updatedContract);
+//     } catch (error) {
+//         // Chuyển lỗi cho middleware xử lý lỗi
+//         next(error);
+//     }
+// };
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

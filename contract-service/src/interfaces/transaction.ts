@@ -1,4 +1,4 @@
-import { TransactionStatus } from '@prisma/client';
+import { TransactionStatus, TransactionType } from '@prisma/client';
 
 export type ICreateTransaction = {
     amount: number;
@@ -11,6 +11,8 @@ export type ICreateTransaction = {
     transaction_hash?: string;
     from_id?: string;
     to_id?: string;
+    end_date?: Date;
+    type: TransactionType;
 };
 
 export interface IPaymentTransaction {

@@ -1,9 +1,10 @@
 import { CronJob } from 'cron';
 import { getContractsByStatus } from '../repositories/contract.repository';
 import { createTransaction } from '../repositories/transaction.repository';
+import { dateAfter } from '../utils/dateAfter';
 
 export const createMonthlyRentTask = () => {
-    const job = new CronJob('0 41 9 * * *', async () => {
+    const job = new CronJob('0 0 0 * * *', async () => {
         const [onGoingContracts, depositedContracts] = await Promise.all([
             getContractsByStatus('ONGOING'),
             getContractsByStatus('DEPOSITED'),
@@ -28,6 +29,8 @@ export const createMonthlyRentTask = () => {
                         }**`,
                         from_id: contract.renter_user_id,
                         to_id: contract.owner_user_id,
+                        end_date: dateAfter(3, true),
+                        type: 'RENT',
                     }),
                 );
             }

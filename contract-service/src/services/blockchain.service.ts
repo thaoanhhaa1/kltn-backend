@@ -117,3 +117,43 @@ export const payMonthlyRentSmartContractService = async ({
 
     return receipt;
 };
+
+export const cancelSmartContractByRenterService = async ({
+    contractId,
+    renterAddress,
+    notifyBefore30Days,
+}: {
+    contractId: string;
+    renterAddress: string;
+    notifyBefore30Days: boolean;
+}) => {
+    const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+        from: renterAddress,
+    });
+
+    console.log(`Contract details on blockchain: `, rental);
+
+    const rentalStatus = parseInt(rental.status, 10);
+
+    if (rentalStatus === 3) throw new CustomError(400, 'Hợp đồng đã kết thúc.');
+
+    const depositAmountInWei = await convertVNDToWei(Number(rental.depositAmount));
+
+    const cancelContract = rentalContract.methods.cancelContractByRenter(
+        contractId,
+        notifyBefore30Days,
+        depositAmountInWei,
+    );
+
+    const gasEstimate = await cancelContract.estimateGas({
+        from: renterAddress,
+    });
+
+    const receipt = await cancelContract.send({
+        from: renterAddress,
+        gas: gasEstimate.toString(),
+        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+    });
+
+    return receipt;
+};

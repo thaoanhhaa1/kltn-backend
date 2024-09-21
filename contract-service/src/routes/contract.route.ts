@@ -3,8 +3,8 @@ import {
     createContract,
     deposit,
     payMonthlyRent,
-    cancelContractByOwner,
-    cancelContractByRenter,
+    // cancelContractByOwner,
+    // cancelContractByRenter,
     getContractTransactions,
     getContractDetails,
     endContract,
@@ -32,11 +32,11 @@ router.post('/deposit', authMiddleware, roleMiddleware('renter'), deposit);
 // Route để thanh toán tiền thuê hàng tháng
 router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);
 
-// Route để hủy hợp đồng bởi người thuê
-router.post('/cancel/renter', authMiddleware, roleMiddleware('renter'), cancelContractByRenter);
+// // Route để hủy hợp đồng bởi người thuê
+// router.post('/cancel/renter', authMiddleware, roleMiddleware('renter'), cancelContractByRenter);
 
-// Route để hủy hợp đồng bởi chủ nhà
-router.post('/cancel/owner', authMiddleware, roleMiddleware('owner'), cancelContractByOwner);
+// // Route để hủy hợp đồng bởi chủ nhà
+// router.post('/cancel/owner', authMiddleware, roleMiddleware('owner'), cancelContractByOwner);
 
 // Route để lấy danh sách giao dịch của hợp đồng
 router.get(

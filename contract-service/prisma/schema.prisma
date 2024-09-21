@@ -104,6 +104,13 @@ enum TransactionStatus {
   OVERDUE
 }
 
+enum TransactionType {
+  DEPOSIT
+  RENT
+  WITHDRAW
+  REFUND
+}
+
 model Transaction {
   id               Int               @id @default(autoincrement())
   from_id          String?
@@ -115,6 +122,7 @@ model Transaction {
   transaction_hash String?
   status           TransactionStatus
   title            String
+  type             TransactionType   @default(RENT)
   description      String? // Trường mô tả nội dung giao dịch
   end_date         DateTime? // Trường ngày kết thúc giao dịch
   created_at       DateTime          @default(now())

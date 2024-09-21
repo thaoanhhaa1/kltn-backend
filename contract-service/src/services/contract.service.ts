@@ -9,8 +9,6 @@ import { IDeposit } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
-    cancelContractByOwner as cancelContractByOwnerInRepo,
-    cancelContractByRenter as cancelContractByRenterInRepo,
     createContract as createContractInRepo,
     deposit as depositInRepo,
     endContract as endContractInRepo,
@@ -26,6 +24,7 @@ import { updatePropertyStatus } from '../repositories/property.repository';
 import { createTransaction, getTransactionById, paymentTransaction } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
+import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
 import {
     createSmartContractService,
@@ -33,7 +32,6 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
-import { createTransactionService } from './transaction.service';
 
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
@@ -68,13 +66,15 @@ export const createContractService = async (contract: CreateContractReq): Promis
             transaction_hash: receipt.transactionHash,
         });
 
-        createTransactionService({
+        createTransaction({
             from_id: renter.user_id,
             amount: contract.deposit_amount,
             contract_id: contractId,
             title: 'Thanh toán tiền đặt cọc',
             description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
             status: 'PENDING',
+            end_date: dateAfter(14, true),
+            type: 'DEPOSIT',
         })
             .then(() => console.log('Transaction created'))
             .catch((error) => console.error('Error creating transaction:', error));
@@ -143,6 +143,8 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
                 }**`,
                 from_id: contract.renter_user_id,
                 to_id: contract.owner_user_id,
+                end_date: dateAfter(14, true),
+                type: 'RENT',
             })
                 .then(() => console.log('Transaction created'))
                 .catch((error) => console.error('Error creating transaction:', error));
@@ -202,35 +204,103 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
     }
 };
 
-// Hàm để hủy hợp đồng bởi người thuê
-export const cancelContractByRenterService = async (
-    contractId: string,
-    renterUserId: IUserId,
-    cancellationDate: Date,
-): Promise<PrismaContract> => {
-    try {
-        // Gọi phương thức repository để thực hiện hủy hợp đồng
-        return await cancelContractByRenterInRepo(contractId, renterUserId, cancellationDate);
-    } catch (error) {
-        console.error('Error processing contract cancellation:', error);
-        throw new Error('Could not process contract cancellation');
-    }
-};
+// // Hàm để hủy hợp đồng bởi người thuê
+// export const cancelContractByRenterService = async (
+//     contractId: string,
+//     renterUserId: IUserId,
+//     cancellationDate: Date,
+// ): Promise<PrismaContract> => {
+//     try {
+//         const [contract, renter] = await Promise.all([findContractById(contractId), findUserById(renterUserId)]);
 
-// Hàm để hủy hợp đồng bởi chủ nhà
-export const cancelContractByOwnerService = async (
-    contractId: string,
-    ownerUserId: IUserId,
-    cancellationDate: Date,
-): Promise<PrismaContract> => {
-    try {
-        // Gọi phương thức repository để thực hiện hủy hợp đồng
-        return await cancelContractByOwnerInRepo(contractId, ownerUserId, cancellationDate);
-    } catch (error) {
-        console.error('Error processing contract cancellation:', error);
-        throw new Error('Could not process contract cancellation');
-    }
-};
+//         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+
+//         if (!renter || !renter.wallet_address)
+//             throw new CustomError(404, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví');
+
+//         const notifyBefore30Days = isNotificationBefore30Days(cancellationDate);
+
+//         const receipt = await cancelSmartContractByRenterService({
+//             contractId,
+//             notifyBefore30Days,
+//             renterAddress: renter.wallet_address,
+//         });
+
+//         const ethVnd = await getCoinPriceService({
+//             coin: 'ethereum',
+//             currency: 'vnd',
+//         });
+
+//         const queries = [];
+
+//         if (notifyBefore30Days) {
+//             queries.push(
+//                 createTransaction({
+//                     amount: contract.deposit_amount,
+//                     contract_id: contractId,
+//                     status: 'COMPLETED',
+//                     title: 'Hoàn trả tiền đặt cọc',
+//                     description: `Hoàn trả tiền đặt cọc cho hợp đồng **${contractId}**`,
+//                     to_id: renterUserId,
+//                     amount_eth: contract.deposit_amount / ethVnd,
+//                     fee: Number(receipt.gasUsed) / 1e18,
+//                     transaction_hash: receipt.transactionHash,
+//                 }),
+//             );
+//         } else {
+//             queries.push(
+//                 createTransaction({
+//                     amount: contract.deposit_amount,
+//                     contract_id: contractId,
+//                     status: 'COMPLETED',
+//                     title: 'Thanh toán tiền đặt cọc cho chủ nhà',
+//                     description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
+//                     to_id: contract.owner_user_id,
+//                     amount_eth: contract.deposit_amount / ethVnd,
+//                     fee: Number(receipt.gasUsed) / 1e18,
+//                     transaction_hash: receipt.transactionHash,
+//                 }),
+//             );
+//         }
+
+//         // // Cập nhật trạng thái property trong cơ sở dữ liệu
+//         // await prisma.property.update({
+//         //     where: { property_id: contract.property_id },
+//         //     data: {
+//         //         status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
+//         //     },
+//         // });
+
+//         // RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+//         //     data: {
+//         //         propertyId: contract.property_id,
+//         //         status: PropertyStatus.ACTIVE,
+//         //     },
+//         //     type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+//         // });
+
+//         // Gọi phương thức repository để thực hiện hủy hợp đồng
+//         return await cancelContractByRenterInRepo(contractId, renterUserId, cancellationDate);
+//     } catch (error) {
+//         console.error('Error processing contract cancellation:', error);
+//         throw new Error('Could not process contract cancellation');
+//     }
+// };
+
+// // Hàm để hủy hợp đồng bởi chủ nhà
+// export const cancelContractByOwnerService = async (
+//     contractId: string,
+//     ownerUserId: IUserId,
+//     cancellationDate: Date,
+// ): Promise<PrismaContract> => {
+//     try {
+//         // Gọi phương thức repository để thực hiện hủy hợp đồng
+//         return await cancelContractByOwnerInRepo(contractId, ownerUserId, cancellationDate);
+//     } catch (error) {
+//         console.error('Error processing contract cancellation:', error);
+//         throw new Error('Could not process contract cancellation');
+//     }
+// };
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactionsService = async (contractId: string, userId: IUserId): Promise<any[]> => {
