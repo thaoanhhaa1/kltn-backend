@@ -3,26 +3,27 @@ import Email from 'email-templates';
 import path from 'path';
 import envConfig from './env.config';
 
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: envConfig.GMAIL_USER,
+        pass: envConfig.GMAIL_PASSWORD,
+    },
+});
+
+const dirname = __dirname
+    .replace('/build/src/configs', '')
+    .replace('/build/configs', '')
+    .replace('\\build\\configs', '')
+    .replace('\\configs', '');
+
+console.log(dirname);
+
 const emailTemplates = async (template: string, receiver: string, subject: string, locals: any) => {
     try {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-                user: envConfig.GMAIL_USER,
-                pass: envConfig.GMAIL_PASSWORD,
-            },
-        });
-
-        const dirname = __dirname
-            .replace('/build/src/configs', '')
-            .replace('\\build\\configs', '')
-            .replace('\\configs', '');
-
-        console.log(dirname);
-
         const email = new Email({
             message: {
                 from: `Admin <${envConfig.GMAIL_USER}>`,
