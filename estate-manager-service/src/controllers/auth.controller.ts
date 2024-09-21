@@ -29,26 +29,28 @@ export const otpRegister = async (req: Request, res: Response, next: NextFunctio
             throw new EntryError(400, 'Bad request', [
                 {
                     field: 'email',
-                    error: 'Email already in use',
+                    error: 'Đã tồn tại tài khoản với email này',
                 },
             ]);
 
         const otpCode = otp.generate();
 
-        await sendEmail({
-            receiver: email,
-            locals: {
-                appLink: envConfig.FE_URL,
-                OTP: otpCode,
-                title: 'OTP Verification',
-            },
-            subject: 'OTP Verification',
-            template: 'verifyEmail',
-        });
-        await Redis.getInstance().getClient().set(`otp:${email}`, otpCode, {
-            ex: envConfig.OTP_EXPIRATION,
-            type: 'string',
-        });
+        await Promise.all([
+            sendEmail({
+                receiver: email,
+                locals: {
+                    appLink: envConfig.FE_URL,
+                    OTP: otpCode,
+                    title: 'OTP Verification',
+                },
+                subject: 'OTP Verification',
+                template: 'verifyEmail',
+            }),
+            Redis.getInstance().getClient().set(`otp:${email}`, otpCode, {
+                ex: envConfig.OTP_EXPIRATION,
+                type: 'string',
+            }),
+        ]);
 
         // FIXME: Remove this line in production
         console.log(`OTP: ${otpCode}`);
