@@ -1,6 +1,8 @@
 import { Contract, Transaction } from '@prisma/client';
 import { IUserId } from './user';
 
+export type IContractId = Contract['contract_id'];
+
 export interface CreateContractReq {
     owner_user_id: string; // ID của chủ nhà
     renter_user_id: string; // ID của người thuê
@@ -22,4 +24,16 @@ export interface IDeposit {
     contractId: Contract['contract_id'];
     renterId: IUserId;
     transactionId: Transaction['id'];
+}
+
+export interface IGetContractInRange {
+    propertyId: string;
+    rentalStartDate: string;
+    rentalEndDate: string;
+}
+
+export interface ICancelContract {
+    propertyId: string;
+    rentalStartDate: string;
+    rentalEndDate: string;
 }

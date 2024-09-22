@@ -1,6 +1,10 @@
-import { IPagination } from '../interface/pagination';
-import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interface/rentalRequest';
-import { IUserId } from '../interface/user';
+import { IPagination } from '../interfaces/pagination';
+import {
+    IOwnerUpdateRentalRequestStatus,
+    IRenterUpdateRentalRequestStatus,
+    IRequestId,
+} from '../interfaces/rentalRequest';
+import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 
@@ -15,10 +19,10 @@ export const createRentalRequest = async ({
 }: ICreateRentalRequest) => {
     const rentalRequest = await prisma.rentalRequest.findFirst({
         where: {
-            renterId,
+            renter_id: renterId,
             property: {
                 is: {
-                    propertyId: property.propertyId,
+                    property_id: property.propertyId,
                 },
             },
             status: 'PENDING',
@@ -28,26 +32,26 @@ export const createRentalRequest = async ({
     if (rentalRequest)
         return prisma.rentalRequest.update({
             where: {
-                requestId: rentalRequest.requestId,
+                request_id: rentalRequest.request_id,
             },
             data: {
-                rentalDeposit,
-                rentalEndDate,
-                rentalPrice,
-                rentalStartDate,
+                rental_deposit: rentalDeposit,
+                rental_end_date: rentalEndDate,
+                rental_price: rentalPrice,
+                rental_start_date: rentalStartDate,
                 status: 'PENDING',
             },
         });
 
     return prisma.rentalRequest.create({
         data: {
-            property,
-            rentalDeposit,
-            rentalEndDate,
-            rentalPrice,
-            rentalStartDate,
-            renterId,
-            ownerId,
+            property_id: property.propertyId,
+            rental_deposit: rentalDeposit,
+            rental_end_date: rentalEndDate,
+            rental_price: rentalPrice,
+            rental_start_date: rentalStartDate,
+            renter_id: renterId,
+            owner_id: ownerId,
         },
     });
 };
@@ -55,23 +59,20 @@ export const createRentalRequest = async ({
 export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
         where: {
-            renterId,
+            renter_id: renterId,
             status: {
                 not: 'CANCELLED',
             },
         },
         skip,
         take,
-        orderBy: {
-            createdAt: 'desc',
-        },
     });
 };
 
 export const countRentalRequestsByRenter = (renterId: IUserId) => {
     return prisma.rentalRequest.count({
         where: {
-            renterId,
+            renter_id: renterId,
             status: {
                 not: 'CANCELLED',
             },
@@ -82,7 +83,7 @@ export const countRentalRequestsByRenter = (renterId: IUserId) => {
 export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
         where: {
-            ownerId,
+            owner_id: ownerId,
             status: {
                 not: 'CANCELLED',
             },
@@ -90,7 +91,7 @@ export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagi
         skip,
         take,
         orderBy: {
-            createdAt: 'desc',
+            created_at: 'desc',
         },
     });
 };
@@ -98,7 +99,7 @@ export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagi
 export const countRentalRequestsByOwner = (ownerId: IUserId) => {
     return prisma.rentalRequest.count({
         where: {
-            ownerId,
+            owner_id: ownerId,
             status: {
                 not: 'CANCELLED',
             },
@@ -109,7 +110,7 @@ export const countRentalRequestsByOwner = (ownerId: IUserId) => {
 export const getRentalRequestByRenter = (renterId: IUserId, slug: string) => {
     return prisma.rentalRequest.findFirst({
         where: {
-            renterId,
+            renter_id: renterId,
             property: {
                 is: {
                     slug,
@@ -122,7 +123,7 @@ export const getRentalRequestByRenter = (renterId: IUserId, slug: string) => {
 export const getRentalRequestByOwner = (ownerId: IUserId, slug: string) => {
     return prisma.rentalRequest.findFirst({
         where: {
-            ownerId,
+            owner_id: ownerId,
             property: {
                 is: {
                     slug,
@@ -135,11 +136,15 @@ export const getRentalRequestByOwner = (ownerId: IUserId, slug: string) => {
     });
 };
 
-export const ownerUpdateRentalRequestStatus = ({ ownerId, requestId, status }: IOwnerUpdateRentalRequestStatus) => {
+export const ownerUpdateRentalRequestStatus = ({ ownerId, slug, status }: IOwnerUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
-            ownerId,
-            requestId,
+            owner_id: ownerId,
+            property: {
+                is: {
+                    slug,
+                },
+            },
             status: 'PENDING',
         },
         data: {
@@ -148,11 +153,15 @@ export const ownerUpdateRentalRequestStatus = ({ ownerId, requestId, status }: I
     });
 };
 
-export const renterUpdateRentalRequestStatus = ({ renterId, requestId, status }: IRenterUpdateRentalRequestStatus) => {
+export const renterUpdateRentalRequestStatus = ({ renterId, slug, status }: IRenterUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
-            renterId,
-            requestId,
+            renter_id: renterId,
+            property: {
+                is: {
+                    slug,
+                },
+            },
             status: 'PENDING',
         },
         data: {
@@ -161,10 +170,10 @@ export const renterUpdateRentalRequestStatus = ({ renterId, requestId, status }:
     });
 };
 
-export const getRentalRequestById = (requestId: string) => {
+export const getRentalRequestById = (requestId: IRequestId) => {
     return prisma.rentalRequest.findUnique({
         where: {
-            requestId,
+            request_id: requestId,
         },
     });
 };

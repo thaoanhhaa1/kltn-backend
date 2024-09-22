@@ -1,11 +1,11 @@
-import { Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
+import { Prisma, Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
 import { addDays, differenceInDays, isAfter, isSameDay } from 'date-fns';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import web3 from '../configs/web3.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { IContract } from '../interfaces/contract';
+import { ICancelContract, IContract, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { checkOverduePayments } from '../tasks/checkOverduePayments';
@@ -1148,13 +1148,21 @@ export const getContractsByOwner = (ownerId: IUserId) => {
             owner_user_id: ownerId,
         },
         include: {
-            owner: {
+            renter: {
                 select: {
                     avatar: true,
                     name: true,
                     user_id: true,
                 },
             },
+            property: {
+                select: {
+                    title: true,
+                },
+            },
+        },
+        orderBy: {
+            created_at: 'desc',
         },
     });
 };
@@ -1165,13 +1173,21 @@ export const getContractsByRenter = (renterId: IUserId) => {
             renter_user_id: renterId,
         },
         include: {
-            renter: {
+            owner: {
                 select: {
                     avatar: true,
                     name: true,
                     user_id: true,
                 },
             },
+            property: {
+                select: {
+                    title: true,
+                },
+            },
+        },
+        orderBy: {
+            created_at: 'desc',
         },
     });
 };
@@ -1180,6 +1196,99 @@ export const getContractsByStatus = (status: Status) => {
     return prisma.contract.findMany({
         where: {
             status,
+        },
+    });
+};
+
+export const getContractInRange = ({ propertyId, rentalEndDate, rentalStartDate }: IGetContractInRange) => {
+    return prisma.contract.findFirst({
+        where: {
+            status: {
+                in: ['DEPOSITED', 'ONGOING'],
+            },
+            deleted: false,
+            property_id: propertyId,
+            OR: [
+                {
+                    AND: [
+                        {
+                            start_date: {
+                                gte: rentalStartDate,
+                            },
+                        },
+                        {
+                            start_date: {
+                                lte: rentalEndDate,
+                            },
+                        },
+                    ],
+                },
+                {
+                    start_date: {
+                        lt: rentalStartDate,
+                    },
+                    end_date: {
+                        gte: rentalStartDate,
+                    },
+                },
+            ],
+        },
+        select: {
+            property_id: true,
+            start_date: true,
+            end_date: true,
+        },
+    });
+};
+
+const getWhereCancelContracts = ({
+    propertyId,
+    rentalEndDate,
+    rentalStartDate,
+}: ICancelContract): Prisma.ContractWhereInput => ({
+    status: 'WAITING',
+    deleted: false,
+    property_id: propertyId,
+    OR: [
+        {
+            AND: [
+                {
+                    start_date: {
+                        gte: rentalStartDate,
+                    },
+                },
+                {
+                    start_date: {
+                        lte: rentalEndDate,
+                    },
+                },
+            ],
+        },
+        {
+            start_date: {
+                lt: rentalStartDate,
+            },
+            end_date: {
+                gte: rentalStartDate,
+            },
+        },
+    ],
+});
+
+export const findCancelContracts = (params: ICancelContract) => {
+    return prisma.contract.findMany({
+        where: getWhereCancelContracts(params),
+        select: {
+            contract_id: true,
+        },
+    });
+};
+
+export const cancelContracts = (params: ICancelContract) => {
+    return prisma.contract.updateMany({
+        where: getWhereCancelContracts(params),
+        data: {
+            status: 'CANCELLED',
         },
     });
 };
