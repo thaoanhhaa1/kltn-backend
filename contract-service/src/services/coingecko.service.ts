@@ -16,23 +16,24 @@ export const getCoinPriceService = async ({ coin, currency }: IGetCoinPrice) => 
 
         const response = await fetch(url, options);
         console.log('🚀 ~ getCoinPriceService ~ response:', response);
-        const data = await response.json();
+        const data = await response.text();
         console.log('🚀 ~ getCoinPriceService ~ data:', data);
 
-        Redis.getInstance()
-            .getClient()
-            .set(`coin-eth-vnd`, data?.[coin]?.[currency] ?? 0, {
-                ex: 60, // 1 phút
-                type: 'double',
-            })
-            .then(() => {
-                console.log('Set redis cache');
-            })
-            .catch((err: any) => {
-                console.error('Error setting redis cache:', err);
-            });
+        // Redis.getInstance()
+        //     .getClient()
+        //     .set(`coin-eth-vnd`, data?.[coin]?.[currency] ?? 0, {
+        //         ex: 60, // 1 phút
+        //         type: 'double',
+        //     })
+        //     .then(() => {
+        //         console.log('Set redis cache');
+        //     })
+        //     .catch((err: any) => {
+        //         console.error('Error setting redis cache:', err);
+        //     });
 
-        return data?.[coin]?.[currency] ?? 0;
+        // return data?.[coin]?.[currency] ?? 0;
+        return 0;
     } catch (error) {
         console.error('Error getCoinPriceService:', error);
         throw error;
