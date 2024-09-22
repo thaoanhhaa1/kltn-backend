@@ -1,3 +1,6 @@
+import RabbitMQ from '../configs/rabbitmq.config';
+import { SYNC_MESSAGE_QUEUE } from '../constants/rabbitmq';
+import { IContractInRange } from '../interface/contract';
 import { IPagination, IPaginationResponse } from '../interface/pagination';
 import {
     IGenerateContract,
@@ -23,11 +26,36 @@ import { findOwnerId, findUserById, isConnectToWallet } from '../repositories/us
 import { findUserDetailByUserId } from '../repositories/userDetail.repository';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 import { convertDateToDB } from '../utils/convertDate';
+import convertDateToString from '../utils/convertDateToString.util';
 import { createContract } from '../utils/createContract.util';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
 
 export const createRentalRequestService = async ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
+    console.log("Here's the rentalEndDate:", rentalEndDate);
+
+    const result = await RabbitMQ.getInstance().sendSyncMessage({
+        queue: SYNC_MESSAGE_QUEUE.name,
+        message: {
+            type: SYNC_MESSAGE_QUEUE.type.GET_CONTRACT_IN_RANGE,
+            data: {
+                propertyId: rest.property.propertyId,
+                rentalStartDate: convertDateToDB(rentalStartDate),
+                rentalEndDate: convertDateToDB(rentalEndDate),
+            },
+        },
+    });
+    const contract = JSON.parse(result) as IContractInRange | null;
+    console.log('🚀 ~ createRentalRequestService ~ contract:', contract);
+
+    if (contract)
+        throw new CustomError(
+            400,
+            `Bất động sản đã có hợp đồng trong thời gian ${convertDateToString(
+                new Date(contract.start_date),
+            )} - ${convertDateToString(new Date(contract.end_date))}`,
+        );
+
     const renterId = rest.renterId;
 
     const [isConnect, userDetail] = await Promise.all([isConnectToWallet(renterId), findUserDetailByUserId(renterId)]);

@@ -5,7 +5,7 @@ import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import web3 from '../configs/web3.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { IContract } from '../interfaces/contract';
+import { IContract, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { checkOverduePayments } from '../tasks/checkOverduePayments';
@@ -1180,6 +1180,47 @@ export const getContractsByStatus = (status: Status) => {
     return prisma.contract.findMany({
         where: {
             status,
+        },
+    });
+};
+
+export const getContractInRange = ({ propertyId, rentalEndDate, rentalStartDate }: IGetContractInRange) => {
+    return prisma.contract.findFirst({
+        where: {
+            status: {
+                in: ['DEPOSITED', 'ONGOING'],
+            },
+            deleted: false,
+            property_id: propertyId,
+            OR: [
+                {
+                    AND: [
+                        {
+                            start_date: {
+                                gte: rentalStartDate,
+                            },
+                        },
+                        {
+                            start_date: {
+                                lte: rentalEndDate,
+                            },
+                        },
+                    ],
+                },
+                {
+                    start_date: {
+                        lt: rentalStartDate,
+                    },
+                    end_date: {
+                        gte: rentalStartDate,
+                    },
+                },
+            ],
+        },
+        select: {
+            property_id: true,
+            start_date: true,
+            end_date: true,
         },
     });
 };

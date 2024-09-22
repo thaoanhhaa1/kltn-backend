@@ -23,3 +23,9 @@ export interface IDeposit {
     renterId: IUserId;
     transactionId: Transaction['id'];
 }
+
+export interface IGetContractInRange {
+    propertyId: string;
+    rentalStartDate: string;
+    rentalEndDate: string;
+}

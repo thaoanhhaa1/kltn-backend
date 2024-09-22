@@ -5,7 +5,7 @@ import { isAfter } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { IDeposit } from '../interfaces/contract';
+import { IDeposit, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
@@ -14,6 +14,7 @@ import {
     endContract as endContractInRepo,
     findContractById,
     getContractDetails as getContractDetailsInRepo,
+    getContractInRange,
     getContractsByOwner,
     getContractsByRenter,
     getContractTransactions as getContractTransactionsInRepo,
@@ -73,7 +74,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             title: 'Thanh toán tiền đặt cọc',
             description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
             status: 'PENDING',
-            end_date: dateAfter(14, true),
+            end_date: dateAfter(3, true),
             type: 'DEPOSIT',
         })
             .then(() => console.log('Transaction created'))
@@ -365,4 +366,8 @@ export const getContractsByRenterService = async (renterId: IUserId): Promise<Pr
         console.error('Error getting contracts by renter:', error);
         throw new CustomError(400, 'Không thể lấy danh sách hợp đồng');
     }
+};
+
+export const getContractInRangeService = (params: IGetContractInRange) => {
+    return getContractInRange(params);
 };

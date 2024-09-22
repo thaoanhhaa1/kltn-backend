@@ -21,14 +21,16 @@ enum UserStatus {
 }
 
 model User {
-  user_id         String     @id
-  name            String?
-  avatar          String?
-  email           String?
-  wallet_address  String?    @unique
-  status          UserStatus @default(ACTIVE)
-  ownedContracts  Contract[] @relation("OwnerContracts")
-  rentedContracts Contract[] @relation("RenterContracts")
+  user_id              String          @id
+  name                 String?
+  avatar               String?
+  email                String?
+  wallet_address       String?         @unique
+  status               UserStatus      @default(ACTIVE)
+  ownedContracts       Contract[]      @relation("OwnerContracts")
+  rentedContracts      Contract[]      @relation("RenterContracts")
+  renterRentalRequests RentalRequest[] @relation("RenterRentalRequest")
+  ownerRentalRequests  RentalRequest[] @relation("OwnerRentalRequest")
 
   @@map("`user`")
 }
@@ -53,15 +55,16 @@ enum PropertyStatus {
 }
 
 model Property {
-  property_id String         @id
-  title       String
-  slug        String
-  images      String[]
-  status      PropertyStatus @default(PENDING)
-  deleted     Boolean?       @default(false)
-  address_id  String
-  address     Address        @relation(fields: [address_id], references: [address_id])
-  contracts   Contract[]     @relation("PropertyContracts")
+  property_id    String          @id
+  title          String
+  slug           String
+  images         String[]
+  status         PropertyStatus  @default(PENDING)
+  deleted        Boolean?        @default(false)
+  address_id     String
+  address        Address         @relation(fields: [address_id], references: [address_id])
+  contracts      Contract[]      @relation("PropertyContracts")
+  rentalRequests RentalRequest[]
 
   @@map("`property`")
 }
@@ -130,4 +133,30 @@ model Transaction {
   contract         Contract          @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
 
   @@map("`transaction`")
+}
+
+enum RentalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model RentalRequest {
+  request_id        Int                 @id @default(autoincrement())
+  renter_id         String
+  owner_id          String
+  property_id       String
+  status            RentalRequestStatus @default(PENDING)
+  rental_price      Float
+  rental_deposit    Float
+  rental_start_date DateTime
+  rental_end_date   DateTime
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+  renter            User                @relation(fields: [renter_id], references: [user_id], "RenterRentalRequest")
+  owner             User                @relation(fields: [owner_id], references: [user_id], "OwnerRentalRequest")
+  property          Property            @relation(fields: [property_id], references: [property_id])
+
+  @@map("rentalRequests")
 }
