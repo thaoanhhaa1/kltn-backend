@@ -118,11 +118,11 @@ export const getRentalRequestByOwner = async (req: AuthenticatedRequest, res: Re
 export const ownerUpdateRentalRequestStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const { slug, status } = req.body;
+        const { requestId, status } = req.body;
 
         const rentalRequest = await ownerUpdateRentalRequestStatusService({
             ownerId: userId,
-            slug,
+            requestId,
             status,
         });
 
@@ -143,11 +143,11 @@ export const ownerUpdateRentalRequestStatus = async (req: AuthenticatedRequest, 
 export const renterUpdateRentalRequestStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const { slug, status } = req.body;
+        const { requestId, status } = req.body;
 
         const rentalRequest = await renterUpdateRentalRequestStatusService({
             renterId: userId,
-            slug,
+            requestId,
             status,
         });
 

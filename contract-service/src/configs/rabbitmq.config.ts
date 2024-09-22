@@ -1,5 +1,6 @@
 import amqp from 'amqplib/callback_api';
 
+import { v4 as uuidv4 } from 'uuid';
 import envConfig from './env.config';
 
 class RabbitMQ {
@@ -110,6 +111,74 @@ class RabbitMQ {
             this.channels[name]!.consume(q.queue, callback, {
                 noAck: true,
             });
+        });
+    }
+
+    assertQueue(channel: amqp.Channel, queue: string, options?: amqp.Options.AssertQueue) {
+        return new Promise((resolve, reject) => {
+            channel.assertQueue(queue, options, (err, q) => {
+                if (err) return reject(err);
+
+                resolve(q);
+            });
+        });
+    }
+
+    async sendSyncMessage<T>({
+        queue,
+        message,
+    }: {
+        queue: string;
+        message: {
+            type: string;
+            data?: T;
+        };
+    }) {
+        if (!this.channels[queue]) await this.createChannel({ name: queue });
+
+        const channel = this.channels[queue];
+
+        const replyQueue = (await this.assertQueue(channel, '', { exclusive: true })) as amqp.Replies.AssertQueue;
+        const correlationId = uuidv4();
+
+        return new Promise((resolve, reject) => {
+            channel.consume(
+                replyQueue.queue,
+                (msg) => {
+                    if (msg?.properties.correlationId === correlationId) {
+                        resolve(msg.content.toString());
+                    }
+                },
+                { noAck: true },
+            );
+
+            channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
+                correlationId,
+                replyTo: replyQueue.queue,
+            });
+        });
+    }
+
+    async receiveSyncMessage<T>({ queue, callback }: { queue: string; callback: (message: string) => Promise<T> }) {
+        if (!this.channels[queue]) await this.createChannel({ name: queue });
+
+        const channel = this.channels[queue];
+
+        await this.assertQueue(channel, queue, { durable: false });
+        channel.prefetch(1);
+
+        channel.consume(queue, async (msg: amqp.Message | null) => {
+            if (msg) {
+                const message = msg.content.toString();
+
+                const result = await callback(message);
+
+                channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify(result)), {
+                    correlationId: msg.properties.correlationId,
+                });
+
+                channel.ack(msg);
+            }
         });
     }
 }

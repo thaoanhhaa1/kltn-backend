@@ -37,3 +37,10 @@ export const CONTRACT_QUEUE = {
         UPDATE_STATUS: 'PROPERTY_UPDATE_STATUS',
     },
 };
+
+export const SYNC_MESSAGE_QUEUE = {
+    name: 'sync-message-queue',
+    type: {
+        GET_CONTRACT_IN_RANGE: 'GET_CONTRACT_IN_RANGE',
+    },
+};

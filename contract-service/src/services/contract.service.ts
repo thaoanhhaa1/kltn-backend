@@ -5,15 +5,18 @@ import { isAfter } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { IDeposit } from '../interfaces/contract';
+import { IDeposit, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
+    cancelContracts,
     createContract as createContractInRepo,
     deposit as depositInRepo,
     endContract as endContractInRepo,
+    findCancelContracts,
     findContractById,
     getContractDetails as getContractDetailsInRepo,
+    getContractInRange,
     getContractsByOwner,
     getContractsByRenter,
     getContractTransactions as getContractTransactionsInRepo,
@@ -21,7 +24,12 @@ import {
     terminateForNonPayment as terminateForNonPaymentInRepo,
 } from '../repositories/contract.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
-import { createTransaction, getTransactionById, paymentTransaction } from '../repositories/transaction.repository';
+import {
+    cancelTransactions,
+    createTransaction,
+    getTransactionById,
+    paymentTransaction,
+} from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
 import { dateAfter } from '../utils/dateAfter';
@@ -32,6 +40,7 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
+import { convertDateToDB } from '../utils/convertDate';
 
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
@@ -73,7 +82,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             title: 'Thanh toán tiền đặt cọc',
             description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
             status: 'PENDING',
-            end_date: dateAfter(14, true),
+            end_date: dateAfter(3, true),
             type: 'DEPOSIT',
         })
             .then(() => console.log('Transaction created'))
@@ -101,6 +110,14 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         if (transaction.contract_id !== contractId) throw new CustomError(400, 'Giao dịch không thuộc hợp đồng này');
         if (contract.renter_user_id !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
         if (!renter.wallet_address) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+
+        const contractInRange = await getContractInRange({
+            propertyId: contract.property_id,
+            rentalEndDate: convertDateToDB(contract.end_date),
+            rentalStartDate: convertDateToDB(contract.start_date),
+        });
+
+        if (contractInRange) throw new CustomError(400, 'Căn hộ đã được thuê trong khoảng thời gian này');
 
         const [receipt, ethVnd] = await Promise.all([
             depositSmartContractService({
@@ -149,6 +166,21 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
                 .then(() => console.log('Transaction created'))
                 .catch((error) => console.error('Error creating transaction:', error));
         }
+
+        const data = {
+            propertyId: contract.property_id,
+            rentalEndDate: convertDateToDB(contract.end_date),
+            rentalStartDate: convertDateToDB(contract.start_date),
+        };
+
+        Promise.all([findCancelContracts(data), cancelContracts(data)])
+            .then(([contracts]) => {
+                const contractIds = contracts.map((contract) => contract.contract_id);
+
+                return cancelTransactions(contractIds);
+            })
+            .then(() => console.log('Transactions cancelled'))
+            .catch((error) => console.error('Error cancelling transactions:', error));
 
         return transactionResult;
     } catch (error) {
@@ -365,4 +397,8 @@ export const getContractsByRenterService = async (renterId: IUserId): Promise<Pr
         console.error('Error getting contracts by renter:', error);
         throw new CustomError(400, 'Không thể lấy danh sách hợp đồng');
     }
+};
+
+export const getContractInRangeService = (params: IGetContractInRange) => {
+    return getContractInRange(params);
 };

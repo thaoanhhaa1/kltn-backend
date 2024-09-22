@@ -1,15 +1,17 @@
-import { RentalRequestStatus } from '@prisma/client';
+import { RentalRequest, RentalRequestStatus } from '@prisma/client';
 import { IUserId } from './user';
+
+export type IRequestId = RentalRequest['request_id'];
 
 export interface IOwnerUpdateRentalRequestStatus {
     ownerId: IUserId;
-    requestId: string;
+    slug: string;
     status: Extract<RentalRequestStatus, 'APPROVED' | 'REJECTED'>;
 }
 
 export interface IRenterUpdateRentalRequestStatus {
     renterId: IUserId;
-    requestId: string;
+    slug: string;
     status: Extract<RentalRequestStatus, 'CANCELLED'>;
 }
 
