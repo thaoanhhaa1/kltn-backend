@@ -1,5 +1,6 @@
 import { IContractId } from '../interfaces/contract';
-import { ICreateTransaction, IPaymentTransaction } from '../interfaces/transaction';
+import { IPagination } from '../interfaces/pagination';
+import { ICreateTransaction, IGetTransactionsByUserId, IPaymentTransaction } from '../interfaces/transaction';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 
@@ -50,6 +51,85 @@ export const cancelTransactions = (contractIds: IContractId[]) => {
         },
         data: {
             status: 'CANCELLED',
+        },
+    });
+};
+
+export const getTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId, { skip, take }: IPagination) => {
+    const orQuery =
+        type === 'ALL'
+            ? {
+                  OR: [
+                      {
+                          from_id: userId,
+                      },
+                      {
+                          to_id: userId,
+                      },
+                  ],
+              }
+            : type === 'INCOME'
+            ? {
+                  to_id: userId,
+              }
+            : {
+                  from_id: userId,
+              };
+
+    return prisma.transaction.findMany({
+        where: {
+            ...orQuery,
+            status: {
+                in: ['COMPLETED', 'FAILED'],
+            },
+        },
+        orderBy: {
+            updated_at: 'desc',
+        },
+        select: {
+            id: true,
+            amount: true,
+            amount_eth: true,
+            fee: true,
+            transaction_hash: true,
+            title: true,
+            description: true,
+            updated_at: true,
+            from_id: true,
+            to_id: true,
+        },
+        skip,
+        take,
+    });
+};
+
+export const countTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId) => {
+    const orQuery =
+        type === 'ALL'
+            ? {
+                  OR: [
+                      {
+                          from_id: userId,
+                      },
+                      {
+                          to_id: userId,
+                      },
+                  ],
+              }
+            : type === 'INCOME'
+            ? {
+                  to_id: userId,
+              }
+            : {
+                  from_id: userId,
+              };
+
+    return prisma.transaction.count({
+        where: {
+            ...orQuery,
+            status: {
+                in: ['COMPLETED', 'FAILED'],
+            },
         },
     });
 };
