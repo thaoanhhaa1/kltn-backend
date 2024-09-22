@@ -1,3 +1,4 @@
+import { IContractId } from '../interfaces/contract';
 import { ICreateTransaction, IPaymentTransaction } from '../interfaces/transaction';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
@@ -20,6 +21,7 @@ export const paymentTransaction = ({ id, ...rest }: IPaymentTransaction) => {
     return prisma.transaction.update({
         where: {
             id,
+            status: 'PENDING',
         },
         data: {
             status: 'COMPLETED',
@@ -35,6 +37,19 @@ export const getTransactionsByRenter = (userId: IUserId) => {
         },
         orderBy: {
             created_at: 'desc',
+        },
+    });
+};
+
+export const cancelTransactions = (contractIds: IContractId[]) => {
+    return prisma.transaction.updateMany({
+        where: {
+            contract_id: {
+                in: contractIds,
+            },
+        },
+        data: {
+            status: 'CANCELLED',
         },
     });
 };

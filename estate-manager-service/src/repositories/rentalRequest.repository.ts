@@ -62,6 +62,9 @@ export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPa
         },
         skip,
         take,
+        orderBy: {
+            createdAt: 'desc',
+        },
     });
 };
 
@@ -132,15 +135,11 @@ export const getRentalRequestByOwner = (ownerId: IUserId, slug: string) => {
     });
 };
 
-export const ownerUpdateRentalRequestStatus = ({ ownerId, slug, status }: IOwnerUpdateRentalRequestStatus) => {
+export const ownerUpdateRentalRequestStatus = ({ ownerId, requestId, status }: IOwnerUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
             ownerId,
-            property: {
-                is: {
-                    slug,
-                },
-            },
+            requestId,
             status: 'PENDING',
         },
         data: {
@@ -149,15 +148,11 @@ export const ownerUpdateRentalRequestStatus = ({ ownerId, slug, status }: IOwner
     });
 };
 
-export const renterUpdateRentalRequestStatus = ({ renterId, slug, status }: IRenterUpdateRentalRequestStatus) => {
+export const renterUpdateRentalRequestStatus = ({ renterId, requestId, status }: IRenterUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
             renterId,
-            property: {
-                is: {
-                    slug,
-                },
-            },
+            requestId,
             status: 'PENDING',
         },
         data: {
