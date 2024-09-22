@@ -1,7 +1,8 @@
-import axios from 'axios';
-import envConfig from '../configs/env.config';
+import CoinGecko from 'coingecko-api';
 import Redis from '../configs/redis.config';
 import { IGetCoinPrice } from '../interfaces/coingecko';
+
+const CoinGeckoClient = new CoinGecko();
 
 export const getCoinPriceService = async ({ coin, currency }: IGetCoinPrice) => {
     try {
@@ -9,21 +10,17 @@ export const getCoinPriceService = async ({ coin, currency }: IGetCoinPrice) => 
 
         if (res) return parseFloat(res);
 
-        const url = `${envConfig.COINGECKO_ENDPOINT}/simple/price?ids=${coin}&vs_currencies=${currency}`;
-        // const options = {
-        //     method: 'GET',
-        //     // headers: { accept: 'application/json', 'x-cg-demo-api-key': envConfig.COINGECKO_API_KEY },
-        // };
+        const result = await CoinGeckoClient.simple.price({
+            ids: coin,
+            vs_currencies: currency,
+        });
 
-        // const response = await fetch(url, options);
-        // console.log('🚀 ~ getCoinPriceService ~ response:', response);
-        // const data = await response.text();
-        // console.log('🚀 ~ getCoinPriceService ~ data:', data);
+        Redis.getInstance().getClient().set(`coin-eth-vnd`, result.data[coin][currency], {
+            ex: 60, // 1 minute
+            type: 'number',
+        });
 
-        const test = await axios.get(url);
-        console.log('🚀 ~ getCoinPriceService ~ test:', test.data);
-
-        return test.data[coin][currency];
+        return result.data[coin][currency];
     } catch (error) {
         console.error('Error getCoinPriceService:', error);
         throw error;
