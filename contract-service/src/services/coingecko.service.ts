@@ -4,31 +4,38 @@ import Redis from '../configs/redis.config';
 import { IGetCoinPrice } from '../interfaces/coingecko';
 
 export const getCoinPriceService = async ({ coin, currency }: IGetCoinPrice) => {
-    const res = await Redis.getInstance().getClient().get(`coin-eth-vnd`);
+    try {
+        const res = await Redis.getInstance().getClient().get(`coin-eth-vnd`);
 
-    if (res) return parseFloat(res);
+        if (res) return parseFloat(res);
 
-    const url = `${envConfig.COINGECKO_ENDPOINT}/simple/price?ids=${coin}&vs_currencies=${currency}`;
-    const options = {
-        method: 'GET',
-        headers: { accept: 'application/json', 'x-cg-demo-api-key': envConfig.COINGECKO_API_KEY },
-    };
+        const url = `${envConfig.COINGECKO_ENDPOINT}/simple/price?ids=${coin}&vs_currencies=${currency}`;
+        const options = {
+            method: 'GET',
+            // headers: { accept: 'application/json', 'x-cg-demo-api-key': envConfig.COINGECKO_API_KEY },
+        };
 
-    const response = await fetch(url, options);
-    const data = await response.json();
+        const response = await fetch(url, options);
+        console.log('🚀 ~ getCoinPriceService ~ response:', response);
+        const data = await response.json();
+        console.log('🚀 ~ getCoinPriceService ~ data:', data);
 
-    Redis.getInstance()
-        .getClient()
-        .set(`coin-eth-vnd`, data?.[coin]?.[currency] ?? 0, {
-            ex: 60, // 1 phút
-            type: 'double',
-        })
-        .then(() => {
-            console.log('Set redis cache');
-        })
-        .catch((err: any) => {
-            console.error('Error setting redis cache:', err);
-        });
+        Redis.getInstance()
+            .getClient()
+            .set(`coin-eth-vnd`, data?.[coin]?.[currency] ?? 0, {
+                ex: 60, // 1 phút
+                type: 'double',
+            })
+            .then(() => {
+                console.log('Set redis cache');
+            })
+            .catch((err: any) => {
+                console.error('Error setting redis cache:', err);
+            });
 
-    return data?.[coin]?.[currency] ?? 0;
+        return data?.[coin]?.[currency] ?? 0;
+    } catch (error) {
+        console.error('Error getCoinPriceService:', error);
+        throw error;
+    }
 };
