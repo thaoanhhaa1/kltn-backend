@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import envConfig from '../configs/env.config';
 import Redis from '../configs/redis.config';
 import { IGetCoinPrice } from '../interfaces/coingecko';
