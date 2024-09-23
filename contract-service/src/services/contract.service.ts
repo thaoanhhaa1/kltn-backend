@@ -32,6 +32,7 @@ import {
 } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
+import { convertDateToDB } from '../utils/convertDate';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
 import {
@@ -40,7 +41,6 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
-import { convertDateToDB } from '../utils/convertDate';
 
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
@@ -124,10 +124,7 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
                 contractId,
                 renterAddress: renter.wallet_address,
             }),
-            getCoinPriceService({
-                coin: 'ethereum',
-                currency: 'vnd',
-            }),
+            getCoinPriceService(),
         ]);
 
         const [, , transactionResult] = await prisma.$transaction([
@@ -212,10 +209,7 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
                 renterAddress: renter.wallet_address,
             }),
 
-            getCoinPriceService({
-                coin: 'ethereum',
-                currency: 'vnd',
-            }),
+            getCoinPriceService(),
         ]);
 
         const [transactionResult] = await prisma.$transaction([
