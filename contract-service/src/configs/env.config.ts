@@ -16,6 +16,7 @@ const EnvSchema = z.object({
     COINGECKO_ENDPOINT: z.string(),
     KV_REST_API_URL: z.string(),
     KV_REST_API_TOKEN: z.string(),
+    BIT_GET_API: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

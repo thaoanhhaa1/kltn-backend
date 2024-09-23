@@ -4,7 +4,7 @@ import { getCoinPriceService } from '../services/coingecko.service';
 
 export const coingecko = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const result = await getCoinPriceService({ coin: 'ethereum', currency: 'vnd' });
+        const result = await getCoinPriceService();
 
         res.status(200).json({ result });
     } catch (error) {

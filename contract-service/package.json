@@ -19,7 +19,6 @@
         "@vercel/kv": "^2.0.0",
         "agenda": "^5.0.0",
         "amqplib": "^0.10.4",
-        "coingecko-api": "^1.0.10",
         "contact-service": "file:",
         "cron": "^3.0.0",
         "date-fns": "^3.6.0",
