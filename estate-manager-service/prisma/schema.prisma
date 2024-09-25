@@ -17,7 +17,10 @@ model Chat {
   chatId    String        @id @default(auto()) @map("_id") @db.ObjectId
   sender    UserBaseEmbed
   receiver  UserBaseEmbed
-  message   String
+  message   String?
+  medias    String[]      @default([])
+  savedBy   String[]      @default([])
+  deletedBy String[]      @default([])
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 

@@ -69,6 +69,30 @@ class RabbitMQ {
         });
     }
 
+    async consumeQueueWithAck(queue: string, callback: (message: amqp.Message | null) => Promise<void>) {
+        if (!this.channels[queue]) await this.createChannel({ name: queue });
+
+        this.channels[queue]!.consume(
+            queue,
+            async (message) => {
+                if (message) {
+                    try {
+                        await callback(message);
+                        // Xác nhận thông điệp đã được xử lý thành công
+                        this.channels[queue]!.ack(message);
+                    } catch (error) {
+                        console.error(`Error processing message from queue ${queue}:`, error);
+                        // Không xác nhận thông điệp, thông điệp sẽ được gửi lại vào hàng đợi
+                        this.channels[queue]!.nack(message, false, true);
+                    }
+                }
+            },
+            {
+                noAck: false, // Sử dụng xác nhận thủ công
+            },
+        );
+    }
+
     async publishInQueue({
         exchange,
         message,
