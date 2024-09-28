@@ -1,7 +1,7 @@
 // contract.service.ts
 
 import { Contract as PrismaContract, PropertyStatus } from '@prisma/client';
-import { isAfter } from 'date-fns';
+import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
@@ -146,7 +146,7 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,
         });
 
-        if (isAfter(new Date(), contract.start_date)) {
+        if (isAfter(new Date(), contract.start_date) || isSameDay(new Date(), contract.start_date)) {
             createTransaction({
                 amount: contract.monthly_rent,
                 contract_id: contract.contract_id,
