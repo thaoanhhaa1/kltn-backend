@@ -44,3 +44,10 @@ export const SYNC_MESSAGE_QUEUE = {
         GET_CONTRACT_IN_RANGE: 'GET_CONTRACT_IN_RANGE',
     },
 };
+
+export const CREATE_CHAT_QUEUE = {
+    name: 'create-chat-queue',
+    type: {
+        CREATE_CHAT: 'CREATE_CHAT',
+    },
+};

@@ -166,3 +166,14 @@ export const isConnectToWallet = (userId: IUserId) => {
         },
     });
 };
+
+export const getUserBaseEmbedById = (userId: IUserId) => {
+    return prisma.user.findUnique({
+        where: { userId },
+        select: {
+            userId: true,
+            name: true,
+            avatar: true,
+        },
+    });
+};

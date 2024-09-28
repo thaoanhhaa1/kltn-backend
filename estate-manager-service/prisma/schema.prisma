@@ -13,18 +13,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum chatStatus {
+  RECEIVED
+  READ
+  DELETED
+  RECALL
+}
+
+type MediaType {
+  url  String
+  type String
+}
+
 model Chat {
-  chatId    String        @id @default(auto()) @map("_id") @db.ObjectId
-  sender    UserBaseEmbed
-  receiver  UserBaseEmbed
-  message   String?
-  medias    String[]      @default([])
-  savedBy   String[]      @default([])
-  deletedBy String[]      @default([])
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  chatId       String        @id @map("_id")
+  conversation String
+  sender       UserBaseEmbed
+  receiver     UserBaseEmbed
+  message      String?
+  medias       MediaType[]
+  savedBy      String[]      @default([])
+  deletedBy    String[]      @default([])
+  status       chatStatus    @default(RECEIVED)
+  createdAt    DateTime
+  updatedAt    DateTime      @updatedAt
 
   @@map("chats")
+}
+
+model Conversation {
+  conversationId String          @id @map("_id")
+  participants   UserBaseEmbed[]
+  lastChat       ChatEmbed
+  deletedBy      String[]        @default([])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("conversations")
+}
+
+type ChatEmbed {
+  sender  UserBaseEmbed
+  message String?
+  medias  MediaType[]
+  status  chatStatus    @default(RECEIVED)
 }
 
 enum Status {
@@ -247,7 +279,7 @@ type UserPropertyEmbed {
 type UserBaseEmbed {
   userId String
   name   String
-  avatar String
+  avatar String?
 }
 
 type RentalRequestPropertEmbed {
