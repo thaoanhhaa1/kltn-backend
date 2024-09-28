@@ -15,6 +15,7 @@
     "dependencies": {
         "@prisma/client": "^5.19.1",
         "@types/amqplib": "^0.10.5",
+        "@types/coingecko-api": "^1.0.13",
         "@vercel/kv": "^2.0.0",
         "agenda": "^5.0.0",
         "amqplib": "^0.10.4",
