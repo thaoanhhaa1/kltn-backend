@@ -1,16 +1,21 @@
 import express from 'express';
+import { Server } from 'socket.io';
 import elasticClient from './configs/elastic.config';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
-import { CONTRACT_QUEUE, PROPERTY_QUEUE } from './constants/rabbitmq';
+import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import { updateStatus } from './repositories/property.repository';
 import router from './routes';
+import { createChatService } from './services/chat.service';
 import { getNotPendingPropertiesService } from './services/property.service';
+import socketService from './services/socket.io.service';
 
 const app = express();
 
-RabbitMQ.getInstance().connect();
+const rabbitMQ = RabbitMQ.getInstance();
+
+rabbitMQ.connect();
 
 app.use(express.json());
 
@@ -19,8 +24,6 @@ app.get('/health', (_req, res) => {
 });
 
 app.use(envConfig.PREFIX, router);
-
-app.use(errorHandler);
 
 elasticClient
     .info()
@@ -56,7 +59,7 @@ elasticClient
         console.error('Elasticsearch connection error:', err);
     });
 
-RabbitMQ.getInstance().consumeQueue(CONTRACT_QUEUE.name, async (message) => {
+rabbitMQ.consumeQueue(CONTRACT_QUEUE.name, async (message) => {
     if (!message) return;
 
     const { type, data } = JSON.parse(message.content.toString());
@@ -66,7 +69,7 @@ RabbitMQ.getInstance().consumeQueue(CONTRACT_QUEUE.name, async (message) => {
 
         const property = await updateStatus(propertyId, status);
 
-        RabbitMQ.getInstance().publishInQueue({
+        rabbitMQ.publishInQueue({
             exchange: PROPERTY_QUEUE.exchange,
             message: {
                 type: PROPERTY_QUEUE.type.UPDATED,
@@ -77,9 +80,31 @@ RabbitMQ.getInstance().consumeQueue(CONTRACT_QUEUE.name, async (message) => {
     }
 });
 
+rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
+    if (!message) return;
+
+    const { type, data } = JSON.parse(message.content.toString());
+
+    if (type === CREATE_CHAT_QUEUE.type.CREATE_CHAT) {
+        await createChatService(data);
+    }
+});
+
 const PORT = envConfig.PORT || 4001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+const io = new Server(server, {
+    pingTimeout: 60000,
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH'],
+    },
+});
+
+socketService(io);
+
+app.use(errorHandler);
 
 export default app;
