@@ -5,10 +5,11 @@ import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { IDeposit, IGetContractInRange } from '../interfaces/contract';
+import { ICancelSmartContractBeforeDeposit, IDeposit, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
+    cancelContractBeforeDeposit,
     cancelContracts,
     createContract as createContractInRepo,
     deposit as depositInRepo,
@@ -36,6 +37,7 @@ import { convertDateToDB } from '../utils/convertDate';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
 import {
+    cancelSmartContractBeforeDepositService,
     createSmartContractService,
     depositSmartContractService,
     payMonthlyRentSmartContractService,
@@ -60,12 +62,18 @@ export const createContractService = async (contract: CreateContractReq): Promis
 
         const contractId = v4();
 
-        const receipt = await createSmartContractService({
-            ...contract,
-            contract_id: contractId,
-            owner_wallet_address: owner.wallet_address,
-            renter_wallet_address: renter.wallet_address,
-        });
+        const [receipt, ethPrice] = await Promise.all([
+            createSmartContractService({
+                ...contract,
+                contract_id: contractId,
+                owner_wallet_address: owner.wallet_address,
+                renter_wallet_address: renter.wallet_address,
+            }),
+            getCoinPriceService(),
+        ]);
+
+        const eth = Number(receipt.gasUsed) / 1e18;
+        const fee = eth * ethPrice;
 
         const result = await createContractInRepo({
             ...contract,
@@ -74,6 +82,20 @@ export const createContractService = async (contract: CreateContractReq): Promis
             contract_id: contractId,
             transaction_hash: receipt.transactionHash,
         });
+
+        createTransaction({
+            from_id: owner.user_id,
+            amount: fee,
+            contract_id: contractId,
+            status: 'COMPLETED',
+            title: 'Thanh toán phí tạo hợp đồng',
+            description: `Thanh toán phí tạo hợp đồng **${contractId}**`,
+            transaction_hash: receipt.transactionHash,
+            type: 'CREATE_CONTRACT',
+            amount_eth: eth,
+        })
+            .then(() => console.log('Transaction created'))
+            .catch((error) => console.error('Error creating transaction:', error));
 
         createTransaction({
             from_id: renter.user_id,
@@ -395,4 +417,52 @@ export const getContractsByRenterService = async (renterId: IUserId): Promise<Pr
 
 export const getContractInRangeService = (params: IGetContractInRange) => {
     return getContractInRange(params);
+};
+
+export const cancelContractBeforeDepositService = async ({ contractId, userId }: ICancelSmartContractBeforeDeposit) => {
+    try {
+        const [contract, user] = await Promise.all([findContractById(contractId), findUserById(userId)]);
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (!user) throw new CustomError(404, 'Không tìm thấy người dùng');
+        if (!user.wallet_address) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
+
+        if (contract.owner_user_id !== userId && contract.renter_user_id !== userId)
+            throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+
+        const [receipt, ethVnd] = await Promise.all([
+            cancelSmartContractBeforeDepositService({
+                contractId,
+                userAddress: user.wallet_address,
+            }),
+            getCoinPriceService(),
+        ]);
+
+        const eth = Number(receipt.gasUsed) / 1e18;
+
+        cancelTransactions([contractId])
+            .then(() =>
+                createTransaction({
+                    amount: eth * ethVnd,
+                    contract_id: contractId,
+                    status: 'COMPLETED',
+                    title: 'Phí hủy hợp đồng',
+                    type: 'CANCEL_CONTRACT',
+                    amount_eth: eth,
+                    transaction_hash: receipt.transactionHash,
+                    description: `Thanh toán phí hủy hợp đồng **${contractId}**`,
+                    from_id: userId,
+                }),
+            )
+            .then(() => console.log('Transaction cancelled'))
+            .catch((error) => console.error('Error creating transaction:', error));
+
+        return cancelContractBeforeDeposit({
+            contractId,
+            userId,
+        });
+    } catch (error) {
+        console.error('Error cancelling contract before deposit:', error);
+        throw new Error('Could not cancel contract before deposit');
+    }
 };

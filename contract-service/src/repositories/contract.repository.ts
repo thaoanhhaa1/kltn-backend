@@ -5,7 +5,7 @@ import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import web3 from '../configs/web3.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { ICancelContract, IContract, IGetContractInRange } from '../interfaces/contract';
+import { ICancelContract, ICancelContractBeforeDeposit, IContract, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { checkOverduePayments } from '../tasks/checkOverduePayments';
@@ -1289,6 +1289,27 @@ export const cancelContracts = (params: ICancelContract) => {
         where: getWhereCancelContracts(params),
         data: {
             status: 'CANCELLED',
+        },
+    });
+};
+
+export const cancelContractBeforeDeposit = async ({ contractId, userId }: ICancelContractBeforeDeposit) => {
+    return prisma.contract.update({
+        where: {
+            contract_id: contractId,
+            OR: [
+                {
+                    renter_user_id: userId,
+                },
+                {
+                    owner_user_id: userId,
+                },
+            ],
+        },
+        data: {
+            status: 'CANCELLED',
+            cancelled_at: new Date(),
+            cancelled_by: userId,
         },
     });
 };

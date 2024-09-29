@@ -37,3 +37,13 @@ export interface ICancelContract {
     rentalStartDate: string;
     rentalEndDate: string;
 }
+
+export interface ICancelSmartContractBeforeDeposit {
+    userId: IUserId;
+    contractId: IContractId;
+}
+
+export interface ICancelContractBeforeDeposit {
+    contractId: IContractId;
+    userId: IUserId;
+}

@@ -2,6 +2,7 @@ import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
+    cancelContractBeforeDepositService,
     // cancelContractByOwnerService,
     // cancelContractByRenterService,
     createContractService,
@@ -232,6 +233,19 @@ export const getContractsByRenter = async (req: AuthenticatedRequest, res: Respo
         const contracts = await getContractsByRenterService(userId);
 
         res.status(200).json(contracts);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const cancelContractBeforeDeposit = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { contractId } = req.body;
+        const userId = req.user!.id;
+
+        const updatedContract = await cancelContractBeforeDepositService({ contractId, userId });
+
+        res.status(200).json(updatedContract);
     } catch (error) {
         next(error);
     }
