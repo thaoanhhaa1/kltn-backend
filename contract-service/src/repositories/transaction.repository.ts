@@ -48,6 +48,7 @@ export const cancelTransactions = (contractIds: IContractId[]) => {
             contract_id: {
                 in: contractIds,
             },
+            status: 'PENDING',
         },
         data: {
             status: 'CANCELLED',

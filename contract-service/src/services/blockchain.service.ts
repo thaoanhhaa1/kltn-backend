@@ -157,3 +157,23 @@ export const cancelSmartContractByRenterService = async ({
 
     return receipt;
 };
+
+export const cancelSmartContractBeforeDepositService = async ({
+    contractId,
+    userAddress,
+}: {
+    contractId: string;
+    userAddress: string;
+}) => {
+    const cancelContract = rentalContract.methods.cancelContractBeforeDeposit(contractId);
+
+    const gasEstimate = await cancelContract.estimateGas({
+        from: userAddress,
+    });
+
+    return cancelContract.send({
+        from: userAddress,
+        gas: gasEstimate.toString(),
+        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+    });
+};

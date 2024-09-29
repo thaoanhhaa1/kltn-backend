@@ -11,6 +11,7 @@ import {
     terminateForNonPayment,
     getContractsByOwner,
     getContractsByRenter,
+    cancelContractBeforeDeposit,
     // deleteContractById,
     // getAllContracts,
     // getContractById,
@@ -28,6 +29,12 @@ router.post('/', authMiddleware, roleMiddleware('owner'), createContract);
 
 // Route để thực hiện đặt cọc và tạo hợp đồng thành công
 router.post('/deposit', authMiddleware, roleMiddleware('renter'), deposit);
+router.post(
+    '/cancel-before-deposit',
+    authMiddleware,
+    hasAnyRoleMiddleware(['owner', 'renter']),
+    cancelContractBeforeDeposit,
+);
 
 // Route để thanh toán tiền thuê hàng tháng
 router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);

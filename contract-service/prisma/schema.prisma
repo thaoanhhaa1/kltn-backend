@@ -74,8 +74,8 @@ enum Status {
   DEPOSITED
   ONGOING
   ENDED
-  OVERDUE
-  CANCELLED
+  OVERDUE // Trạng thái hợp đồng quá hạn
+  CANCELLED // Trạng thái hợp đồng bị hủy
 }
 
 model Contract {
@@ -93,6 +93,8 @@ model Contract {
   deposit_amount            Float
   contract_terms            String
   transaction_hash_contract String?
+  cancelled_at              DateTime?
+  cancelled_by              String?
   transactions              Transaction[] @relation("ContractTransactions")
   owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
   renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
@@ -114,6 +116,8 @@ enum TransactionType {
   RENT
   WITHDRAW
   REFUND
+  CREATE_CONTRACT
+  CANCEL_CONTRACT
 }
 
 model Transaction {
