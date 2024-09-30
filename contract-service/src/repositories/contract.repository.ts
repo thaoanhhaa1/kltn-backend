@@ -1293,7 +1293,7 @@ export const cancelContracts = (params: ICancelContract) => {
     });
 };
 
-export const cancelContractBeforeDeposit = async ({ contractId, userId }: ICancelContractBeforeDeposit) => {
+export const cancelContractBeforeDeposit = ({ contractId, userId }: ICancelContractBeforeDeposit) => {
     return prisma.contract.update({
         where: {
             contract_id: contractId,
@@ -1308,8 +1308,6 @@ export const cancelContractBeforeDeposit = async ({ contractId, userId }: ICance
         },
         data: {
             status: 'CANCELLED',
-            cancelled_at: new Date(),
-            cancelled_by: userId,
         },
     });
 };

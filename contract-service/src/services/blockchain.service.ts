@@ -120,15 +120,15 @@ export const payMonthlyRentSmartContractService = async ({
 
 export const cancelSmartContractByRenterService = async ({
     contractId,
-    renterAddress,
+    userAddress,
     notifyBefore30Days,
 }: {
     contractId: string;
-    renterAddress: string;
+    userAddress: string;
     notifyBefore30Days: boolean;
 }) => {
     const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
-        from: renterAddress,
+        from: userAddress,
     });
 
     console.log(`Contract details on blockchain: `, rental);
@@ -146,16 +146,66 @@ export const cancelSmartContractByRenterService = async ({
     );
 
     const gasEstimate = await cancelContract.estimateGas({
-        from: renterAddress,
+        from: userAddress,
     });
 
     const receipt = await cancelContract.send({
-        from: renterAddress,
+        from: userAddress,
         gas: gasEstimate.toString(),
         gasPrice: web3.utils.toWei('30', 'gwei').toString(),
     });
 
-    return receipt;
+    return {
+        receipt,
+        smartContract: rental,
+    };
+};
+
+export const cancelSmartContractByOwnerService = async ({
+    contractId,
+    userAddress,
+    notifyBefore30Days,
+}: {
+    contractId: string;
+    userAddress: string;
+    notifyBefore30Days: boolean;
+}) => {
+    const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
+        from: userAddress,
+    });
+
+    console.log(`Contract details on blockchain: `, rental);
+
+    const rentalStatus = parseInt(rental.status, 10);
+
+    if (rentalStatus === 3) throw new CustomError(400, 'Hợp đồng đã kết thúc.');
+
+    const [depositAmountInWei, monthlyRentInWei] = await Promise.all([
+        convertVNDToWei(Number(rental.depositAmount)),
+        convertVNDToWei(Number(rental.monthlyRent)),
+    ]);
+
+    const cancelContract = rentalContract.methods.cancelContractByOwner(
+        contractId,
+        notifyBefore30Days,
+        monthlyRentInWei,
+        depositAmountInWei,
+    );
+
+    const gasEstimate = await cancelContract.estimateGas({
+        from: userAddress,
+    });
+
+    const receipt = await cancelContract.send({
+        from: userAddress,
+        gas: gasEstimate.toString(),
+        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+    });
+
+    return {
+        receipt,
+        smartContract: rental,
+    };
 };
 
 export const cancelSmartContractBeforeDepositService = async ({

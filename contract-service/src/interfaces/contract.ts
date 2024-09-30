@@ -47,3 +47,10 @@ export interface ICancelContractBeforeDeposit {
     contractId: IContractId;
     userId: IUserId;
 }
+
+export interface IRequestCancelContract {
+    contractId: IContractId;
+    userId: IUserId;
+    cancelDate: string;
+    isToday?: boolean;
+}

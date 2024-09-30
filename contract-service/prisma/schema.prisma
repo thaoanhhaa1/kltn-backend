@@ -76,6 +76,8 @@ enum Status {
   ENDED
   OVERDUE // Trạng thái hợp đồng quá hạn
   CANCELLED // Trạng thái hợp đồng bị hủy
+  PENDING_CANCELLATION // Trạng thái hợp đồng đang chờ hủy
+  UNILATERAL_CANCELLATION // Trạng thái hợp đồng bị hủy một phía
 }
 
 model Contract {
@@ -93,8 +95,6 @@ model Contract {
   deposit_amount            Float
   contract_terms            String
   transaction_hash_contract String?
-  cancelled_at              DateTime?
-  cancelled_by              String?
   transactions              Transaction[] @relation("ContractTransactions")
   owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
   renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
@@ -164,5 +164,26 @@ model RentalRequest {
   owner             User                @relation(fields: [owner_id], references: [user_id], "OwnerRentalRequest")
   property          Property            @relation(fields: [property_id], references: [property_id])
 
-  @@map("rentalRequests")
+  @@map("`rental_requests`")
+}
+
+enum ContractCancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  CONTINUE
+  UNILATERAL_CANCELLATION
+}
+
+model ContractCancellationRequest {
+  id          Int      @id @default(autoincrement())
+  contractId  String   @map("contract_id")
+  requestedBy String   @map("requested_by")
+  requestedAt DateTime @default(now())
+  cancelDate  DateTime @map("cancel_date")
+  reason      String?  @map("reason")
+  deleted     Boolean  @default(false) @map("is_deleted")
+
+  @@map("`contract_cancellation_requests`")
 }

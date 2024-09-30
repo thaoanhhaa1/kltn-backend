@@ -7,3 +7,15 @@ const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
 };
 
 export default isNotificationBefore30Days;
+
+export const isDateDifferenceMoreThan30Days = (date1: Date, date2: Date): boolean => {
+    // set time to 0 to compare only date
+    const date1WithoutTime = new Date(date1);
+    date1WithoutTime.setHours(0, 0, 0, 0);
+    const date2WithoutTime = new Date(date2);
+    date2WithoutTime.setHours(0, 0, 0, 0);
+
+    const daysDifference = differenceInDays(date1WithoutTime, date2WithoutTime);
+
+    return daysDifference >= 30;
+};
