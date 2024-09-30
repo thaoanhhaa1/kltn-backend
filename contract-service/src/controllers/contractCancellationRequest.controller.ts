@@ -1,8 +1,13 @@
+import { ContractCancellationRequestStatus } from '@prisma/client';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractCancellationRequestSchema } from '../schemas/contractCancellationRequest.schema';
-import { createCancellationRequestService } from '../services/contractCancellationRequest.service';
+import {
+    createCancellationRequestService,
+    rejectCancellationRequestService,
+} from '../services/contractCancellationRequest.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
+import CustomError from '../utils/error.util';
 
 export const createCancellationRequest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -23,6 +28,25 @@ export const createCancellationRequest = async (req: AuthenticatedRequest, res: 
         const result = await createCancellationRequestService(safeParser.data);
 
         res.status(201).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateCancellationRequestStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const requestId = Number(req.params.requestId);
+        const { status } = req.body;
+
+        if (!Number.isInteger(requestId)) throw new CustomError(400, 'Mã yêu cầu không hợp lệ');
+        if (!status) throw new CustomError(400, 'Trạng thái không được để trống');
+
+        if (status === ContractCancellationRequestStatus.REJECTED)
+            return res.json(await rejectCancellationRequestService({ requestId, userId }));
+
+        throw new CustomError(400, 'Trạng thái không hợp lệ');
     } catch (error) {
         next(error);
     }
