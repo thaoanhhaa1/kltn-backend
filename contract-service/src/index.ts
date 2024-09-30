@@ -7,7 +7,7 @@ import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
 import { getContractInRangeService } from './services/contract.service';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
-import { createMonthlyRentTask } from './services/task.service';
+import TaskService from './services/task.service';
 import { createUserService, updateUserService } from './services/user.service';
 import { startAgenda } from './tasks/agenda';
 
@@ -128,7 +128,7 @@ startAgenda()
         console.error('Error starting agenda:', err);
     });
 
-createMonthlyRentTask();
+new TaskService().start();
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
