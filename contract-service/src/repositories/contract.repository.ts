@@ -5,7 +5,13 @@ import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import web3 from '../configs/web3.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { ICancelContract, ICancelContractBeforeDeposit, IContract, IGetContractInRange } from '../interfaces/contract';
+import {
+    ICancelContract,
+    ICancelContractBeforeDeposit,
+    IContract,
+    IFindContractByIdAndUser,
+    IGetContractInRange,
+} from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { checkOverduePayments } from '../tasks/checkOverduePayments';
@@ -45,7 +51,13 @@ export const createContract = async (
 
 export const findContractById = async (contractId: string) => {
     return prisma.contract.findUnique({
-        where: { contract_id: contractId },
+        where: { contract_id: contractId, deleted: false },
+    });
+};
+
+export const findContractByIdAndUser = async ({ contractId, userId }: IFindContractByIdAndUser) => {
+    return prisma.contract.findUnique({
+        where: { contract_id: contractId, deleted: false, OR: [{ owner_user_id: userId }, { renter_user_id: userId }] },
     });
 };
 
