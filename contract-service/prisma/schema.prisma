@@ -188,6 +188,7 @@ model ContractCancellationRequest {
   cancelDate  DateTime                          @map("cancel_date")
   reason      String?                           @map("reason")
   deleted     Boolean                           @default(false) @map("deleted")
+  updatedAt   DateTime                          @updatedAt @map("updated_at")
   status      ContractCancellationRequestStatus @default(PENDING)
   contract    Contract                          @relation(fields: [contractId], references: [contract_id])
   userRequest User                              @relation(fields: [requestedBy], references: [user_id])

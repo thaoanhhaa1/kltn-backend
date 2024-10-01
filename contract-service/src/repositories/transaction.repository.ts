@@ -134,3 +134,13 @@ export const countTransactionsByUser = ({ type, userId }: IGetTransactionsByUser
         },
     });
 };
+
+export const findByContractAndRented = (contractId: IContractId) => {
+    return prisma.transaction.findFirst({
+        where: {
+            contract_id: contractId,
+            status: 'COMPLETED',
+            type: 'RENT',
+        },
+    });
+};

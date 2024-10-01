@@ -51,7 +51,7 @@ export const getCancelRequestOverdue = () => {
                 in: ['PENDING', 'REJECTED'],
             },
             deleted: false,
-            requestedAt: {
+            updatedAt: {
                 lte: yesterday,
             },
         },

@@ -3,7 +3,7 @@ import { getContractsByStatus } from '../repositories/contract.repository';
 import { getCancelRequestOverdue } from '../repositories/contractCancellationRequest.repository';
 import { createTransaction } from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
-import { rejectCancellationRequestService } from './contractCancellationRequest.service';
+import { updateStatusRequestService } from './contractCancellationRequest.service';
 
 class TaskService {
     private createMonthlyRentTask = () => {
@@ -55,12 +55,14 @@ class TaskService {
             const overdueRequests = await getCancelRequestOverdue();
 
             const queries = overdueRequests.map((request) => {
-                if (request.status === 'PENDING') return rejectCancellationRequestService({ requestId: request.id });
+                if (request.status === 'PENDING')
+                    return updateStatusRequestService({ requestId: request.id, status: 'REJECTED' });
 
-                return Promise.resolve(); // FIXME
+                return updateStatusRequestService({ requestId: request.id, status: 'CONTINUE' });
             });
 
-            await Promise.allSettled(queries);
+            const result = await Promise.allSettled(queries);
+            console.log('🚀 ~ job ~ result:', result);
 
             console.log('task.service::Reject contract cancel request task finished');
         });

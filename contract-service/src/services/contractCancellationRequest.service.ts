@@ -1,14 +1,17 @@
-import { IRejectCancellationRequest } from '../interfaces/contractCancellationRequest';
-import { findContractById, findContractByIdAndUser } from '../repositories/contract.repository';
+import { ICancellationRequest } from '../interfaces/contractCancellationRequest';
+import prisma from '../prisma/prismaClient';
+import { findContractById, findContractByIdAndUser, updateStatusContract } from '../repositories/contract.repository';
 import {
     createCancellationRequest,
     getCancelRequestByContractId,
     getCancelRequestById,
     updateCancelRequestStatus,
 } from '../repositories/contractCancellationRequest.repository';
+import { findByContractAndRented } from '../repositories/transaction.repository';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
+import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
 
 export const createCancellationRequestService = async (params: CreateContractCancellationRequest) => {
     const [contract, request] = await Promise.all([
@@ -39,23 +42,36 @@ export const createCancellationRequestService = async (params: CreateContractCan
     if (contract.status === 'UNILATERAL_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã bị hủy một phía');
     if (contract.status === 'APPROVED_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã được hủy');
 
-    return createCancellationRequest({
-        ...params,
-        cancelDate: convertDateToDB(params.cancelDate),
-    });
+    const [cancelRequest] = await prisma.$transaction([
+        createCancellationRequest({
+            ...params,
+            cancelDate: convertDateToDB(params.cancelDate),
+        }),
+        updateStatusContract(
+            params.contractId,
+            getContractStatusByCancelStatus({
+                status: 'PENDING',
+            }),
+        ),
+    ]);
+
+    return cancelRequest;
 };
 
-export const rejectCancellationRequestService = async ({ requestId, userId }: IRejectCancellationRequest) => {
+export const updateStatusRequestService = async ({ requestId, userId, status }: ICancellationRequest) => {
     const request = await getCancelRequestById(requestId);
 
     if (!request) throw new CustomError(404, 'Yêu cầu huỷ hợp đồng không tồn tại');
 
-    const contract = await (userId
-        ? findContractByIdAndUser({
-              contractId: request.contractId,
-              userId,
-          })
-        : findContractById(request.contractId));
+    const [contract, isRented] = await Promise.all([
+        userId
+            ? findContractByIdAndUser({
+                  contractId: request.contractId,
+                  userId,
+              })
+            : findContractById(request.contractId),
+        findByContractAndRented(request.contractId),
+    ]);
 
     if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
 
@@ -66,13 +82,36 @@ export const rejectCancellationRequestService = async ({ requestId, userId }: IR
     if (contract.status === 'UNILATERAL_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã bị hủy một phía');
     if (contract.status === 'APPROVED_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã được hủy');
     if (request.status === 'APPROVED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã được chấp nhận');
-    if (request.status === 'REJECTED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị từ chối');
     if (request.status === 'CANCELLED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị hủy');
     if (request.status === 'CONTINUE') throw new CustomError(400, 'Hợp đồng vẫn tiếp tục được thực hiện');
     if (request.status === 'UNILATERAL_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã bị hủy một phía');
 
-    if (request.requestedBy === userId)
-        throw new CustomError(400, 'Bạn không thể từ chối yêu cầu huỷ hợp đồng của mình');
+    if (status === 'REJECTED') {
+        if (request.status === 'REJECTED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị từ chối');
+    } else if (status === 'CONTINUE') {
+        if (request.status === 'PENDING') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đang chờ xác nhận');
+    }
 
-    return updateCancelRequestStatus(requestId, 'REJECTED');
+    const isByRequestOwner = request.requestedBy === userId;
+    if (['REJECTED'].includes(status) && userId && isByRequestOwner)
+        throw new CustomError(400, 'Bạn không thể từ chối yêu cầu của mình');
+    if (['CONTINUE'].includes(status) && userId && !isByRequestOwner)
+        throw new CustomError(400, 'Bạn không thể tiếp tục yêu cầu của người khác');
+
+    if (['REJECTED', 'CONTINUE'].includes(status)) {
+        const [cancelRequest] = await prisma.$transaction([
+            updateCancelRequestStatus(requestId, status),
+            updateStatusContract(
+                request.contractId,
+                getContractStatusByCancelStatus({
+                    status,
+                    isRented: !!isRented,
+                }),
+            ),
+        ]);
+
+        return cancelRequest;
+    }
+
+    throw new CustomError(400, 'Trạng thái không hợp lệ');
 };
