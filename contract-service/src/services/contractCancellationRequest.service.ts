@@ -1,3 +1,4 @@
+import { ContractCancellationRequestStatus } from '@prisma/client';
 import { ICancellationRequest } from '../interfaces/contractCancellationRequest';
 import prisma from '../prisma/prismaClient';
 import { findContractById, findContractByIdAndUser, updateStatusContract } from '../repositories/contract.repository';
@@ -12,6 +13,21 @@ import { CreateContractCancellationRequest } from '../schemas/contractCancellati
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
 import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
+
+const getTextByStatus = (status: ContractCancellationRequestStatus) => {
+    switch (status) {
+        case 'REJECTED':
+            return 'từ chối';
+        case 'CONTINUE':
+            return 'tiếp tục';
+        case 'APPROVED':
+            return 'chấp nhận';
+        case 'UNILATERAL_CANCELLATION':
+            return 'đơn phương chấm dứt';
+        default:
+            return '';
+    }
+};
 
 export const createCancellationRequestService = async (params: CreateContractCancellationRequest) => {
     const [contract, request] = await Promise.all([
@@ -42,7 +58,7 @@ export const createCancellationRequestService = async (params: CreateContractCan
     if (contract.status === 'UNILATERAL_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã bị hủy một phía');
     if (contract.status === 'APPROVED_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã được hủy');
 
-    const [cancelRequest] = await prisma.$transaction([
+    const [cancelRequest, contractNew] = await prisma.$transaction([
         createCancellationRequest({
             ...params,
             cancelDate: convertDateToDB(params.cancelDate),
@@ -55,7 +71,10 @@ export const createCancellationRequestService = async (params: CreateContractCan
         ),
     ]);
 
-    return cancelRequest;
+    return {
+        request: cancelRequest,
+        contract: contractNew,
+    };
 };
 
 export const updateStatusRequestService = async ({ requestId, userId, status }: ICancellationRequest) => {
@@ -90,16 +109,20 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
         if (request.status === 'REJECTED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị từ chối');
     } else if (status === 'CONTINUE') {
         if (request.status === 'PENDING') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đang chờ xác nhận');
+    } else if (status === 'APPROVED') {
+        if (request.status === 'REJECTED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị từ chối');
+    } else if (status === 'UNILATERAL_CANCELLATION') {
+        if (request.status === 'PENDING') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đang chờ xác nhận');
     }
 
     const isByRequestOwner = request.requestedBy === userId;
-    if (['REJECTED'].includes(status) && userId && isByRequestOwner)
-        throw new CustomError(400, 'Bạn không thể từ chối yêu cầu của mình');
-    if (['CONTINUE'].includes(status) && userId && !isByRequestOwner)
-        throw new CustomError(400, 'Bạn không thể tiếp tục yêu cầu của người khác');
+    if (['REJECTED', 'APPROVED'].includes(status) && userId && isByRequestOwner)
+        throw new CustomError(400, `Bạn không thể ${getTextByStatus(status)} yêu cầu của mình`);
+    if (['CONTINUE', 'UNILATERAL_CANCELLATION'].includes(status) && userId && !isByRequestOwner)
+        throw new CustomError(400, `Bạn không thể ${getTextByStatus(status)} yêu cầu của người khác`);
 
-    if (['REJECTED', 'CONTINUE'].includes(status)) {
-        const [cancelRequest] = await prisma.$transaction([
+    if (['REJECTED', 'CONTINUE', 'APPROVED', 'UNILATERAL_CANCELLATION'].includes(status)) {
+        const [cancelRequest, contract] = await prisma.$transaction([
             updateCancelRequestStatus(requestId, status),
             updateStatusContract(
                 request.contractId,
@@ -110,7 +133,10 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
             ),
         ]);
 
-        return cancelRequest;
+        return {
+            request: cancelRequest,
+            contract,
+        };
     }
 
     throw new CustomError(400, 'Trạng thái không hợp lệ');

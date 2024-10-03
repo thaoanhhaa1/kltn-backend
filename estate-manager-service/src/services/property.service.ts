@@ -49,7 +49,7 @@ const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
 export const createPropertyService = async ({ ownerId, ...property }: ICreateProperty) => {
     const owner = await findUserById(ownerId);
 
-    if (!owner) throw new CustomError(404, 'Owner not found');
+    if (!owner) throw new CustomError(404, 'Không tìm thấy chủ sở hữu');
     const { avatar, email, name, phoneNumber, userId } = owner;
     const slugProperty = slug(property.title, options) + '-' + v4();
 

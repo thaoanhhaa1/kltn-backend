@@ -146,10 +146,12 @@ export const cancelSmartContractByRenterService = async ({
     );
 
     const gasEstimate = await cancelContract.estimateGas({
+        value: depositAmountInWei,
         from: userAddress,
     });
 
     const receipt = await cancelContract.send({
+        value: depositAmountInWei,
         from: userAddress,
         gas: gasEstimate.toString(),
         gasPrice: web3.utils.toWei('30', 'gwei').toString(),
@@ -180,9 +182,10 @@ export const cancelSmartContractByOwnerService = async ({
 
     if (rentalStatus === 3) throw new CustomError(400, 'Hợp đồng đã kết thúc.');
 
-    const [depositAmountInWei, monthlyRentInWei] = await Promise.all([
+    const [depositAmountInWei, monthlyRentInWei, value] = await Promise.all([
         convertVNDToWei(Number(rental.depositAmount)),
         convertVNDToWei(Number(rental.monthlyRent)),
+        convertVNDToWei(Number(rental.depositAmount + (notifyBefore30Days ? 0 : rental.monthlyRent))),
     ]);
 
     const cancelContract = rentalContract.methods.cancelContractByOwner(
@@ -194,9 +197,11 @@ export const cancelSmartContractByOwnerService = async ({
 
     const gasEstimate = await cancelContract.estimateGas({
         from: userAddress,
+        value,
     });
 
     const receipt = await cancelContract.send({
+        value,
         from: userAddress,
         gas: gasEstimate.toString(),
         gasPrice: web3.utils.toWei('30', 'gwei').toString(),

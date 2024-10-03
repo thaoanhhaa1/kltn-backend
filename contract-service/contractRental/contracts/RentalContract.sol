@@ -234,17 +234,14 @@ contract RentalContract {
     function cancelContractByOwner(string memory _contractId, bool notifyBefore30Days, uint monthlyRent, uint depositAmount) public payable onlyOwner(_contractId) {
         Contract storage contractInfo = contracts[_contractId];
 
-        uint compensation = 0;
-
         if (!notifyBefore30Days) {
             // Tính bồi thường và chuyển cho người thuê nếu không thông báo trước 30 ngày
-            compensation = monthlyRent;
-            require(address(msg.sender).balance >= compensation, unicode"Số dư không đủ để bồi thường cho người thuê");
+            require(address(msg.sender).balance >= monthlyRent, unicode"Số dư không đủ để bồi thường cho người thuê");
 
-            (bool successCompensation, ) = contractInfo.renter.call{value: compensation}("");
+            (bool successCompensation, ) = contractInfo.renter.call{value: monthlyRent}("");
             require(successCompensation, unicode"Chuyển tiền bồi thường thất bại");
 
-            _recordTransaction(_contractId, msg.sender, contractInfo.renter, compensation, unicode"Bồi thường cho người thuê");
+            _recordTransaction(_contractId, msg.sender, contractInfo.renter, monthlyRent, unicode"Bồi thường cho người thuê");
         }
 
         if (contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing) {
@@ -258,6 +255,6 @@ contract RentalContract {
         }
 
         contractInfo.status = RentalStatus.Ended;
-        emit ContractCancelledByOwner(_contractId, msg.sender, compensation, block.timestamp);
+        emit ContractCancelledByOwner(_contractId, msg.sender, msg.value, block.timestamp);
     }
 }

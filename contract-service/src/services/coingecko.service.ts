@@ -22,6 +22,7 @@ export const getCoinPriceService = async () => {
         });
         const result = await response.json();
         const price = Math.round(result.data.fiatExchangeRate.usdRate * result.data.price);
+        console.log('🚀 ~ getCoinPriceService ~ price:', price);
 
         Redis.getInstance().getClient().set(`coin-eth-vnd`, price, {
             ex: 60, // 1 minute

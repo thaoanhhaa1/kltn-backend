@@ -1,18 +1,19 @@
 import { CronJob } from 'cron';
-import { getContractsByStatus } from '../repositories/contract.repository';
-import { getCancelRequestOverdue } from '../repositories/contractCancellationRequest.repository';
+import { getContractForRentTransaction } from '../repositories/contract.repository';
+import {
+    getCancelRequestOverdue,
+    getRequestsCancelContract,
+} from '../repositories/contractCancellationRequest.repository';
 import { createTransaction } from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
+import { getCoinPriceService } from './coingecko.service';
+import { endContractService } from './contract.service';
 import { updateStatusRequestService } from './contractCancellationRequest.service';
 
 class TaskService {
     private createMonthlyRentTask = () => {
         const job = new CronJob('0 0 0 * * *', async () => {
-            const [onGoingContracts, depositedContracts] = await Promise.all([
-                getContractsByStatus('ONGOING'),
-                getContractsByStatus('DEPOSITED'),
-            ]);
-            const contracts = [...onGoingContracts, ...depositedContracts];
+            const contracts = await getContractForRentTransaction();
 
             const queries: any[] = [];
 
@@ -39,6 +40,7 @@ class TaskService {
                 }
             });
 
+            await getCoinPriceService();
             await Promise.all(queries);
 
             console.log('task.service::Monthly rent task executed');
@@ -47,7 +49,7 @@ class TaskService {
         job.start();
     };
 
-    private rejectContractCancelRequestTask = () => {
+    private handleOverdueContractCancelRequestTask = () => {
         const job = new CronJob('0 0 0 * * *', async () => {
             // Chạy vào 00:00:00 mỗi ngày
             console.log('task.service::Reject contract cancel request task executed');
@@ -70,9 +72,28 @@ class TaskService {
         job.start();
     };
 
+    private handleEndContractByRequestTask = () => {
+        const job = new CronJob('0 0 0 * * *', async () => {
+            // Chạy vào 00:00:00 mỗi ngày
+            console.log('task.service::End contract by request task executed');
+
+            const requests = await getRequestsCancelContract();
+            await getCoinPriceService();
+
+            const result = await Promise.allSettled(requests.map(endContractService));
+            console.log('🚀 ~ job ~ requests:', requests);
+            console.log('🚀 ~ job ~ result:', result);
+
+            console.log('task.service::End contract by request task finished');
+        });
+
+        job.start();
+    };
+
     public start = () => {
         this.createMonthlyRentTask();
-        this.rejectContractCancelRequestTask();
+        this.handleOverdueContractCancelRequestTask();
+        this.handleEndContractByRequestTask();
     };
 }
 

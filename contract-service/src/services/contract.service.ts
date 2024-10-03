@@ -5,7 +5,7 @@ import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { ICancelSmartContractBeforeDeposit, IDeposit, IGetContractInRange } from '../interfaces/contract';
+import { ICancelSmartContractBeforeDeposit, IDeposit, IEndContract, IGetContractInRange } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
@@ -13,7 +13,6 @@ import {
     cancelContracts,
     createContract as createContractInRepo,
     deposit as depositInRepo,
-    endContract as endContractInRepo,
     findCancelContracts,
     findContractById,
     getContractDetails as getContractDetailsInRepo,
@@ -23,7 +22,9 @@ import {
     getContractTransactions as getContractTransactionsInRepo,
     payMonthlyRent as payMonthlyRentInRepo,
     terminateForNonPayment as terminateForNonPaymentInRepo,
+    updateStatusContract,
 } from '../repositories/contract.repository';
+import { getCancelRequestById } from '../repositories/contractCancellationRequest.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
 import {
     cancelTransactions,
@@ -36,8 +37,11 @@ import { CreateContractReq } from '../schemas/contract.schema';
 import { convertDateToDB } from '../utils/convertDate';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
+import { isDateDifferenceMoreThan30Days } from '../utils/isNotificationBefore30Days.util';
 import {
     cancelSmartContractBeforeDepositService,
+    cancelSmartContractByOwnerService,
+    cancelSmartContractByRenterService,
     createSmartContractService,
     depositSmartContractService,
     payMonthlyRentSmartContractService,
@@ -372,17 +376,6 @@ export const getContractDetailsService = async (contractId: string, userId: IUse
     }
 };
 
-// Hàm để kết thúc hợp đồng
-export const endContractService = async (contractId: string, userId: string): Promise<PrismaContract> => {
-    try {
-        // Gọi phương thức repository để thực hiện hủy hợp đồng
-        return await endContractInRepo(contractId, userId);
-    } catch (error) {
-        console.error('Error ending contract:', error);
-        throw new Error('Could not end contract');
-    }
-};
-
 // Hàm để hủy hợp đồng do không thanh toán
 export const terminateForNonPaymentService = async (
     contractId: string,
@@ -464,5 +457,80 @@ export const cancelContractBeforeDepositService = async ({ contractId, userId }:
     } catch (error) {
         console.error('Error cancelling contract before deposit:', error);
         throw new Error('Could not cancel contract before deposit');
+    }
+};
+
+export const endContractService = async ({ contractId, id: requestId }: IEndContract) => {
+    try {
+        const [contract, request] = await Promise.all([findContractById(contractId), getCancelRequestById(requestId)]);
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (!request) throw new CustomError(404, 'Không tìm thấy yêu cầu hủy hợp đồng');
+
+        const user = await findUserById(request.requestedBy);
+
+        if (!user) throw new CustomError(404, 'Không tìm thấy người dùng');
+        if (!user.wallet_address) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
+
+        const requestByOwner = request.requestedBy === contract.owner_user_id;
+        const notifyBefore30Days =
+            request.status === 'APPROVED' || isDateDifferenceMoreThan30Days(request.cancelDate, request.requestedAt);
+
+        const { receipt } = await (requestByOwner
+            ? cancelSmartContractByOwnerService
+            : cancelSmartContractByRenterService)({
+            contractId,
+            userAddress: user.wallet_address,
+            notifyBefore30Days,
+        });
+
+        const ethVnd = await getCoinPriceService();
+
+        const isRefund = notifyBefore30Days || requestByOwner;
+
+        const queries = [
+            updatePropertyStatus(contract.property_id, 'ACTIVE'),
+            updateStatusContract(contractId, 'ENDED'),
+            createTransaction({
+                amount: contract.deposit_amount,
+                contract_id: contract.contract_id,
+                status: 'COMPLETED',
+                title: isRefund ? `Hoàn trả tiền đặt cọc` : `Thanh toán tiền đặt cọc cho chủ nhà`,
+                description: isRefund
+                    ? `Hoàn trả tiền đặt cọc cho hợp đồng **${contract.contract_id}**`
+                    : `Thanh toán tiền đặt cọc cho hợp đồng **${contract.contract_id}**`,
+                to_id: isRefund ? contract.renter_user_id : contract.owner_user_id,
+                type: isRefund ? 'REFUND' : 'DEPOSIT',
+                amount_eth: contract.deposit_amount / ethVnd,
+                transaction_hash: receipt.transactionHash,
+            }),
+        ];
+
+        if (!notifyBefore30Days && requestByOwner)
+            queries.push(
+                createTransaction({
+                    amount: contract.monthly_rent,
+                    contract_id: contract.contract_id,
+                    status: 'COMPLETED',
+                    title: 'Bồi thường tiền huỷ hợp đồng',
+                    description: `Bồi thường tiền huỷ hợp đồng **${contract.contract_id}**`,
+                    to_id: contract.renter_user_id,
+                    type: 'COMPENSATION',
+                    amount_eth: contract.monthly_rent / ethVnd,
+                    transaction_hash: receipt.transactionHash,
+                }),
+            );
+
+        await prisma.$transaction(queries);
+
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.property_id,
+                status: PropertyStatus.ACTIVE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+        });
+    } catch (error) {
+        throw error;
     }
 };

@@ -57,3 +57,27 @@ export const getCancelRequestOverdue = () => {
         },
     });
 };
+
+export const getRequestsCancelContract = () => {
+    return prisma.contractCancellationRequest.findMany({
+        where: {
+            cancelDate: {
+                gte: new Date(new Date().setDate(new Date().getSeconds() - 30)),
+                lt: new Date(new Date().setDate(new Date().getDate() + 1)),
+            },
+            deleted: false,
+            status: {
+                in: ['UNILATERAL_CANCELLATION', 'APPROVED'],
+            },
+            contract: {
+                status: {
+                    in: ['UNILATERAL_CANCELLATION', 'APPROVED_CANCELLATION'],
+                },
+            },
+        },
+        select: {
+            contractId: true,
+            id: true,
+        },
+    });
+};

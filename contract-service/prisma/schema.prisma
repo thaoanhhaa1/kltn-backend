@@ -122,6 +122,7 @@ enum TransactionType {
   REFUND
   CREATE_CONTRACT
   CANCEL_CONTRACT
+  COMPENSATION
 }
 
 model Transaction {
