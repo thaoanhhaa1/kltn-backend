@@ -133,6 +133,7 @@ model Transaction {
   amount           Float
   amount_eth       Float?
   fee              Float?
+  fee_eth          Float?
   transaction_hash String?
   status           TransactionStatus
   title            String

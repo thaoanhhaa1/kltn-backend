@@ -1,5 +1,5 @@
 import { Prisma, Contract as PrismaContract, PropertyStatus, Status } from '@prisma/client';
-import { addDays, differenceInDays, isAfter, isSameDay } from 'date-fns';
+import { addDays, isAfter, isSameDay } from 'date-fns';
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -14,8 +14,8 @@ import {
 } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
-import { checkOverduePayments } from '../tasks/checkOverduePayments';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
+import isNotificationBefore30Days from '../utils/isNotificationBefore30Days.util';
 
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
@@ -107,21 +107,7 @@ export const payMonthlyRent = (contractId: string) => {
     });
 };
 
-const isNotificationBefore30Days = (cancellationDate: Date): boolean => {
-    const today = new Date();
-    const daysDifference = differenceInDays(cancellationDate, today);
-    return daysDifference >= 30;
-};
-
-export const cancelContractByRenter = (contractId: string) => {
-    return prisma.contract.update({
-        where: { contract_id: contractId },
-        data: {
-            status: Status.ENDED, // Hoặc trạng thái phù hợp với yêu cầu của bạn
-        },
-    });
-};
-
+// !
 export const cancelContractByOwner = async (
     contractId: string,
     ownerUserId: string,
@@ -243,6 +229,7 @@ export const cancelContractByOwner = async (
     }
 };
 
+// !
 export const endContract = async (contractId: string, userId: string): Promise<any> => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
@@ -380,10 +367,11 @@ export const endContract = async (contractId: string, userId: string): Promise<a
     }
 };
 
+// !
 export const terminateForNonPayment = async (contractId: string, ownerId: string): Promise<PrismaContract> => {
     try {
         // Kiểm tra xem hợp đồng có quá hạn thanh toán hay không
-        await checkOverduePayments();
+        // await checkOverduePayments();
 
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
@@ -642,14 +630,6 @@ export const getContractsByRenter = (renterId: IUserId) => {
         },
         orderBy: {
             created_at: 'desc',
-        },
-    });
-};
-
-export const getContractsByStatus = (status: Status) => {
-    return prisma.contract.findMany({
-        where: {
-            status,
         },
     });
 };

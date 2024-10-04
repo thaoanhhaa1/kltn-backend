@@ -1,5 +1,6 @@
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
+import Redis from '../configs/redis.config';
 import web3 from '../configs/web3.config';
 import { IContract } from '../interfaces/contract';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
@@ -8,6 +9,30 @@ import CustomError from '../utils/error.util';
 const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
 const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contractAddress);
+
+const getGasPriceService = async () => {
+    const gasPriceInRedis = await Redis.getInstance().getClient().get('gasPrice');
+
+    if (gasPriceInRedis) return gasPriceInRedis;
+
+    const gasPrice = Number(await web3.eth.getGasPrice());
+
+    Redis.getInstance()
+        .getClient()
+        .set('gasPrice', gasPrice, {
+            ex: 10, // 10 seconds
+            type: 'number',
+        })
+        .then(() => console.log('Gas price has been saved to Redis.'))
+        .catch((err: any) => console.error('Failed to save gas price to Redis.', err));
+
+    return gasPrice;
+};
+
+export const convertGasToEthService = async (gas: number) => {
+    const gasPrice = await getGasPriceService();
+    return web3.utils.fromWei((gas * parseInt(`${Number(gasPrice)}`, 10)).toString(), 'ether');
+};
 
 export const createSmartContractService = async ({
     contract_id,
@@ -26,13 +51,16 @@ export const createSmartContractService = async ({
         monthly_rent,
     );
 
-    const gasEstimate = await contractCreate.estimateGas({ from: owner_wallet_address });
+    const [gasEstimate, gasPrice] = await Promise.all([
+        contractCreate.estimateGas({ from: owner_wallet_address }),
+        getGasPriceService(),
+    ]);
 
     // Tạo hợp đồng trên blockchain
     const receipt = await contractCreate.send({
         from: owner_wallet_address,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice.toString(),
     });
 
     return receipt;
@@ -58,10 +86,13 @@ export const depositSmartContractService = async ({
         throw new CustomError(400, 'Số dư không đủ để thanh toán số tiền đặt cọc.');
 
     // Ước lượng lượng gas cần thiết
-    const gasEstimate = await rentalContract.methods.deposit(contractId).estimateGas({
-        from: renterAddress,
-        value: depositAmountInWei,
-    });
+    const [gasEstimate, gasPrice] = await Promise.all([
+        rentalContract.methods.deposit(contractId).estimateGas({
+            from: renterAddress,
+            value: depositAmountInWei,
+        }),
+        getGasPriceService(),
+    ]);
     console.log('Estimated Gas:', gasEstimate);
 
     // Gọi hàm deposit trên smart contract
@@ -69,7 +100,7 @@ export const depositSmartContractService = async ({
         from: renterAddress,
         value: depositAmountInWei,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice.toString(),
     });
     console.log('Transaction receipt:', receipt);
 
@@ -100,10 +131,13 @@ export const payMonthlyRentSmartContractService = async ({
         throw new CustomError(400, 'Số dư không đủ để thanh toán tiền thuê.');
 
     // Ước lượng lượng gas cần thiết
-    const gasEstimate = await rentalContract.methods.payRent(contractId).estimateGas({
-        from: renterAddress,
-        value: monthlyRentInWei,
-    });
+    const [gasEstimate, gasPrice] = await Promise.all([
+        rentalContract.methods.payRent(contractId).estimateGas({
+            from: renterAddress,
+            value: monthlyRentInWei,
+        }),
+        getGasPriceService(),
+    ]);
     console.log('🚀 ~ gasEstimate ~ gasEstimate:', gasEstimate);
 
     // Gọi hàm payRent trên smart contract
@@ -111,7 +145,7 @@ export const payMonthlyRentSmartContractService = async ({
         from: renterAddress,
         value: monthlyRentInWei,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice.toString(),
     });
     console.log('🚀 ~ receipt ~ receipt:', receipt);
 
@@ -145,21 +179,23 @@ export const cancelSmartContractByRenterService = async ({
         depositAmountInWei,
     );
 
-    const gasEstimate = await cancelContract.estimateGas({
-        value: depositAmountInWei,
-        from: userAddress,
-    });
+    const [gasEstimate, gasPrice] = await Promise.all([
+        cancelContract.estimateGas({
+            from: userAddress,
+        }),
+        getGasPriceService(),
+    ]);
 
     const receipt = await cancelContract.send({
-        value: depositAmountInWei,
         from: userAddress,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice.toString(),
     });
 
     return {
         receipt,
         smartContract: rental,
+        indemnity: null,
     };
 };
 
@@ -185,31 +221,49 @@ export const cancelSmartContractByOwnerService = async ({
     const [depositAmountInWei, monthlyRentInWei, value] = await Promise.all([
         convertVNDToWei(Number(rental.depositAmount)),
         convertVNDToWei(Number(rental.monthlyRent)),
-        convertVNDToWei(Number(rental.depositAmount + (notifyBefore30Days ? 0 : rental.monthlyRent))),
+        convertVNDToWei(Number(rental.depositAmount) + Number(notifyBefore30Days ? 0 : rental.monthlyRent)),
     ]);
 
-    const cancelContract = rentalContract.methods.cancelContractByOwner(
-        contractId,
-        notifyBefore30Days,
-        monthlyRentInWei,
-        depositAmountInWei,
-    );
+    const contractualIndemnity = rentalContract.methods.contractualIndemnity(contractId);
 
-    const gasEstimate = await cancelContract.estimateGas({
-        from: userAddress,
-        value,
-    });
+    const cancelContract = rentalContract.methods.cancelContractByOwner(contractId, depositAmountInWei);
+
+    const [gasEstimate, gasEstimateIndemnity, gasPrice] = await Promise.all([
+        cancelContract.estimateGas({
+            from: userAddress,
+        }),
+        contractualIndemnity.estimateGas({
+            value: monthlyRentInWei,
+            from: userAddress,
+        }),
+        getGasPriceService(),
+    ]);
+
+    let indemnity = null;
+
+    console.log('notifyBefore30Days', notifyBefore30Days);
+
+    if (!notifyBefore30Days) {
+        indemnity = await contractualIndemnity.send({
+            value: monthlyRentInWei,
+            from: userAddress,
+            gas: gasEstimateIndemnity.toString(),
+            gasPrice: gasPrice.toString(),
+        });
+        console.log('🚀 ~ indemnity:', indemnity);
+    }
 
     const receipt = await cancelContract.send({
-        value,
         from: userAddress,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice.toString(),
     });
+    console.log('🚀 ~ receipt:', receipt);
 
     return {
         receipt,
         smartContract: rental,
+        indemnity,
     };
 };
 
@@ -222,13 +276,16 @@ export const cancelSmartContractBeforeDepositService = async ({
 }) => {
     const cancelContract = rentalContract.methods.cancelContractBeforeDeposit(contractId);
 
-    const gasEstimate = await cancelContract.estimateGas({
-        from: userAddress,
-    });
+    const [gasEstimate, gasPrice] = await Promise.all([
+        cancelContract.estimateGas({
+            from: userAddress,
+        }),
+        getGasPriceService(),
+    ]);
 
     return cancelContract.send({
         from: userAddress,
         gas: gasEstimate.toString(),
-        gasPrice: web3.utils.toWei('30', 'gwei').toString(),
+        gasPrice: gasPrice,
     });
 };

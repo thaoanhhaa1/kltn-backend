@@ -9,7 +9,6 @@ import { getContractInRangeService } from './services/contract.service';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
 import TaskService from './services/task.service';
 import { createUserService, updateUserService } from './services/user.service';
-import { startAgenda } from './tasks/agenda';
 
 const app = express();
 
@@ -118,15 +117,6 @@ rabbitMQ.receiveSyncMessage({
 });
 
 const PORT = envConfig.PORT || 3000;
-
-// Khởi động công việc theo lịch
-startAgenda()
-    .then(() => {
-        console.log('Agenda started and job scheduled.');
-    })
-    .catch((err) => {
-        console.error('Error starting agenda:', err);
-    });
 
 new TaskService().start();
 

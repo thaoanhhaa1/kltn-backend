@@ -14,12 +14,14 @@ export type ICreateTransaction = {
     to_id?: string;
     end_date?: Date;
     type: TransactionType;
+    fee_eth?: number;
 };
 
 export interface IPaymentTransaction {
     id: number;
     amount_eth: number;
     fee: number;
+    fee_eth: number;
     transaction_hash: string;
 }
 

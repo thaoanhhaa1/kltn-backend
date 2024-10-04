@@ -90,6 +90,9 @@ class TaskService {
         job.start();
     };
 
+    // TODO: Overdue deposit, rent
+    // TODO: End contract
+
     public start = () => {
         this.createMonthlyRentTask();
         this.handleOverdueContractCancelRequestTask();

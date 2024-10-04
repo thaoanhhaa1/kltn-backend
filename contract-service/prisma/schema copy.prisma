@@ -1,0 +1,198 @@
+// Đây là file schema Prisma của bạn,
+// tìm hiểu thêm về nó trong tài liệu: https://pris.ly/d/prisma-schema
+
+// Tìm cách để tăng tốc truy vấn của bạn, hoặc mở rộng dễ dàng với các chức năng serverless hoặc edge của bạn?
+// Thử Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE // User has verified their email
+  INACTIVE // User has not verified their email
+  BLOCKED // User has been blocked by an admin
+  DELETED // User has been deleted
+}
+
+model User {
+  userId               String                        @id @map("user_id")
+  name                 String?                       @map("name")
+  avatar               String?                       @map("avatar")
+  email                String?                       @map("email")
+  walletAddress        String?                       @unique @map("wallet_address")
+  status               UserStatus                    @default(ACTIVE) @map("status")
+  ownedContracts       Contract[]                    @relation("OwnerContracts")
+  rentedContracts      Contract[]                    @relation("RenterContracts")
+  renterRentalRequests RentalRequest[]               @relation("RenterRentalRequest")
+  ownerRentalRequests  RentalRequest[]               @relation("OwnerRentalRequest")
+  cancellationRequests ContractCancellationRequest[]
+
+  @@map("`user`")
+}
+
+model Address {
+  addressId  String     @id @default(uuid()) @map("address_id")
+  street     String
+  ward       String
+  district   String
+  city       String
+  properties Property[]
+
+  @@map("`address`")
+}
+
+enum PropertyStatus {
+  PENDING // waiting for approval
+  ACTIVE // approved and available for rent
+  INACTIVE // not approved
+  REJECTED // rejected by admin
+  UNAVAILABLE // rented out
+}
+
+model Property {
+  propertyId     String          @id @map("property_id")
+  title          String
+  slug           String
+  images         String[]
+  status         PropertyStatus  @default(PENDING)
+  deleted        Boolean?        @default(false)
+  addressId      String          @map("address_id")
+  address        Address         @relation(fields: [addressId], references: [addressId])
+  contracts      Contract[]      @relation("PropertyContracts")
+  rentalRequests RentalRequest[]
+
+  @@map("`property`")
+}
+
+enum Status {
+  WAITING
+  DEPOSITED
+  ONGOING
+  ENDED
+  OVERDUE // Trạng thái hợp đồng quá hạn
+  CANCELLED // Trạng thái hợp đồng bị hủy
+  PENDING_CANCELLATION // Trạng thái hợp đồng đang chờ hủy
+  UNILATERAL_CANCELLATION // Trạng thái hợp đồng bị hủy một phía
+  APPROVED_CANCELLATION // Trạng thái yêu cầu hủy hợp đồng được chấp nhận
+  REJECTED_CANCELLATION // Trạng thái yêu cầu hủy hợp đồng bị từ chối
+}
+
+model Contract {
+  contractId              String                        @id @default(uuid()) @map("contract_id")
+  ownerId                 String                        @map("owner_user_id")
+  renterId                String                        @map("renter_user_id")
+  propertyId              String                        @map("property_id")
+  startDate               DateTime                      @map("start_date")
+  endDate                 DateTime                      @map("end_date")
+  deleted                 Boolean                       @default(false)
+  status                  Status                        @default(WAITING)
+  createdAt               DateTime                      @default(now()) @map("created_at")
+  updatedAt               DateTime                      @updatedAt @map("updated_at")
+  monthlyRent             Float                         @map("monthly_rent")
+  depositAmount           Float                         @map("deposit_amount")
+  contractTerms           String                        @map("contract_terms")
+  transactionHashContract String?                       @map("transaction_hash_contract")
+  transactions            Transaction[]                 @relation("ContractTransactions")
+  owner                   User                          @relation("OwnerContracts", fields: [ownerId], references: [userId])
+  renter                  User                          @relation("RenterContracts", fields: [renterId], references: [userId])
+  property                Property                      @relation("PropertyContracts", fields: [propertyId], references: [propertyId])
+  cancellationRequests    ContractCancellationRequest[]
+
+  @@map("`contract`")
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  OVERDUE
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  RENT
+  WITHDRAW
+  REFUND
+  CREATE_CONTRACT
+  CANCEL_CONTRACT
+  COMPENSATION
+}
+
+model Transaction {
+  id              Int               @id @default(autoincrement())
+  fromId          String?           @map("from_id")
+  toId            String?           @map("to_id")
+  contractId      String            @map("contract_id")
+  amount          Float
+  amountEth       Float?            @map("amount_eth")
+  fee             Float?
+  transactionHash String?           @map("transaction_hash")
+  status          TransactionStatus
+  title           String
+  type            TransactionType   @default(RENT)
+  description     String? // Trường mô tả nội dung giao dịch
+  endDate         DateTime?         @map("end_date")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  contract        Contract          @relation("ContractTransactions", fields: [contractId], references: [contractId])
+
+  @@map("`transaction`")
+}
+
+enum RentalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model RentalRequest {
+  requestId       Int                 @id @default(autoincrement()) @map("request_id")
+  renterId        String              @map("renter_id")
+  ownerId         String              @map("owner_id")
+  propertyId      String              @map("property_id")
+  status          RentalRequestStatus @default(PENDING)
+  rentalPrice     Float               @map("rental_price")
+  rentalDeposit   Float               @map("rental_deposit")
+  rentalStartDate DateTime            @map("rental_start_date")
+  rentalEndDate   DateTime            @map("rental_end_date")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  renter          User                @relation(fields: [renterId], references: [userId], "RenterRentalRequest")
+  owner           User                @relation(fields: [ownerId], references: [userId], "OwnerRentalRequest")
+  property        Property            @relation(fields: [propertyId], references: [propertyId])
+
+  @@map("`rental_requests`")
+}
+
+enum ContractCancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  CONTINUE
+  UNILATERAL_CANCELLATION
+}
+
+model ContractCancellationRequest {
+  id          Int                               @id @default(autoincrement())
+  contractId  String                            @map("contract_id")
+  requestedBy String                            @map("requested_by")
+  requestedAt DateTime                          @default(now()) @map("requested_at")
+  cancelDate  DateTime                          @map("cancel_date")
+  reason      String?                           @map("reason")
+  deleted     Boolean                           @default(false) @map("deleted")
+  updatedAt   DateTime                          @updatedAt @map("updated_at")
+  status      ContractCancellationRequestStatus @default(PENDING)
+  contract    Contract                          @relation(fields: [contractId], references: [contractId])
+  userRequest User                              @relation(fields: [requestedBy], references: [userId])
+
+  @@map("`contract_cancellation_requests`")
+}

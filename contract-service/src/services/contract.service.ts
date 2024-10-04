@@ -42,6 +42,7 @@ import {
     cancelSmartContractBeforeDepositService,
     cancelSmartContractByOwnerService,
     cancelSmartContractByRenterService,
+    convertGasToEthService,
     createSmartContractService,
     depositSmartContractService,
     payMonthlyRentSmartContractService,
@@ -76,7 +77,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             getCoinPriceService(),
         ]);
 
-        const eth = Number(receipt.gasUsed) / 1e18;
+        const eth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
         const fee = eth * ethPrice;
 
         const result = await createContractInRepo({
@@ -153,10 +154,14 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
             getCoinPriceService(),
         ]);
 
+        const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+        const fee = feeEth * ethVnd;
+
         const [, , transactionResult] = await prisma.$transaction([
             paymentTransaction({
                 amount_eth: transaction.amount / ethVnd,
-                fee: Number(receipt.gasUsed) / 1e18,
+                fee,
+                fee_eth: feeEth,
                 id: transactionId,
                 transaction_hash: receipt.transactionHash,
             }),
@@ -234,14 +239,17 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
                 contractId,
                 renterAddress: renter.wallet_address,
             }),
-
             getCoinPriceService(),
         ]);
+
+        const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+        const fee = feeEth * ethVnd;
 
         const [transactionResult] = await prisma.$transaction([
             paymentTransaction({
                 amount_eth: transaction.amount / ethVnd,
-                fee: Number(receipt.gasUsed) / 1e18,
+                fee,
+                fee_eth: feeEth,
                 id: transactionId,
                 transaction_hash: receipt.transactionHash,
             }),
@@ -430,13 +438,13 @@ export const cancelContractBeforeDepositService = async ({ contractId, userId }:
             }),
             getCoinPriceService(),
         ]);
-
-        const eth = Number(receipt.gasUsed) / 1e18;
+        const eth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+        const fee = eth * ethVnd;
 
         cancelTransactions([contractId])
             .then(() =>
                 createTransaction({
-                    amount: eth * ethVnd,
+                    amount: fee,
                     contract_id: contractId,
                     status: 'COMPLETED',
                     title: 'Phí hủy hợp đồng',
@@ -475,8 +483,9 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
         const requestByOwner = request.requestedBy === contract.owner_user_id;
         const notifyBefore30Days =
             request.status === 'APPROVED' || isDateDifferenceMoreThan30Days(request.cancelDate, request.requestedAt);
+        console.log('🚀 ~ endContractService ~ notifyBefore30Days:', notifyBefore30Days);
 
-        const { receipt } = await (requestByOwner
+        const { receipt, indemnity } = await (requestByOwner
             ? cancelSmartContractByOwnerService
             : cancelSmartContractByRenterService)({
             contractId,
@@ -484,9 +493,14 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
             notifyBefore30Days,
         });
 
-        const ethVnd = await getCoinPriceService();
+        const [ethVnd, feeEth, feeIndemnity] = await Promise.all([
+            getCoinPriceService(),
+            convertGasToEthService(Number(receipt.gasUsed)),
+            indemnity ? convertGasToEthService(Number(indemnity.gasUsed)) : 0,
+        ]);
 
         const isRefund = notifyBefore30Days || requestByOwner;
+        const fee = Number(feeEth) * ethVnd;
 
         const queries = [
             updatePropertyStatus(contract.property_id, 'ACTIVE'),
@@ -503,10 +517,15 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                 type: isRefund ? 'REFUND' : 'DEPOSIT',
                 amount_eth: contract.deposit_amount / ethVnd,
                 transaction_hash: receipt.transactionHash,
+                fee: Number(fee),
+                fee_eth: Number(feeEth),
             }),
+            cancelTransactions([contractId]),
         ];
 
-        if (!notifyBefore30Days && requestByOwner)
+        if (indemnity) {
+            const fee = Number(feeIndemnity) * ethVnd;
+
             queries.push(
                 createTransaction({
                     amount: contract.monthly_rent,
@@ -518,8 +537,12 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                     type: 'COMPENSATION',
                     amount_eth: contract.monthly_rent / ethVnd,
                     transaction_hash: receipt.transactionHash,
+                    from_id: contract.owner_user_id,
+                    fee,
+                    fee_eth: Number(feeIndemnity),
                 }),
             );
+        }
 
         await prisma.$transaction(queries);
 
