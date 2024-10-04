@@ -5,7 +5,7 @@ export const createProperty = ({ address, ...property }: IProperty) => {
     return prisma.property.create({
         data: {
             ...property,
-            // address_id: addressRes.address_id,
+            // addressId: addressRes.addressId,
             address: {
                 create: address,
             },
@@ -13,10 +13,10 @@ export const createProperty = ({ address, ...property }: IProperty) => {
     });
 };
 
-export const softDeleteProperty = (property_id: string) => {
+export const softDeleteProperty = (propertyId: string) => {
     return prisma.property.update({
         where: {
-            property_id,
+            propertyId,
         },
         data: {
             deleted: true,
@@ -24,26 +24,26 @@ export const softDeleteProperty = (property_id: string) => {
     });
 };
 
-export const updateProperty = async (property_id: string, { address, ...property }: Omit<IProperty, 'property_id'>) => {
+export const updateProperty = async (propertyId: string, { address, ...property }: Omit<IProperty, 'propertyId'>) => {
     const addressRes = await prisma.address.create({
         data: address,
     });
 
     return prisma.property.update({
         where: {
-            property_id,
+            propertyId,
         },
         data: {
             ...property,
-            address_id: addressRes.address_id,
+            addressId: addressRes.addressId,
         },
     });
 };
 
-export const updatePropertyStatus = (property_id: string, status: IProperty['status']) => {
+export const updatePropertyStatus = (propertyId: string, status: IProperty['status']) => {
     return prisma.property.update({
         where: {
-            property_id,
+            propertyId,
         },
         data: {
             status,

@@ -6,4 +6,4 @@ export const createUserService = (user: User) => {
     return createUser(user);
 };
 
-export const updateUserService = (userId: IUserId, user: Omit<User, 'user_id'>) => updateUser(userId, user);
+export const updateUserService = (userId: IUserId, user: Omit<User, 'userId'>) => updateUser(userId, user);

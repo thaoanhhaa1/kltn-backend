@@ -5,10 +5,10 @@ export const createPropertyService = (property: IProperty) => {
     return createProperty(property);
 };
 
-export const softDeletePropertyService = (property_id: string) => {
-    return softDeleteProperty(property_id);
+export const softDeletePropertyService = (propertyId: string) => {
+    return softDeleteProperty(propertyId);
 };
 
-export const updatePropertyService = (property_id: string, property: Omit<IProperty, 'property_id'>) => {
-    return updateProperty(property_id, property);
+export const updatePropertyService = (propertyId: string, property: Omit<IProperty, 'propertyId'>) => {
+    return updateProperty(propertyId, property);
 };

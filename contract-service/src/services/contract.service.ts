@@ -52,16 +52,13 @@ import { getCoinPriceService } from './coingecko.service';
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
     try {
-        const [owner, renter] = await Promise.all([
-            findUserById(contract.owner_user_id),
-            findUserById(contract.renter_user_id),
-        ]);
+        const [owner, renter] = await Promise.all([findUserById(contract.ownerId), findUserById(contract.renterId)]);
 
-        if (!owner || !owner.wallet_address) {
+        if (!owner || !owner.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy chủ nhà hoặc chủ nhà chưa có địa chỉ ví.');
         }
 
-        if (!renter || !renter.wallet_address) {
+        if (!renter || !renter.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
         }
 
@@ -70,9 +67,9 @@ export const createContractService = async (contract: CreateContractReq): Promis
         const [receipt, ethPrice] = await Promise.all([
             createSmartContractService({
                 ...contract,
-                contract_id: contractId,
-                owner_wallet_address: owner.wallet_address,
-                renter_wallet_address: renter.wallet_address,
+                contractId: contractId,
+                ownerWalletAddress: owner.walletAddress,
+                renterWalletAddress: renter.walletAddress,
             }),
             getCoinPriceService(),
         ]);
@@ -82,34 +79,34 @@ export const createContractService = async (contract: CreateContractReq): Promis
 
         const result = await createContractInRepo({
             ...contract,
-            owner_wallet_address: owner.wallet_address,
-            renter_wallet_address: renter.wallet_address,
-            contract_id: contractId,
-            transaction_hash: receipt.transactionHash,
+            ownerWalletAddress: owner.walletAddress,
+            renterWalletAddress: renter.walletAddress,
+            contractId: contractId,
+            transactionHash: receipt.transactionHash,
         });
 
         createTransaction({
-            from_id: owner.user_id,
+            fromId: owner.userId,
             amount: fee,
-            contract_id: contractId,
+            contractId: contractId,
             status: 'COMPLETED',
             title: 'Thanh toán phí tạo hợp đồng',
             description: `Thanh toán phí tạo hợp đồng **${contractId}**`,
-            transaction_hash: receipt.transactionHash,
+            transactionHash: receipt.transactionHash,
             type: 'CREATE_CONTRACT',
-            amount_eth: eth,
+            amountEth: eth,
         })
             .then(() => console.log('Transaction created'))
             .catch((error) => console.error('Error creating transaction:', error));
 
         createTransaction({
-            from_id: renter.user_id,
-            amount: contract.deposit_amount,
-            contract_id: contractId,
+            fromId: renter.userId,
+            amount: contract.depositAmount,
+            contractId: contractId,
             title: 'Thanh toán tiền đặt cọc',
             description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
             status: 'PENDING',
-            end_date: dateAfter(3, true),
+            endDate: dateAfter(3, true),
             type: 'DEPOSIT',
         })
             .then(() => console.log('Transaction created'))
@@ -134,14 +131,14 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         if (transaction.status !== 'PENDING') throw new CustomError(400, 'Giao dịch đã được xử lý');
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
         if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
-        if (transaction.contract_id !== contractId) throw new CustomError(400, 'Giao dịch không thuộc hợp đồng này');
-        if (contract.renter_user_id !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
-        if (!renter.wallet_address) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+        if (transaction.contractId !== contractId) throw new CustomError(400, 'Giao dịch không thuộc hợp đồng này');
+        if (contract.renterId !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+        if (!renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
 
         const contractInRange = await getContractInRange({
-            propertyId: contract.property_id,
-            rentalEndDate: convertDateToDB(contract.end_date),
-            rentalStartDate: convertDateToDB(contract.start_date),
+            propertyId: contract.propertyId,
+            rentalEndDate: convertDateToDB(contract.endDate),
+            rentalStartDate: convertDateToDB(contract.startDate),
         });
 
         if (contractInRange) throw new CustomError(400, 'Căn hộ đã được thuê trong khoảng thời gian này');
@@ -149,7 +146,7 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         const [receipt, ethVnd] = await Promise.all([
             depositSmartContractService({
                 contractId,
-                renterAddress: renter.wallet_address,
+                renterAddress: renter.walletAddress,
             }),
             getCoinPriceService(),
         ]);
@@ -159,36 +156,36 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
 
         const [, , transactionResult] = await prisma.$transaction([
             paymentTransaction({
-                amount_eth: transaction.amount / ethVnd,
+                amountEth: transaction.amount / ethVnd,
                 fee,
-                fee_eth: feeEth,
+                feeEth: feeEth,
                 id: transactionId,
-                transaction_hash: receipt.transactionHash,
+                transactionHash: receipt.transactionHash,
             }),
-            updatePropertyStatus(contract.property_id, 'UNAVAILABLE'),
+            updatePropertyStatus(contract.propertyId, 'UNAVAILABLE'),
             depositInRepo(contractId),
         ]);
 
         RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
             data: {
-                propertyId: contract.property_id,
+                propertyId: contract.propertyId,
                 status: PropertyStatus.UNAVAILABLE,
             },
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,
         });
 
-        if (isAfter(new Date(), contract.start_date) || isSameDay(new Date(), contract.start_date)) {
+        if (isAfter(new Date(), contract.startDate) || isSameDay(new Date(), contract.startDate)) {
             createTransaction({
-                amount: contract.monthly_rent,
-                contract_id: contract.contract_id,
+                amount: contract.monthlyRent,
+                contractId: contract.contractId,
                 status: 'PENDING',
-                title: `Thanh toán tiền thuê tháng ${contract.start_date.getMonth() + 1}`,
-                description: `Thanh toán tiền thuê tháng ${contract.start_date.getMonth() + 1} cho hợp đồng **${
-                    contract.contract_id
+                title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
+                description: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1} cho hợp đồng **${
+                    contract.contractId
                 }**`,
-                from_id: contract.renter_user_id,
-                to_id: contract.owner_user_id,
-                end_date: dateAfter(14, true),
+                fromId: contract.renterId,
+                toId: contract.ownerId,
+                endDate: dateAfter(14, true),
                 type: 'RENT',
             })
                 .then(() => console.log('Transaction created'))
@@ -196,14 +193,14 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         }
 
         const data = {
-            propertyId: contract.property_id,
-            rentalEndDate: convertDateToDB(contract.end_date),
-            rentalStartDate: convertDateToDB(contract.start_date),
+            propertyId: contract.propertyId,
+            rentalEndDate: convertDateToDB(contract.endDate),
+            rentalStartDate: convertDateToDB(contract.startDate),
         };
 
         Promise.all([findCancelContracts(data), cancelContracts(data)])
             .then(([contracts]) => {
-                const contractIds = contracts.map((contract) => contract.contract_id);
+                const contractIds = contracts.map((contract) => contract.contractId);
 
                 return cancelTransactions(contractIds);
             })
@@ -231,13 +228,13 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
         if (transaction.status !== 'PENDING') throw new CustomError(400, 'Giao dịch đã được xử lý');
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
         if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
-        if (!renter.wallet_address) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
-        if (contract.renter_user_id !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+        if (!renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+        if (contract.renterId !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
 
         const [receipt, ethVnd] = await Promise.all([
             payMonthlyRentSmartContractService({
                 contractId,
-                renterAddress: renter.wallet_address,
+                renterAddress: renter.walletAddress,
             }),
             getCoinPriceService(),
         ]);
@@ -247,11 +244,11 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 
         const [transactionResult] = await prisma.$transaction([
             paymentTransaction({
-                amount_eth: transaction.amount / ethVnd,
+                amountEth: transaction.amount / ethVnd,
                 fee,
-                fee_eth: feeEth,
+                feeEth: feeEth,
                 id: transactionId,
-                transaction_hash: receipt.transactionHash,
+                transactionHash: receipt.transactionHash,
             }),
             payMonthlyRentInRepo(contractId),
         ]);
@@ -267,15 +264,15 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 // // Hàm để hủy hợp đồng bởi người thuê
 // export const cancelContractByRenterService = async (
 //     contractId: string,
-//     renterUserId: IUserId,
+//     ren.renterId: IUserId,
 //     cancellationDate: Date,
 // ): Promise<PrismaContract> => {
 //     try {
-//         const [contract, renter] = await Promise.all([findContractById(contractId), findUserById(renterUserId)]);
+//         const [contract, renter] = await Promise.all([findContractById(contractId), findUserById(ren.renterId)]);
 
 //         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
 
-//         if (!renter || !renter.wallet_address)
+//         if (!renter || !renter.walletAddress)
 //             throw new CustomError(404, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví');
 
 //         const notifyBefore30Days = isNotificationBefore30Days(cancellationDate);
@@ -283,7 +280,7 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 //         const receipt = await cancelSmartContractByRenterService({
 //             contractId,
 //             notifyBefore30Days,
-//             renterAddress: renter.wallet_address,
+//             renterAddress: renter.walletAddress,
 //         });
 
 //         const ethVnd = await getCoinPriceService({
@@ -296,36 +293,36 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 //         if (notifyBefore30Days) {
 //             queries.push(
 //                 createTransaction({
-//                     amount: contract.deposit_amount,
-//                     contract_id: contractId,
+//                     amount: contract.depositAmount,
+//                     contractId: contractId,
 //                     status: 'COMPLETED',
 //                     title: 'Hoàn trả tiền đặt cọc',
 //                     description: `Hoàn trả tiền đặt cọc cho hợp đồng **${contractId}**`,
-//                     to_id: renterUserId,
-//                     amount_eth: contract.deposit_amount / ethVnd,
+//                     to_id: ren.renterId,
+//                     amountEth: contract.depositAmount/ ethVnd,
 //                     fee: Number(receipt.gasUsed) / 1e18,
-//                     transaction_hash: receipt.transactionHash,
+//                     transactionHash: receipt.transactionHash,
 //                 }),
 //             );
 //         } else {
 //             queries.push(
 //                 createTransaction({
-//                     amount: contract.deposit_amount,
-//                     contract_id: contractId,
+//                     amount: contract.depositAmount,
+//                     contractId: contractId,
 //                     status: 'COMPLETED',
 //                     title: 'Thanh toán tiền đặt cọc cho chủ nhà',
 //                     description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
-//                     to_id: contract.owner_user_id,
-//                     amount_eth: contract.deposit_amount / ethVnd,
+//                     to_id: contract.owner,
+//                     amountEth: contract.depositAmount/ ethVnd,
 //                     fee: Number(receipt.gasUsed) / 1e18,
-//                     transaction_hash: receipt.transactionHash,
+//                     transactionHash: receipt.transactionHash,
 //                 }),
 //             );
 //         }
 
 //         // // Cập nhật trạng thái property trong cơ sở dữ liệu
 //         // await prisma.property.update({
-//         //     where: { property_id: contract.property_id },
+//         //     where: { property_id: contract.propertyId},
 //         //     data: {
 //         //         status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
 //         //     },
@@ -333,14 +330,14 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 
 //         // RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
 //         //     data: {
-//         //         propertyId: contract.property_id,
+//         //         propertyId: contract.propertyId,
 //         //         status: PropertyStatus.ACTIVE,
 //         //     },
 //         //     type: CONTRACT_QUEUE.type.UPDATE_STATUS,
 //         // });
 
 //         // Gọi phương thức repository để thực hiện hủy hợp đồng
-//         return await cancelContractByRenterInRepo(contractId, renterUserId, cancellationDate);
+//         return await cancelContractByRenterInRepo(contractId, ren.renterId, cancellationDate);
 //     } catch (error) {
 //         console.error('Error processing contract cancellation:', error);
 //         throw new Error('Could not process contract cancellation');
@@ -350,12 +347,12 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
 // // Hàm để hủy hợp đồng bởi chủ nhà
 // export const cancelContractByOwnerService = async (
 //     contractId: string,
-//     ownerUserId: IUserId,
+//     owner: IUserId,
 //     cancellationDate: Date,
 // ): Promise<PrismaContract> => {
 //     try {
 //         // Gọi phương thức repository để thực hiện hủy hợp đồng
-//         return await cancelContractByOwnerInRepo(contractId, ownerUserId, cancellationDate);
+//         return await cancelContractByOwnerInRepo(contractId, owner, cancellationDate);
 //     } catch (error) {
 //         console.error('Error processing contract cancellation:', error);
 //         throw new Error('Could not process contract cancellation');
@@ -385,13 +382,10 @@ export const getContractDetailsService = async (contractId: string, userId: IUse
 };
 
 // Hàm để hủy hợp đồng do không thanh toán
-export const terminateForNonPaymentService = async (
-    contractId: string,
-    ownerUserId: string,
-): Promise<PrismaContract> => {
+export const terminateForNonPaymentService = async (contractId: string, owner: string): Promise<PrismaContract> => {
     try {
         // Gọi phương thức repository để thực hiện hủy hợp đồng do không thanh toán
-        return await terminateForNonPaymentInRepo(contractId, ownerUserId);
+        return await terminateForNonPaymentInRepo(contractId, owner);
     } catch (error) {
         console.error('Error terminating contract for non-payment:', error);
         throw new Error('Could not terminate contract for non-payment');
@@ -426,15 +420,15 @@ export const cancelContractBeforeDepositService = async ({ contractId, userId }:
 
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
         if (!user) throw new CustomError(404, 'Không tìm thấy người dùng');
-        if (!user.wallet_address) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
+        if (!user.walletAddress) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
 
-        if (contract.owner_user_id !== userId && contract.renter_user_id !== userId)
+        if (contract.ownerId !== userId && contract.renterId !== userId)
             throw new CustomError(403, 'Không có quyền thực hiện hành động này');
 
         const [receipt, ethVnd] = await Promise.all([
             cancelSmartContractBeforeDepositService({
                 contractId,
-                userAddress: user.wallet_address,
+                userAddress: user.walletAddress,
             }),
             getCoinPriceService(),
         ]);
@@ -445,14 +439,14 @@ export const cancelContractBeforeDepositService = async ({ contractId, userId }:
             .then(() =>
                 createTransaction({
                     amount: fee,
-                    contract_id: contractId,
+                    contractId: contractId,
                     status: 'COMPLETED',
                     title: 'Phí hủy hợp đồng',
                     type: 'CANCEL_CONTRACT',
-                    amount_eth: eth,
-                    transaction_hash: receipt.transactionHash,
+                    amountEth: eth,
+                    transactionHash: receipt.transactionHash,
                     description: `Thanh toán phí hủy hợp đồng **${contractId}**`,
-                    from_id: userId,
+                    fromId: userId,
                 }),
             )
             .then(() => console.log('Transaction cancelled'))
@@ -478,9 +472,9 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
         const user = await findUserById(request.requestedBy);
 
         if (!user) throw new CustomError(404, 'Không tìm thấy người dùng');
-        if (!user.wallet_address) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
+        if (!user.walletAddress) throw new CustomError(400, 'Người dùng chưa có địa chỉ ví');
 
-        const requestByOwner = request.requestedBy === contract.owner_user_id;
+        const requestByOwner = request.requestedBy === contract.ownerId;
         const notifyBefore30Days =
             request.status === 'APPROVED' || isDateDifferenceMoreThan30Days(request.cancelDate, request.requestedAt);
         console.log('🚀 ~ endContractService ~ notifyBefore30Days:', notifyBefore30Days);
@@ -489,7 +483,7 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
             ? cancelSmartContractByOwnerService
             : cancelSmartContractByRenterService)({
             contractId,
-            userAddress: user.wallet_address,
+            userAddress: user.walletAddress,
             notifyBefore30Days,
         });
 
@@ -503,22 +497,22 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
         const fee = Number(feeEth) * ethVnd;
 
         const queries = [
-            updatePropertyStatus(contract.property_id, 'ACTIVE'),
+            updatePropertyStatus(contract.propertyId, 'ACTIVE'),
             updateStatusContract(contractId, 'ENDED'),
             createTransaction({
-                amount: contract.deposit_amount,
-                contract_id: contract.contract_id,
+                amount: contract.depositAmount,
+                contractId: contract.contractId,
                 status: 'COMPLETED',
                 title: isRefund ? `Hoàn trả tiền đặt cọc` : `Thanh toán tiền đặt cọc cho chủ nhà`,
                 description: isRefund
-                    ? `Hoàn trả tiền đặt cọc cho hợp đồng **${contract.contract_id}**`
-                    : `Thanh toán tiền đặt cọc cho hợp đồng **${contract.contract_id}**`,
-                to_id: isRefund ? contract.renter_user_id : contract.owner_user_id,
+                    ? `Hoàn trả tiền đặt cọc cho hợp đồng **${contract.contractId}**`
+                    : `Thanh toán tiền đặt cọc cho hợp đồng **${contract.contractId}**`,
+                toId: isRefund ? contract.renterId : contract.ownerId,
                 type: isRefund ? 'REFUND' : 'DEPOSIT',
-                amount_eth: contract.deposit_amount / ethVnd,
-                transaction_hash: receipt.transactionHash,
+                amountEth: contract.depositAmount / ethVnd,
+                transactionHash: receipt.transactionHash,
                 fee: Number(fee),
-                fee_eth: Number(feeEth),
+                feeEth: Number(feeEth),
             }),
             cancelTransactions([contractId]),
         ];
@@ -528,18 +522,18 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
 
             queries.push(
                 createTransaction({
-                    amount: contract.monthly_rent,
-                    contract_id: contract.contract_id,
+                    amount: contract.monthlyRent,
+                    contractId: contract.contractId,
                     status: 'COMPLETED',
                     title: 'Bồi thường tiền huỷ hợp đồng',
-                    description: `Bồi thường tiền huỷ hợp đồng **${contract.contract_id}**`,
-                    to_id: contract.renter_user_id,
+                    description: `Bồi thường tiền huỷ hợp đồng **${contract.contractId}**`,
+                    toId: contract.renterId,
                     type: 'COMPENSATION',
-                    amount_eth: contract.monthly_rent / ethVnd,
-                    transaction_hash: receipt.transactionHash,
-                    from_id: contract.owner_user_id,
+                    amountEth: contract.monthlyRent / ethVnd,
+                    transactionHash: receipt.transactionHash,
+                    fromId: contract.ownerId,
                     fee,
-                    fee_eth: Number(feeIndemnity),
+                    feeEth: Number(feeIndemnity),
                 }),
             );
         }
@@ -548,7 +542,7 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
 
         RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
             data: {
-                propertyId: contract.property_id,
+                propertyId: contract.propertyId,
                 status: PropertyStatus.ACTIVE,
             },
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,

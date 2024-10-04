@@ -18,22 +18,22 @@ class TaskService {
             const queries: any[] = [];
 
             contracts.forEach((contract) => {
-                const startDate = contract.start_date.getDate();
+                const startDate = contract.startDate.getDate();
                 const currentDate = new Date().getDate();
 
                 if (startDate === currentDate) {
                     queries.push(
                         createTransaction({
-                            amount: contract.monthly_rent,
-                            contract_id: contract.contract_id,
+                            amount: contract.monthlyRent,
+                            contractId: contract.contractId,
                             status: 'PENDING',
-                            title: `Thanh toán tiền thuê tháng ${contract.start_date.getMonth() + 1}`,
+                            title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
                             description: `Thanh toán tiền thuê tháng ${
-                                contract.start_date.getMonth() + 1
-                            } cho hợp đồng **${contract.contract_id}**`,
-                            from_id: contract.renter_user_id,
-                            to_id: contract.owner_user_id,
-                            end_date: dateAfter(3, true),
+                                contract.startDate.getMonth() + 1
+                            } cho hợp đồng **${contract.contractId}**`,
+                            fromId: contract.renterId,
+                            toId: contract.ownerId,
+                            endDate: dateAfter(3, true),
                             type: 'RENT',
                         }),
                     );

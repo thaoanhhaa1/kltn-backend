@@ -38,7 +38,7 @@ rabbitMQ.subscribeToQueue({
             avatar: data.avatar,
             name: data.name,
             status: data.status,
-            wallet_address: data.walletAddress,
+            walletAddress: data.walletAddress,
         };
 
         try {
@@ -46,7 +46,7 @@ rabbitMQ.subscribeToQueue({
                 case USER_QUEUE.type.CREATED:
                     await createUserService({
                         ...rest,
-                        user_id: data.userId,
+                        userId: data.userId,
                     });
                     break;
                 case USER_QUEUE.type.UPDATED:
@@ -73,7 +73,7 @@ rabbitMQ.subscribeToQueue({
             switch (type) {
                 case PROPERTY_QUEUE.type.CREATED:
                     await createPropertyService({
-                        property_id: data.propertyId,
+                        propertyId: data.propertyId,
                         title: data.title,
                         images: data.images,
                         slug: data.slug,

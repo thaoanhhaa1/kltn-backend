@@ -3,26 +3,26 @@ import { IUserId } from './user';
 
 export type ICreateTransaction = {
     amount: number;
-    amount_eth?: number;
-    contract_id: string;
+    amountEth?: number;
+    contractId: string;
     title: string;
     description?: string;
     fee?: number;
     status: TransactionStatus;
-    transaction_hash?: string;
-    from_id?: string;
-    to_id?: string;
-    end_date?: Date;
+    transactionHash?: string;
+    fromId?: string;
+    toId?: string;
+    endDate?: Date;
     type: TransactionType;
-    fee_eth?: number;
+    feeEth?: number;
 };
 
 export interface IPaymentTransaction {
     id: number;
-    amount_eth: number;
+    amountEth: number;
     fee: number;
-    fee_eth: number;
-    transaction_hash: string;
+    feeEth: number;
+    transactionHash: string;
 }
 
 export type ITransactionType = 'ALL' | 'INCOME' | 'OUTCOME';
@@ -34,13 +34,13 @@ export interface IGetTransactionsByUserId {
 
 export interface IHistoryTransaction {
     id: number;
-    from_id: string | null;
-    to_id: string | null;
+    fromId: string | null;
+    toId: string | null;
     amount: number;
-    amount_eth: number | null;
+    amountEth: number | null;
     fee: number | null;
-    transaction_hash: string | null;
+    transactionHash: string | null;
     title: string;
     description: string | null;
-    updated_at: Date;
+    updatedAt: Date;
 }

@@ -2,27 +2,27 @@ import { Contract, Transaction } from '@prisma/client';
 import { IUserId } from './user';
 import { ContractCancellationRequestId } from './contractCancellationRequest';
 
-export type IContractId = Contract['contract_id'];
+export type IContractId = Contract['contractId'];
 
 export interface CreateContractReq {
-    owner_user_id: string; // ID của chủ nhà
-    renter_user_id: string; // ID của người thuê
-    property_id: string; // ID tài sản
-    start_date: Date; // Ngày bắt đầu hợp đồng
-    end_date: Date; // Ngày kết thúc hợp đồng
-    contract_terms: string; // Điều khoản hợp đồng
-    monthly_rent: number; // Giá thuê hàng tháng
-    deposit_amount: number; // Số tiền đặt cọc
+    ownerId: string; // ID của chủ nhà
+    renterId: string; // ID của người thuê
+    propertyId: string; // ID tài sản
+    startDate: Date; // Ngày bắt đầu hợp đồng
+    endDate: Date; // Ngày kết thúc hợp đồng
+    contractTerms: string; // Điều khoản hợp đồng
+    monthlyRent: number; // Giá thuê hàng tháng
+    depositAmount: number; // Số tiền đặt cọc
 }
 
 export interface IContract extends CreateContractReq {
-    contract_id: string;
-    owner_wallet_address: string;
-    renter_wallet_address: string;
+    contractId: string;
+    ownerWalletAddress: string;
+    renterWalletAddress: string;
 }
 
 export interface IDeposit {
-    contractId: Contract['contract_id'];
+    contractId: Contract['contractId'];
     renterId: IUserId;
     transactionId: Transaction['id'];
 }

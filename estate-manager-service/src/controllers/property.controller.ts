@@ -294,7 +294,6 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
                                 'rentalConditions.value': {
                                     query: `${bedroom} phòng`,
                                     operator: 'and',
-                                    // start with 2 phòng
                                 },
                             },
                         },
@@ -460,7 +459,7 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
         } else if (sort === 'price_desc') {
             sortElastic = { price: 'desc' };
         } else if (sort === 'newest') {
-            sortElastic = { updatedAt: 'desc' };
+            sortElastic = { createdAt: 'desc' };
         } else if (sort === 'oldest') {
             sortElastic = { createdAt: 'asc' };
         }

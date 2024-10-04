@@ -21,12 +21,12 @@ enum UserStatus {
 }
 
 model User {
-  user_id              String                        @id
-  name                 String?
-  avatar               String?
-  email                String?
-  wallet_address       String?                       @unique
-  status               UserStatus                    @default(ACTIVE)
+  userId               String                        @id @map("user_id")
+  name                 String?                       @map("name")
+  avatar               String?                       @map("avatar")
+  email                String?                       @map("email")
+  walletAddress        String?                       @unique @map("wallet_address")
+  status               UserStatus                    @default(ACTIVE) @map("status")
   ownedContracts       Contract[]                    @relation("OwnerContracts")
   rentedContracts      Contract[]                    @relation("RenterContracts")
   renterRentalRequests RentalRequest[]               @relation("RenterRentalRequest")
@@ -37,7 +37,7 @@ model User {
 }
 
 model Address {
-  address_id String     @id @default(uuid())
+  addressId  String     @id @default(uuid()) @map("address_id")
   street     String
   ward       String
   district   String
@@ -56,14 +56,14 @@ enum PropertyStatus {
 }
 
 model Property {
-  property_id    String          @id
+  propertyId     String          @id @map("property_id")
   title          String
   slug           String
   images         String[]
   status         PropertyStatus  @default(PENDING)
   deleted        Boolean?        @default(false)
-  address_id     String
-  address        Address         @relation(fields: [address_id], references: [address_id])
+  addressId      String          @map("address_id")
+  address        Address         @relation(fields: [addressId], references: [addressId])
   contracts      Contract[]      @relation("PropertyContracts")
   rentalRequests RentalRequest[]
 
@@ -84,25 +84,25 @@ enum Status {
 }
 
 model Contract {
-  contract_id               String                        @id @default(uuid())
-  owner_user_id             String
-  renter_user_id            String
-  property_id               String
-  start_date                DateTime
-  end_date                  DateTime
-  deleted                   Boolean                       @default(false)
-  status                    Status                        @default(WAITING)
-  created_at                DateTime                      @default(now())
-  updated_at                DateTime                      @updatedAt
-  monthly_rent              Float
-  deposit_amount            Float
-  contract_terms            String
-  transaction_hash_contract String?
-  transactions              Transaction[]                 @relation("ContractTransactions")
-  owner                     User                          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
-  renter                    User                          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
-  property                  Property                      @relation("PropertyContracts", fields: [property_id], references: [property_id])
-  cancellationRequests      ContractCancellationRequest[]
+  contractId              String                        @id @default(uuid()) @map("contract_id")
+  ownerId                 String                        @map("owner_user_id")
+  renterId                String                        @map("renter_user_id")
+  propertyId              String                        @map("property_id")
+  startDate               DateTime                      @map("start_date")
+  endDate                 DateTime                      @map("end_date")
+  deleted                 Boolean                       @default(false)
+  status                  Status                        @default(WAITING)
+  createdAt               DateTime                      @default(now()) @map("created_at")
+  updatedAt               DateTime                      @updatedAt @map("updated_at")
+  monthlyRent             Float                         @map("monthly_rent")
+  depositAmount           Float                         @map("deposit_amount")
+  contractTerms           String                        @map("contract_terms")
+  transactionHashContract String?                       @map("transaction_hash_contract")
+  transactions            Transaction[]                 @relation("ContractTransactions")
+  owner                   User                          @relation("OwnerContracts", fields: [ownerId], references: [userId])
+  renter                  User                          @relation("RenterContracts", fields: [renterId], references: [userId])
+  property                Property                      @relation("PropertyContracts", fields: [propertyId], references: [propertyId])
+  cancellationRequests    ContractCancellationRequest[]
 
   @@map("`contract`")
 }
@@ -126,23 +126,23 @@ enum TransactionType {
 }
 
 model Transaction {
-  id               Int               @id @default(autoincrement())
-  from_id          String?
-  to_id            String?
-  contract_id      String
-  amount           Float
-  amount_eth       Float?
-  fee              Float?
-  fee_eth          Float?
-  transaction_hash String?
-  status           TransactionStatus
-  title            String
-  type             TransactionType   @default(RENT)
-  description      String? // Trường mô tả nội dung giao dịch
-  end_date         DateTime? // Trường ngày kết thúc giao dịch
-  created_at       DateTime          @default(now())
-  updated_at       DateTime          @updatedAt
-  contract         Contract          @relation("ContractTransactions", fields: [contract_id], references: [contract_id])
+  id              Int               @id @default(autoincrement())
+  fromId          String?           @map("from_id")
+  toId            String?           @map("to_id")
+  contractId      String            @map("contract_id")
+  amount          Float
+  amountEth       Float?            @map("amount_eth")
+  fee             Float?
+  feeEth          Float?            @map("fee_eth")
+  transactionHash String?           @map("transaction_hash")
+  status          TransactionStatus
+  title           String
+  type            TransactionType   @default(RENT)
+  description     String? // Trường mô tả nội dung giao dịch
+  endDate         DateTime?         @map("end_date")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  contract        Contract          @relation("ContractTransactions", fields: [contractId], references: [contractId])
 
   @@map("`transaction`")
 }
@@ -155,20 +155,20 @@ enum RentalRequestStatus {
 }
 
 model RentalRequest {
-  request_id        Int                 @id @default(autoincrement())
-  renter_id         String
-  owner_id          String
-  property_id       String
-  status            RentalRequestStatus @default(PENDING)
-  rental_price      Float
-  rental_deposit    Float
-  rental_start_date DateTime
-  rental_end_date   DateTime
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
-  renter            User                @relation(fields: [renter_id], references: [user_id], "RenterRentalRequest")
-  owner             User                @relation(fields: [owner_id], references: [user_id], "OwnerRentalRequest")
-  property          Property            @relation(fields: [property_id], references: [property_id])
+  requestId       Int                 @id @default(autoincrement()) @map("request_id")
+  renterId        String              @map("renter_id")
+  ownerId         String              @map("owner_id")
+  propertyId      String              @map("property_id")
+  status          RentalRequestStatus @default(PENDING)
+  rentalPrice     Float               @map("rental_price")
+  rentalDeposit   Float               @map("rental_deposit")
+  rentalStartDate DateTime            @map("rental_start_date")
+  rentalEndDate   DateTime            @map("rental_end_date")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  renter          User                @relation(fields: [renterId], references: [userId], "RenterRentalRequest")
+  owner           User                @relation(fields: [ownerId], references: [userId], "OwnerRentalRequest")
+  property        Property            @relation(fields: [propertyId], references: [propertyId])
 
   @@map("`rental_requests`")
 }
@@ -192,8 +192,8 @@ model ContractCancellationRequest {
   deleted     Boolean                           @default(false) @map("deleted")
   updatedAt   DateTime                          @updatedAt @map("updated_at")
   status      ContractCancellationRequestStatus @default(PENDING)
-  contract    Contract                          @relation(fields: [contractId], references: [contract_id])
-  userRequest User                              @relation(fields: [requestedBy], references: [user_id])
+  contract    Contract                          @relation(fields: [contractId], references: [contractId])
+  userRequest User                              @relation(fields: [requestedBy], references: [userId])
 
   @@map("`contract_cancellation_requests`")
 }

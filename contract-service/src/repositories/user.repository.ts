@@ -8,10 +8,10 @@ export const createUser = async (user: User) => {
     });
 };
 
-export const updateUser = (userId: IUserId, user: Omit<User, 'user_id'>) => {
+export const updateUser = (userId: IUserId, user: Omit<User, 'userId'>) => {
     return prisma.user.update({
         where: {
-            user_id: userId,
+            userId,
         },
         data: user,
     });
@@ -20,8 +20,8 @@ export const updateUser = (userId: IUserId, user: Omit<User, 'user_id'>) => {
 export const findUserById = (userId: IUserId) => {
     return prisma.user.findFirst({
         where: {
-            user_id: userId,
-            wallet_address: {
+            userId,
+            walletAddress: {
                 not: null,
             },
         },

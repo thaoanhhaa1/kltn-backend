@@ -29,7 +29,7 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
         // Gọi hàm service để tạo hợp đồng
         const createdContract = await createContractService({
             ...contractData,
-            owner_user_id: userId,
+            ownerId: userId,
         });
 
         // Phản hồi với dữ liệu hợp đồng đã tạo

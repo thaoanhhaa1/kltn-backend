@@ -44,7 +44,7 @@ export const createCancellationRequestService = async (params: CreateContractCan
         if (request.status === 'APPROVED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã được chấp nhận');
         if (request.status === 'PENDING') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đang chờ xác nhận');
         if (request.status === 'UNILATERAL_CANCELLATION') {
-            if (request.requestedBy === contract.renter_user_id)
+            if (request.requestedBy === contract.renterId)
                 throw new CustomError(400, 'Người thuê nhà đã đơn phương chấm dứt hợp đồng');
             throw new CustomError(400, 'Người cho thuê nhà đã đơn phương chấm dứt hợp đồng');
         }
