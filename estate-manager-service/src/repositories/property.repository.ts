@@ -157,6 +157,9 @@ export const getNotDeletedProperties = async ({ skip, take }: IPagination): Prom
         include: propertiesInclude,
         skip,
         take,
+        orderBy: {
+            createdAt: 'desc',
+        },
     });
 };
 
@@ -188,6 +191,9 @@ export const getNotDeletedPropertiesByOwnerId = async ({
             ...ownerFilterPropertiesWhere(filter),
         },
         include: propertiesInclude,
+        orderBy: {
+            createdAt: 'desc',
+        },
         skip,
         take,
     });

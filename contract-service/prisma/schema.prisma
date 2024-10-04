@@ -21,16 +21,17 @@ enum UserStatus {
 }
 
 model User {
-  user_id              String          @id
+  user_id              String                        @id
   name                 String?
   avatar               String?
   email                String?
-  wallet_address       String?         @unique
-  status               UserStatus      @default(ACTIVE)
-  ownedContracts       Contract[]      @relation("OwnerContracts")
-  rentedContracts      Contract[]      @relation("RenterContracts")
-  renterRentalRequests RentalRequest[] @relation("RenterRentalRequest")
-  ownerRentalRequests  RentalRequest[] @relation("OwnerRentalRequest")
+  wallet_address       String?                       @unique
+  status               UserStatus                    @default(ACTIVE)
+  ownedContracts       Contract[]                    @relation("OwnerContracts")
+  rentedContracts      Contract[]                    @relation("RenterContracts")
+  renterRentalRequests RentalRequest[]               @relation("RenterRentalRequest")
+  ownerRentalRequests  RentalRequest[]               @relation("OwnerRentalRequest")
+  cancellationRequests ContractCancellationRequest[]
 
   @@map("`user`")
 }
@@ -76,29 +77,32 @@ enum Status {
   ENDED
   OVERDUE // Trạng thái hợp đồng quá hạn
   CANCELLED // Trạng thái hợp đồng bị hủy
+  PENDING_CANCELLATION // Trạng thái hợp đồng đang chờ hủy
+  UNILATERAL_CANCELLATION // Trạng thái hợp đồng bị hủy một phía
+  APPROVED_CANCELLATION // Trạng thái yêu cầu hủy hợp đồng được chấp nhận
+  REJECTED_CANCELLATION // Trạng thái yêu cầu hủy hợp đồng bị từ chối
 }
 
 model Contract {
-  contract_id               String        @id @default(uuid())
+  contract_id               String                        @id @default(uuid())
   owner_user_id             String
   renter_user_id            String
   property_id               String
   start_date                DateTime
   end_date                  DateTime
-  deleted                   Boolean       @default(false)
-  status                    Status        @default(WAITING)
-  created_at                DateTime      @default(now())
-  updated_at                DateTime      @updatedAt
+  deleted                   Boolean                       @default(false)
+  status                    Status                        @default(WAITING)
+  created_at                DateTime                      @default(now())
+  updated_at                DateTime                      @updatedAt
   monthly_rent              Float
   deposit_amount            Float
   contract_terms            String
   transaction_hash_contract String?
-  cancelled_at              DateTime?
-  cancelled_by              String?
-  transactions              Transaction[] @relation("ContractTransactions")
-  owner                     User          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
-  renter                    User          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
-  property                  Property      @relation("PropertyContracts", fields: [property_id], references: [property_id])
+  transactions              Transaction[]                 @relation("ContractTransactions")
+  owner                     User                          @relation("OwnerContracts", fields: [owner_user_id], references: [user_id])
+  renter                    User                          @relation("RenterContracts", fields: [renter_user_id], references: [user_id])
+  property                  Property                      @relation("PropertyContracts", fields: [property_id], references: [property_id])
+  cancellationRequests      ContractCancellationRequest[]
 
   @@map("`contract`")
 }
@@ -118,6 +122,7 @@ enum TransactionType {
   REFUND
   CREATE_CONTRACT
   CANCEL_CONTRACT
+  COMPENSATION
 }
 
 model Transaction {
@@ -128,6 +133,7 @@ model Transaction {
   amount           Float
   amount_eth       Float?
   fee              Float?
+  fee_eth          Float?
   transaction_hash String?
   status           TransactionStatus
   title            String
@@ -164,5 +170,30 @@ model RentalRequest {
   owner             User                @relation(fields: [owner_id], references: [user_id], "OwnerRentalRequest")
   property          Property            @relation(fields: [property_id], references: [property_id])
 
-  @@map("rentalRequests")
+  @@map("`rental_requests`")
+}
+
+enum ContractCancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  CONTINUE
+  UNILATERAL_CANCELLATION
+}
+
+model ContractCancellationRequest {
+  id          Int                               @id @default(autoincrement())
+  contractId  String                            @map("contract_id")
+  requestedBy String                            @map("requested_by")
+  requestedAt DateTime                          @default(now()) @map("requested_at")
+  cancelDate  DateTime                          @map("cancel_date")
+  reason      String?                           @map("reason")
+  deleted     Boolean                           @default(false) @map("deleted")
+  updatedAt   DateTime                          @updatedAt @map("updated_at")
+  status      ContractCancellationRequestStatus @default(PENDING)
+  contract    Contract                          @relation(fields: [contractId], references: [contract_id])
+  userRequest User                              @relation(fields: [requestedBy], references: [user_id])
+
+  @@map("`contract_cancellation_requests`")
 }

@@ -1,5 +1,6 @@
 import { Contract, Transaction } from '@prisma/client';
 import { IUserId } from './user';
+import { ContractCancellationRequestId } from './contractCancellationRequest';
 
 export type IContractId = Contract['contract_id'];
 
@@ -46,4 +47,14 @@ export interface ICancelSmartContractBeforeDeposit {
 export interface ICancelContractBeforeDeposit {
     contractId: IContractId;
     userId: IUserId;
+}
+
+export interface IFindContractByIdAndUser {
+    contractId: IContractId;
+    userId: IUserId;
+}
+
+export interface IEndContract {
+    contractId: IContractId;
+    id: ContractCancellationRequestId;
 }

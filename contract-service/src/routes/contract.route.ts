@@ -1,27 +1,20 @@
 import express from 'express';
 import {
+    cancelContractBeforeDeposit,
     createContract,
     deposit,
-    payMonthlyRent,
+    getContractDetails,
+    getContractsByOwner,
+    getContractsByRenter,
     // cancelContractByOwner,
     // cancelContractByRenter,
     getContractTransactions,
-    getContractDetails,
-    endContract,
+    payMonthlyRent,
     terminateForNonPayment,
-    getContractsByOwner,
-    getContractsByRenter,
-    cancelContractBeforeDeposit,
-    // deleteContractById,
-    // getAllContracts,
-    // getContractById,
-    // getContractsByOwnerId,
-    // getContractsByRenterId,
-    // updateContractById,
 } from '../controllers/contract.controller';
 import authMiddleware from '../middlewares/auth.middleware';
-import roleMiddleware from '../middlewares/role.middleware';
 import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
+import roleMiddleware from '../middlewares/role.middleware';
 
 const router = express.Router();
 
@@ -55,9 +48,6 @@ router.get(
 
 // Route để lấy chi tiết hợp đồng
 router.get('/:contractId/details', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetails);
-
-// Route để kết thúc hợp đồng
-router.post('/end', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), endContract);
 
 // Route để hủy hợp đồng do không thanh toán
 router.post('/terminate', authMiddleware, roleMiddleware('owner'), terminateForNonPayment);

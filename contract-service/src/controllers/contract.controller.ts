@@ -7,7 +7,6 @@ import {
     // cancelContractByRenterService,
     createContractService,
     depositService,
-    endContractService,
     getContractDetailsService,
     getContractsByOwnerService,
     getContractsByRenterService,
@@ -168,26 +167,6 @@ export const getContractDetails = async (req: AuthenticatedRequest, res: Respons
 
         // Trả về chi tiết hợp đồng
         res.status(200).json(contractDetails);
-    } catch (error) {
-        // Chuyển lỗi cho middleware xử lý lỗi
-        next(error);
-    }
-};
-
-export const endContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { contractId, userId } = req.body;
-
-        // Kiểm tra dữ liệu đầu vào
-        if (typeof contractId !== 'string' || typeof userId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID and user ID must be a valid string.' });
-        }
-
-        // Gọi hàm service để kết thúc hợp đồng
-        const result = await endContractService(contractId, userId);
-
-        // Trả về kết quả thành công
-        res.status(200).json(result);
     } catch (error) {
         // Chuyển lỗi cho middleware xử lý lỗi
         next(error);
