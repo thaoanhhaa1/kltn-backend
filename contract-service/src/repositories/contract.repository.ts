@@ -28,42 +28,42 @@ const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contr
 
 export const createContract = async (
     contract: IContract & {
-        transaction_hash: string;
+        transactionHash: string;
     },
 ): Promise<PrismaContract> => {
     // Lưu hợp đồng vào cơ sở dữ liệu
     return prisma.contract.create({
         data: {
-            contract_id: contract.contract_id,
-            owner_user_id: contract.owner_user_id,
-            renter_user_id: contract.renter_user_id,
-            property_id: contract.property_id,
-            start_date: contract.start_date,
-            end_date: contract.end_date,
-            monthly_rent: contract.monthly_rent,
-            deposit_amount: contract.deposit_amount,
-            contract_terms: contract.contract_terms,
+            contractId: contract.contractId,
+            ownerId: contract.ownerId,
+            renterId: contract.renterId,
+            propertyId: contract.propertyId,
+            startDate: contract.startDate,
+            endDate: contract.endDate,
+            monthlyRent: contract.monthlyRent,
+            depositAmount: contract.depositAmount,
+            contractTerms: contract.contractTerms,
             status: Status.WAITING,
-            transaction_hash_contract: contract.transaction_hash,
+            transactionHashContract: contract.transactionHash,
         },
     });
 };
 
 export const findContractById = async (contractId: string) => {
     return prisma.contract.findUnique({
-        where: { contract_id: contractId, deleted: false },
+        where: { contractId: contractId, deleted: false },
     });
 };
 
 export const findContractByIdAndUser = async ({ contractId, userId }: IFindContractByIdAndUser) => {
     return prisma.contract.findUnique({
-        where: { contract_id: contractId, deleted: false, OR: [{ owner_user_id: userId }, { renter_user_id: userId }] },
+        where: { contractId: contractId, deleted: false, OR: [{ ownerId: userId }, { renterId: userId }] },
     });
 };
 
 export const deposit = (contractId: string) => {
     return prisma.contract.update({
-        where: { contract_id: contractId },
+        where: { contractId: contractId },
         data: {
             status: Status.DEPOSITED, // Cập nhật trạng thái hợp đồng thành ACCEPTED sau khi thanh toán
         },
@@ -72,14 +72,14 @@ export const deposit = (contractId: string) => {
 
 export const updateStatusContract = (contractId: string, status: Status) => {
     return prisma.contract.update({
-        where: { contract_id: contractId },
+        where: { contractId: contractId },
         data: { status },
         include: {
             owner: {
                 select: {
                     avatar: true,
                     name: true,
-                    user_id: true,
+                    userId: true,
                 },
             },
             property: {
@@ -91,7 +91,7 @@ export const updateStatusContract = (contractId: string, status: Status) => {
                 select: {
                     avatar: true,
                     name: true,
-                    user_id: true,
+                    userId: true,
                 },
             },
         },
@@ -100,7 +100,7 @@ export const updateStatusContract = (contractId: string, status: Status) => {
 
 export const payMonthlyRent = (contractId: string) => {
     return prisma.contract.update({
-        where: { contract_id: contractId },
+        where: { contractId: contractId },
         data: {
             status: Status.ONGOING,
         },
@@ -116,7 +116,7 @@ export const cancelContractByOwner = async (
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
         });
 
         if (!contract) {
@@ -128,14 +128,14 @@ export const cancelContractByOwner = async (
 
         // Lấy thông tin người chủ từ cơ sở dữ liệu
         const owner = await prisma.user.findUnique({
-            where: { user_id: ownerUserId },
+            where: { userId: ownerUserId },
         });
 
-        if (!owner || !owner.wallet_address) {
+        if (!owner || !owner.walletAddress) {
             throw new Error('Owner not found or does not have a wallet address.');
         }
 
-        const ownerAddress = owner.wallet_address.toLowerCase();
+        const ownerAddress = owner.walletAddress.toLowerCase();
 
         // Lấy thông tin hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -189,9 +189,9 @@ export const cancelContractByOwner = async (
         // Ghi nhận giao dịch
         await prisma.transaction.create({
             data: {
-                contract_id: contractId,
+                contractId: contractId,
                 amount: compensation + depositAmount,
-                transaction_hash: receipt.transactionHash,
+                transactionHash: receipt.transactionHash,
                 status: 'COMPLETED',
                 title: notifyBefore30Days ? 'Contract cancellation' : 'Contract cancellation with compensation',
             },
@@ -199,16 +199,16 @@ export const cancelContractByOwner = async (
 
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
             data: {
                 status: Status.ENDED,
-                updated_at: new Date(),
+                updatedAt: new Date(),
             },
         });
 
         // Cập nhật trạng thái property trong cơ sở dữ liệu
         await prisma.property.update({
-            where: { property_id: contract.property_id },
+            where: { propertyId: contract.propertyId },
             data: {
                 status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
             },
@@ -216,7 +216,7 @@ export const cancelContractByOwner = async (
 
         RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
             data: {
-                propertyId: contract.property_id,
+                propertyId: contract.propertyId,
                 status: PropertyStatus.ACTIVE,
             },
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,
@@ -234,7 +234,7 @@ export const endContract = async (contractId: string, userId: string): Promise<a
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
         });
 
         if (!contract) {
@@ -243,14 +243,14 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const user = await prisma.user.findUnique({
-            where: { user_id: userId },
+            where: { userId: userId },
         });
 
-        if (!user || !user.wallet_address) {
+        if (!user || !user.walletAddress) {
             throw new Error('User not found or does not have a wallet address.');
         }
 
-        const userAddress = user.wallet_address.toLowerCase();
+        const userAddress = user.walletAddress.toLowerCase();
 
         // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -265,7 +265,7 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
         if (rentalStatus === 0) {
             // NotCreated
-            const threeDaysAfterCreation = addDays(new Date(contract.created_at), 3);
+            const threeDaysAfterCreation = addDays(new Date(contract.createdAt), 3);
             const currentDate = new Date();
 
             // Log ngày hiện tại và ngày ba ngày sau khi tạo hợp đồng
@@ -282,16 +282,16 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
                 // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
                 const updatedContract = await prisma.contract.update({
-                    where: { contract_id: contractId },
+                    where: { contractId: contractId },
                     data: {
                         status: Status.ENDED,
-                        updated_at: new Date(),
+                        updatedAt: new Date(),
                     },
                 });
 
                 // Cập nhật trạng thái property trong cơ sở dữ liệu
                 await prisma.property.update({
-                    where: { property_id: contract.property_id },
+                    where: { propertyId: contract.propertyId },
                     data: {
                         status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
                     },
@@ -299,7 +299,7 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
                 RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
                     data: {
-                        propertyId: contract.property_id,
+                        propertyId: contract.propertyId,
                         status: PropertyStatus.ACTIVE,
                     },
                     type: CONTRACT_QUEUE.type.UPDATE_STATUS,
@@ -314,7 +314,7 @@ export const endContract = async (contractId: string, userId: string): Promise<a
             // Deposited or Ongoing
             // Kiểm tra xem ngày hiện tại có phải là ngày kết thúc hợp đồng hay không
             const currentDate = new Date();
-            const endDate = new Date(contract.end_date);
+            const endDate = new Date(contract.endDate);
 
             // Log ngày hiện tại và ngày kết thúc hợp đồng
             console.log('Current date:', currentDate);
@@ -333,16 +333,16 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
             // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
             const updatedContract = await prisma.contract.update({
-                where: { contract_id: contractId },
+                where: { contractId: contractId },
                 data: {
                     status: Status.ENDED,
-                    updated_at: new Date(),
+                    updatedAt: new Date(),
                 },
             });
 
             // Cập nhật trạng thái property trong cơ sở dữ liệu
             await prisma.property.update({
-                where: { property_id: contract.property_id },
+                where: { propertyId: contract.propertyId },
                 data: {
                     status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
                 },
@@ -350,7 +350,7 @@ export const endContract = async (contractId: string, userId: string): Promise<a
 
             RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
                 data: {
-                    propertyId: contract.property_id,
+                    propertyId: contract.propertyId,
                     status: PropertyStatus.ACTIVE,
                 },
                 type: CONTRACT_QUEUE.type.UPDATE_STATUS,
@@ -375,7 +375,7 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
 
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
         });
 
         if (!contract) {
@@ -384,21 +384,21 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
 
         // Kiểm tra xem hợp đồng đã quá hạn chưa
         const currentDate = new Date();
-        const endDate = new Date(contract.end_date); // Giả sử bạn có trường `end_date` trong cơ sở dữ liệu hợp đồng
+        const endDate = new Date(contract.endDate); // Giả sử bạn có trường `endDate` trong cơ sở dữ liệu hợp đồng
         if (currentDate <= endDate) {
             throw new Error('Contract is not overdue yet.');
         }
 
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const owner = await prisma.user.findUnique({
-            where: { user_id: ownerId },
+            where: { userId: ownerId },
         });
 
-        if (!owner || !owner.wallet_address) {
+        if (!owner || !owner.walletAddress) {
             throw new Error('Owner not found or does not have a wallet address.');
         }
 
-        const ownerAddress = owner.wallet_address.toLowerCase();
+        const ownerAddress = owner.walletAddress.toLowerCase();
 
         // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
         const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -425,16 +425,16 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
 
         // Cập nhật trạng thái hợp đồng trong cơ sở dữ liệu
         const updatedContract = await prisma.contract.update({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
             data: {
                 status: Status.ENDED,
-                updated_at: new Date(),
+                updatedAt: new Date(),
             },
         });
 
         // Cập nhật trạng thái property trong cơ sở dữ liệu
         await prisma.property.update({
-            where: { property_id: contract.property_id },
+            where: { propertyId: contract.propertyId },
             data: {
                 status: PropertyStatus.ACTIVE,
             },
@@ -442,7 +442,7 @@ export const terminateForNonPayment = async (contractId: string, ownerId: string
 
         RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
             data: {
-                propertyId: contract.property_id,
+                propertyId: contract.propertyId,
                 status: PropertyStatus.ACTIVE,
             },
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,
@@ -460,14 +460,14 @@ export const getContractTransactions = async (contractId: string, userId: string
     try {
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const user = await prisma.user.findUnique({
-            where: { user_id: userId },
+            where: { userId: userId },
         });
 
-        if (!user || !user.wallet_address) {
+        if (!user || !user.walletAddress) {
             throw new Error('User not found or does not have a wallet address.');
         }
 
-        const userAddress = user.wallet_address.toLowerCase();
+        const userAddress = user.walletAddress.toLowerCase();
 
         // Lấy danh sách giao dịch từ blockchain
         const transactions = await rentalContract.methods.getContractTransactions(contractId).call({
@@ -501,28 +501,28 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const contract = await prisma.contract.findUnique({
-            where: { contract_id: contractId },
+            where: { contractId: contractId },
             select: {
-                owner_user_id: true,
-                renter_user_id: true,
-                property_id: true,
-                start_date: true,
-                end_date: true,
-                contract_terms: true,
-                monthly_rent: true,
-                deposit_amount: true,
+                ownerId: true,
+                renterId: true,
+                propertyId: true,
+                startDate: true,
+                endDate: true,
+                contractTerms: true,
+                monthlyRent: true,
+                depositAmount: true,
                 status: true,
-                transaction_hash_contract: true,
+                transactionHashContract: true,
                 owner: {
                     select: {
-                        user_id: true,
-                        wallet_address: true,
+                        userId: true,
+                        walletAddress: true,
                     },
                 },
                 renter: {
                     select: {
-                        user_id: true,
-                        wallet_address: true,
+                        userId: true,
+                        walletAddress: true,
                     },
                 },
             },
@@ -534,14 +534,14 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
 
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const user = await prisma.user.findUnique({
-            where: { user_id: userId },
+            where: { userId: userId },
         });
 
-        if (!user || !user.wallet_address) {
+        if (!user || !user.walletAddress) {
             throw new Error('User not found or does not have a wallet address.');
         }
 
-        const userAddress = user.wallet_address.toLowerCase();
+        const userAddress = user.walletAddress.toLowerCase();
 
         // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
         let contractDetailsFromBlockchain: any = await rentalContract.methods.getContractDetails(contractId).call({
@@ -562,19 +562,19 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
 
         // Kết hợp dữ liệu từ cơ sở dữ liệu và blockchain
         const combinedContractDetails = {
-            contract_id: contractId,
-            owner_user_id: contract.owner_user_id,
-            renter_user_id: contract.renter_user_id,
-            property_id: contract.property_id,
-            start_date: contract.start_date,
-            end_date: contract.end_date,
-            contract_terms: contract.contract_terms,
-            monthly_rent: contractDetailsFromBlockchain.monthlyRent,
+            contractId: contractId,
+            ownerId: contract.ownerId,
+            renterId: contract.renterId,
+            propertyId: contract.propertyId,
+            startDate: contract.startDate,
+            endDate: contract.endDate,
+            contractTerms: contract.contractTerms,
+            monthlyRent: contractDetailsFromBlockchain.monthlyRent,
             status: contractDetailsFromBlockchain.status, // Trạng thái từ blockchain
-            deposit_amount: contractDetailsFromBlockchain.depositAmount,
-            transaction_hash_contract: contract.transaction_hash_contract,
-            owner_wallet_address: contract.owner.wallet_address,
-            renter_wallet_address: contract.renter.wallet_address,
+            depositAmount: contractDetailsFromBlockchain.depositAmount,
+            transactionHashContract: contract.transactionHashContract,
+            ownerWalletAddress: contract.owner.walletAddress,
+            renterWalletAddress: contract.renter.walletAddress,
         };
 
         return combinedContractDetails;
@@ -587,14 +587,14 @@ export const getContractDetails = async (contractId: string, userId: string): Pr
 export const getContractsByOwner = (ownerId: IUserId) => {
     return prisma.contract.findMany({
         where: {
-            owner_user_id: ownerId,
+            ownerId: ownerId,
         },
         include: {
             renter: {
                 select: {
                     avatar: true,
                     name: true,
-                    user_id: true,
+                    userId: true,
                 },
             },
             property: {
@@ -604,7 +604,7 @@ export const getContractsByOwner = (ownerId: IUserId) => {
             },
         },
         orderBy: {
-            created_at: 'desc',
+            createdAt: 'desc',
         },
     });
 };
@@ -612,14 +612,14 @@ export const getContractsByOwner = (ownerId: IUserId) => {
 export const getContractsByRenter = (renterId: IUserId) => {
     return prisma.contract.findMany({
         where: {
-            renter_user_id: renterId,
+            renterId: renterId,
         },
         include: {
             owner: {
                 select: {
                     avatar: true,
                     name: true,
-                    user_id: true,
+                    userId: true,
                 },
             },
             property: {
@@ -629,7 +629,7 @@ export const getContractsByRenter = (renterId: IUserId) => {
             },
         },
         orderBy: {
-            created_at: 'desc',
+            createdAt: 'desc',
         },
     });
 };
@@ -659,36 +659,36 @@ export const getContractInRange = ({ propertyId, rentalEndDate, rentalStartDate 
                 in: ['DEPOSITED', 'ONGOING'],
             },
             deleted: false,
-            property_id: propertyId,
+            propertyId: propertyId,
             OR: [
                 {
                     AND: [
                         {
-                            start_date: {
+                            startDate: {
                                 gte: rentalStartDate,
                             },
                         },
                         {
-                            start_date: {
+                            startDate: {
                                 lte: rentalEndDate,
                             },
                         },
                     ],
                 },
                 {
-                    start_date: {
+                    startDate: {
                         lt: rentalStartDate,
                     },
-                    end_date: {
+                    endDate: {
                         gte: rentalStartDate,
                     },
                 },
             ],
         },
         select: {
-            property_id: true,
-            start_date: true,
-            end_date: true,
+            propertyId: true,
+            startDate: true,
+            endDate: true,
         },
     });
 };
@@ -700,27 +700,27 @@ const getWhereCancelContracts = ({
 }: ICancelContract): Prisma.ContractWhereInput => ({
     status: 'WAITING',
     deleted: false,
-    property_id: propertyId,
+    propertyId: propertyId,
     OR: [
         {
             AND: [
                 {
-                    start_date: {
+                    startDate: {
                         gte: rentalStartDate,
                     },
                 },
                 {
-                    start_date: {
+                    startDate: {
                         lte: rentalEndDate,
                     },
                 },
             ],
         },
         {
-            start_date: {
+            startDate: {
                 lt: rentalStartDate,
             },
-            end_date: {
+            endDate: {
                 gte: rentalStartDate,
             },
         },
@@ -731,7 +731,7 @@ export const findCancelContracts = (params: ICancelContract) => {
     return prisma.contract.findMany({
         where: getWhereCancelContracts(params),
         select: {
-            contract_id: true,
+            contractId: true,
         },
     });
 };
@@ -748,13 +748,13 @@ export const cancelContracts = (params: ICancelContract) => {
 export const cancelContractBeforeDeposit = ({ contractId, userId }: ICancelContractBeforeDeposit) => {
     return prisma.contract.update({
         where: {
-            contract_id: contractId,
+            contractId: contractId,
             OR: [
                 {
-                    renter_user_id: userId,
+                    renterId: userId,
                 },
                 {
-                    owner_user_id: userId,
+                    ownerId: userId,
                 },
             ],
         },

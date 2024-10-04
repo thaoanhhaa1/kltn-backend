@@ -34,10 +34,10 @@ export const paymentTransaction = ({ id, ...rest }: IPaymentTransaction) => {
 export const getTransactionsByRenter = (userId: IUserId) => {
     return prisma.transaction.findMany({
         where: {
-            from_id: userId,
+            fromId: userId,
         },
         orderBy: {
-            created_at: 'desc',
+            createdAt: 'desc',
         },
     });
 };
@@ -45,7 +45,7 @@ export const getTransactionsByRenter = (userId: IUserId) => {
 export const cancelTransactions = (contractIds: IContractId[]) => {
     return prisma.transaction.updateMany({
         where: {
-            contract_id: {
+            contractId: {
                 in: contractIds,
             },
             status: 'PENDING',
@@ -62,19 +62,19 @@ export const getTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId
             ? {
                   OR: [
                       {
-                          from_id: userId,
+                          fromId: userId,
                       },
                       {
-                          to_id: userId,
+                          toId: userId,
                       },
                   ],
               }
             : type === 'INCOME'
             ? {
-                  to_id: userId,
+                  toId: userId,
               }
             : {
-                  from_id: userId,
+                  fromId: userId,
               };
 
     return prisma.transaction.findMany({
@@ -85,19 +85,19 @@ export const getTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId
             },
         },
         orderBy: {
-            updated_at: 'desc',
+            updatedAt: 'desc',
         },
         select: {
             id: true,
             amount: true,
-            amount_eth: true,
+            amountEth: true,
             fee: true,
-            transaction_hash: true,
+            transactionHash: true,
             title: true,
             description: true,
-            updated_at: true,
-            from_id: true,
-            to_id: true,
+            updatedAt: true,
+            fromId: true,
+            toId: true,
         },
         skip,
         take,
@@ -110,19 +110,19 @@ export const countTransactionsByUser = ({ type, userId }: IGetTransactionsByUser
             ? {
                   OR: [
                       {
-                          from_id: userId,
+                          fromId: userId,
                       },
                       {
-                          to_id: userId,
+                          toId: userId,
                       },
                   ],
               }
             : type === 'INCOME'
             ? {
-                  to_id: userId,
+                  toId: userId,
               }
             : {
-                  from_id: userId,
+                  fromId: userId,
               };
 
     return prisma.transaction.count({
@@ -138,7 +138,7 @@ export const countTransactionsByUser = ({ type, userId }: IGetTransactionsByUser
 export const findByContractAndRented = (contractId: IContractId) => {
     return prisma.transaction.findFirst({
         where: {
-            contract_id: contractId,
+            contractId: contractId,
             status: 'COMPLETED',
             type: 'RENT',
         },

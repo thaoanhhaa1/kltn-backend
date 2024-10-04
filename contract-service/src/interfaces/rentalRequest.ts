@@ -1,7 +1,7 @@
 import { RentalRequest, RentalRequestStatus } from '@prisma/client';
 import { IUserId } from './user';
 
-export type IRequestId = RentalRequest['request_id'];
+export type IRequestId = RentalRequest['requestId'];
 
 export interface IOwnerUpdateRentalRequestStatus {
     ownerId: IUserId;

@@ -35,30 +35,30 @@ export const convertGasToEthService = async (gas: number) => {
 };
 
 export const createSmartContractService = async ({
-    contract_id,
-    property_id,
-    owner_wallet_address,
-    renter_wallet_address,
-    deposit_amount,
-    monthly_rent,
+    contractId,
+    propertyId,
+    ownerWalletAddress,
+    renterWalletAddress,
+    depositAmount,
+    monthlyRent,
 }: IContract) => {
     const contractCreate = rentalContract.methods.createContract(
-        contract_id,
-        property_id,
-        owner_wallet_address,
-        renter_wallet_address,
-        deposit_amount,
-        monthly_rent,
+        contractId,
+        propertyId,
+        ownerWalletAddress,
+        renterWalletAddress,
+        depositAmount,
+        monthlyRent,
     );
 
     const [gasEstimate, gasPrice] = await Promise.all([
-        contractCreate.estimateGas({ from: owner_wallet_address }),
+        contractCreate.estimateGas({ from: ownerWalletAddress }),
         getGasPriceService(),
     ]);
 
     // Tạo hợp đồng trên blockchain
     const receipt = await contractCreate.send({
-        from: owner_wallet_address,
+        from: ownerWalletAddress,
         gas: gasEstimate.toString(),
         gasPrice: gasPrice.toString(),
     });
