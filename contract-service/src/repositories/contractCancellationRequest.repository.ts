@@ -1,4 +1,5 @@
 import { ContractCancellationRequestStatus } from '@prisma/client';
+import { IContractId } from '../interfaces/contract';
 import { ContractCancellationRequestId } from '../interfaces/contractCancellationRequest';
 import prisma from '../prisma/prismaClient';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
@@ -78,6 +79,56 @@ export const getRequestsCancelContract = () => {
         select: {
             contractId: true,
             id: true,
+        },
+    });
+};
+
+export const getHandledCancelRequestByContractId = (contractId: IContractId) => {
+    return prisma.contractCancellationRequest.findMany({
+        where: {
+            contractId,
+            deleted: false,
+            status: {
+                in: ['APPROVED', 'CONTINUE', 'CANCELLED', 'UNILATERAL_CANCELLATION'],
+            },
+        },
+        include: {
+            userRequest: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    email: true,
+                    userId: true,
+                },
+            },
+        },
+        orderBy: {
+            requestedAt: 'desc',
+        },
+    });
+};
+
+export const getNotHandledCancelRequestByContractId = (contractId: IContractId) => {
+    return prisma.contractCancellationRequest.findFirst({
+        where: {
+            contractId,
+            deleted: false,
+            status: {
+                in: ['PENDING', 'REJECTED'],
+            },
+        },
+        include: {
+            userRequest: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    email: true,
+                    userId: true,
+                },
+            },
+        },
+        orderBy: {
+            requestedAt: 'desc',
         },
     });
 };

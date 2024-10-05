@@ -1,11 +1,15 @@
 import { ContractCancellationRequestStatus } from '@prisma/client';
+import { IContractId } from '../interfaces/contract';
 import { ICancellationRequest } from '../interfaces/contractCancellationRequest';
+import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { findContractById, findContractByIdAndUser, updateStatusContract } from '../repositories/contract.repository';
 import {
     createCancellationRequest,
     getCancelRequestByContractId,
     getCancelRequestById,
+    getHandledCancelRequestByContractId,
+    getNotHandledCancelRequestByContractId,
     updateCancelRequestStatus,
 } from '../repositories/contractCancellationRequest.repository';
 import { findByContractAndRented } from '../repositories/transaction.repository';
@@ -140,4 +144,52 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
     }
 
     throw new CustomError(400, 'Trạng thái không hợp lệ');
+};
+
+export const getHandledCancelRequestByContractIdService = async ({
+    contractId,
+    userId,
+}: {
+    contractId: IContractId;
+    userId: IUserId;
+}) => {
+    try {
+        const [requests, contract] = await Promise.all([
+            getHandledCancelRequestByContractId(contractId),
+            findContractById(contractId),
+        ]);
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (contract.ownerId !== userId && contract.renterId !== userId)
+            throw new CustomError(403, 'Không có quyền truy cập hợp đồng');
+
+        return requests;
+    } catch (error) {
+        console.error('Error getting handled cancel requests by contract id:', error);
+        throw error;
+    }
+};
+
+export const getNotHandledCancelRequestByContractIdService = async ({
+    contractId,
+    userId,
+}: {
+    contractId: IContractId;
+    userId: IUserId;
+}) => {
+    try {
+        const [request, contract] = await Promise.all([
+            getNotHandledCancelRequestByContractId(contractId),
+            findContractById(contractId),
+        ]);
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (contract.ownerId !== userId && contract.renterId !== userId)
+            throw new CustomError(403, 'Không có quyền truy cập hợp đồng');
+
+        return request;
+    } catch (error) {
+        console.error('Error getting not handled cancel request by contract id:', error);
+        throw error;
+    }
 };

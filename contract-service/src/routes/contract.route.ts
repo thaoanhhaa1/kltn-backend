@@ -3,7 +3,7 @@ import {
     cancelContractBeforeDeposit,
     createContract,
     deposit,
-    getContractDetails,
+    getContractDetail,
     getContractsByOwner,
     getContractsByRenter,
     // cancelContractByOwner,
@@ -47,7 +47,6 @@ router.get(
 );
 
 // Route để lấy chi tiết hợp đồng
-router.get('/:contractId/details', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetails);
 
 // Route để hủy hợp đồng do không thanh toán
 router.post('/terminate', authMiddleware, roleMiddleware('owner'), terminateForNonPayment);
@@ -60,5 +59,6 @@ router.post('/terminate', authMiddleware, roleMiddleware('owner'), terminateForN
 
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenter);
+router.get('/:contractId', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetail);
 
 export default router;

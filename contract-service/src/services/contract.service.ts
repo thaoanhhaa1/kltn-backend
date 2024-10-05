@@ -4,18 +4,27 @@ import { Contract as PrismaContract, PropertyStatus } from '@prisma/client';
 import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
-import { CONTRACT_QUEUE } from '../constants/rabbitmq';
-import { ICancelSmartContractBeforeDeposit, IDeposit, IEndContract, IGetContractInRange } from '../interfaces/contract';
+import { CONTRACT_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from '../constants/rabbitmq';
+import {
+    ICancelSmartContractBeforeDeposit,
+    IDeposit,
+    IEndContract,
+    IGetContractDetail,
+    IGetContractInRange,
+} from '../interfaces/contract';
+import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
     cancelContractBeforeDeposit,
     cancelContracts,
+    countContractsByOwner,
+    countContractsByRenter,
     createContract as createContractInRepo,
     deposit as depositInRepo,
     findCancelContracts,
     findContractById,
-    getContractDetails as getContractDetailsInRepo,
+    getContractDetail as getContractDetailInRepo,
     getContractInRange,
     getContractsByOwner,
     getContractsByRenter,
@@ -37,6 +46,7 @@ import { CreateContractReq } from '../schemas/contract.schema';
 import { convertDateToDB } from '../utils/convertDate';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
+import getPageInfo from '../utils/getPageInfo';
 import { isDateDifferenceMoreThan30Days } from '../utils/isNotificationBefore30Days.util';
 import {
     cancelSmartContractBeforeDepositService,
@@ -371,10 +381,25 @@ export const getContractTransactionsService = async (contractId: string, userId:
 };
 
 // Hàm để lấy chi tiết hợp đồng
-export const getContractDetailsService = async (contractId: string, userId: IUserId): Promise<any> => {
+export const getContractDetailService = async (params: IGetContractDetail): Promise<any> => {
     try {
         // Gọi phương thức repository để lấy chi tiết hợp đồng
-        return await getContractDetailsInRepo(contractId, userId);
+        const contract = await getContractDetailInRepo(params);
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+
+        const property = await RabbitMQ.getInstance().sendSyncMessage({
+            queue: SYNC_MESSAGE_QUEUE_CONTRACT.name,
+            message: {
+                type: SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL,
+                data: contract.propertyId,
+            },
+        });
+
+        return {
+            ...contract,
+            property: JSON.parse(property),
+        };
     } catch (error) {
         console.error('Error fetching contract details:', error);
         throw new Error('Could not fetch contract details');
@@ -392,18 +417,44 @@ export const terminateForNonPaymentService = async (contractId: string, owner: s
     }
 };
 
-export const getContractsByOwnerService = async (ownerId: IUserId): Promise<PrismaContract[]> => {
+export const getContractsByOwnerService = async (ownerId: IUserId, pagination: IPagination) => {
     try {
-        return await getContractsByOwner(ownerId);
+        const [contracts, count] = await Promise.all([
+            getContractsByOwner(ownerId, pagination),
+            countContractsByOwner(ownerId),
+        ]);
+
+        const result: IPaginationResponse<PrismaContract> = {
+            data: contracts,
+            pageInfo: getPageInfo({
+                ...pagination,
+                count,
+            }),
+        };
+
+        return result;
     } catch (error) {
         console.error('Error getting contracts by owner:', error);
         throw new CustomError(400, 'Không thể lấy danh sách hợp đồng');
     }
 };
 
-export const getContractsByRenterService = async (renterId: IUserId): Promise<PrismaContract[]> => {
+export const getContractsByRenterService = async (renterId: IUserId, pagination: IPagination) => {
     try {
-        return await getContractsByRenter(renterId);
+        const [contracts, count] = await Promise.all([
+            getContractsByRenter(renterId, pagination),
+            countContractsByRenter(renterId),
+        ]);
+
+        const result: IPaginationResponse<PrismaContract> = {
+            data: contracts,
+            pageInfo: getPageInfo({
+                ...pagination,
+                count,
+            }),
+        };
+
+        return result;
     } catch (error) {
         console.error('Error getting contracts by renter:', error);
         throw new CustomError(400, 'Không thể lấy danh sách hợp đồng');

@@ -44,3 +44,10 @@ export const SYNC_MESSAGE_QUEUE = {
         GET_CONTRACT_IN_RANGE: 'GET_CONTRACT_IN_RANGE',
     },
 };
+
+export const SYNC_MESSAGE_QUEUE_CONTRACT = {
+    name: 'sync-message-queue-contract',
+    type: {
+        GET_PROPERTY_DETAIL: 'GET_PROPERTY_DETAIL',
+    },
+};

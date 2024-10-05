@@ -39,6 +39,7 @@ rabbitMQ.subscribeToQueue({
             name: data.name,
             status: data.status,
             walletAddress: data.walletAddress,
+            phoneNumber: data.phoneNumber,
         };
 
         try {

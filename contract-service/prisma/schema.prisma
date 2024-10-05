@@ -26,6 +26,7 @@ model User {
   avatar               String?                       @map("avatar")
   email                String?                       @map("email")
   walletAddress        String?                       @unique @map("wallet_address")
+  phoneNumber          String?
   status               UserStatus                    @default(ACTIVE) @map("status")
   ownedContracts       Contract[]                    @relation("OwnerContracts")
   rentedContracts      Contract[]                    @relation("RenterContracts")

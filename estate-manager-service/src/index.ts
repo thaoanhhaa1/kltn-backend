@@ -3,7 +3,7 @@ import { Server } from 'socket.io';
 import elasticClient from './configs/elastic.config';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
-import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE } from './constants/rabbitmq';
+import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import { updateStatus } from './repositories/property.repository';
 import router from './routes';
@@ -88,6 +88,27 @@ rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
     if (type === CREATE_CHAT_QUEUE.type.CREATE_CHAT) {
         await createChatService(data);
     }
+});
+
+rabbitMQ.receiveSyncMessage({
+    queue: SYNC_MESSAGE_QUEUE_CONTRACT.name,
+    callback: async (message) => {
+        if (!message) return;
+
+        const { data, type } = JSON.parse(message);
+
+        switch (type) {
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL:
+                const property = await elasticClient.get({
+                    index: 'properties',
+                    id: data,
+                });
+
+                return property._source;
+            default:
+                throw new Error(`Queue ${SYNC_MESSAGE_QUEUE_CONTRACT.name} has no type ${type}`);
+        }
+    },
 });
 
 const PORT = envConfig.PORT || 4001;

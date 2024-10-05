@@ -58,3 +58,8 @@ export interface IEndContract {
     contractId: IContractId;
     id: ContractCancellationRequestId;
 }
+
+export interface IGetContractDetail {
+    contractId: IContractId;
+    userId: IUserId;
+}
