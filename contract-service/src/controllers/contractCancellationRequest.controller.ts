@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractCancellationRequestSchema } from '../schemas/contractCancellationRequest.schema';
 import {
     createCancellationRequestService,
+    getHandledCancelRequestByContractIdService,
+    getNotHandledCancelRequestByContractIdService,
     updateStatusRequestService,
 } from '../services/contractCancellationRequest.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
@@ -43,6 +45,40 @@ export const updateCancellationRequestStatus = async (req: AuthenticatedRequest,
         if (!status) throw new CustomError(400, 'Trạng thái không được để trống');
 
         return res.json(await updateStatusRequestService({ requestId, userId, status }));
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getHandledCancelRequestByContractId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const userId = req.user!.id;
+        const contractId = req.params.contractId;
+
+        if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
+
+        return res.json(await getHandledCancelRequestByContractIdService({ contractId, userId }));
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getNotHandledCancelRequestByContractId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const userId = req.user!.id;
+        const contractId = req.params.contractId;
+
+        if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
+
+        return res.json(await getNotHandledCancelRequestByContractIdService({ contractId, userId }));
     } catch (error) {
         next(error);
     }

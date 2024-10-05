@@ -7,7 +7,7 @@ import {
     // cancelContractByRenterService,
     createContractService,
     depositService,
-    getContractDetailsService,
+    getContractDetailService,
     getContractsByOwnerService,
     getContractsByRenterService,
     getContractTransactionsService,
@@ -148,25 +148,23 @@ export const getContractTransactions = async (req: AuthenticatedRequest, res: Re
 };
 
 // Hàm để lấy chi tiết hợp đồng
-export const getContractDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const getContractDetail = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { contractId } = req.params;
-        const { userId } = req.query;
+        const userId = req.user!.id;
 
-        // Kiểm tra dữ liệu đầu vào
-        if (typeof userId !== 'string') {
-            return res.status(400).json({ message: 'Contract ID is required and must be a valid strring.' });
-        }
-
-        if (typeof userId !== 'string') {
-            return res.status(400).json({ message: 'User ID is required and must be a valid string.' });
-        }
+        if (!contractId) return res.status(400).json({ message: 'Mã hợp đồng không được để trống' });
 
         // Gọi hàm service để lấy chi tiết hợp đồng
-        const contractDetails = await getContractDetailsService(contractId, userId);
+        const contractDetail = await getContractDetailService({
+            contractId,
+            userId,
+        });
+
+        if (!contractDetail) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });
 
         // Trả về chi tiết hợp đồng
-        res.status(200).json(contractDetails);
+        res.status(200).json(contractDetail);
     } catch (error) {
         // Chuyển lỗi cho middleware xử lý lỗi
         next(error);
@@ -196,8 +194,13 @@ export const terminateForNonPayment = async (req: AuthenticatedRequest, res: Res
 export const getContractsByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const take = Number(req.query.take) || 10;
+        const skip = Number(req.query.skip) || 0;
 
-        const contracts = await getContractsByOwnerService(userId);
+        const contracts = await getContractsByOwnerService(userId, {
+            skip,
+            take,
+        });
 
         res.status(200).json(contracts);
     } catch (error) {
@@ -208,8 +211,13 @@ export const getContractsByOwner = async (req: AuthenticatedRequest, res: Respon
 export const getContractsByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const take = Number(req.query.take) || 10;
+        const skip = Number(req.query.skip) || 0;
 
-        const contracts = await getContractsByRenterService(userId);
+        const contracts = await getContractsByRenterService(userId, {
+            skip,
+            take,
+        });
 
         res.status(200).json(contracts);
     } catch (error) {

@@ -10,8 +10,10 @@ import {
     ICancelContractBeforeDeposit,
     IContract,
     IFindContractByIdAndUser,
+    IGetContractDetail,
     IGetContractInRange,
 } from '../interfaces/contract';
+import { IPagination } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
@@ -497,97 +499,56 @@ export const getContractTransactions = async (contractId: string, userId: string
 };
 
 // Hàm lấy chi tiết hợp đồng từ cơ sở dữ liệu
-export const getContractDetails = async (contractId: string, userId: string): Promise<any> => {
-    try {
-        // Lấy thông tin hợp đồng từ cơ sở dữ liệu
-        const contract = await prisma.contract.findUnique({
-            where: { contractId: contractId },
-            select: {
-                ownerId: true,
-                renterId: true,
-                propertyId: true,
-                startDate: true,
-                endDate: true,
-                contractTerms: true,
-                monthlyRent: true,
-                depositAmount: true,
-                status: true,
-                transactionHashContract: true,
-                owner: {
-                    select: {
-                        userId: true,
-                        walletAddress: true,
-                    },
+export const getContractDetail = async ({ contractId, userId }: IGetContractDetail): Promise<any> => {
+    return prisma.contract.findUnique({
+        where: {
+            contractId,
+            OR: [
+                {
+                    ownerId: userId,
                 },
-                renter: {
-                    select: {
-                        userId: true,
-                        walletAddress: true,
-                    },
+                {
+                    renterId: userId,
+                },
+            ],
+        },
+        include: {
+            owner: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    userId: true,
+                    email: true,
                 },
             },
-        });
-
-        if (!contract) {
-            throw new Error('Contract not found.');
-        }
-
-        // Lấy thông tin người dùng từ cơ sở dữ liệu
-        const user = await prisma.user.findUnique({
-            where: { userId: userId },
-        });
-
-        if (!user || !user.walletAddress) {
-            throw new Error('User not found or does not have a wallet address.');
-        }
-
-        const userAddress = user.walletAddress.toLowerCase();
-
-        // Lấy thông tin chi tiết hợp đồng từ hợp đồng thông minh
-        let contractDetailsFromBlockchain: any = await rentalContract.methods.getContractDetails(contractId).call({
-            from: userAddress,
-        });
-
-        // Kiểm tra nếu contractDetailsFromBlockchain không tồn tại hoặc không có trường depositAmount
-        if (!contractDetailsFromBlockchain || typeof contractDetailsFromBlockchain.depositAmount === 'undefined') {
-            throw new Error('Invalid contract details from blockchain.');
-        }
-
-        // Chuyển đổi các BigInt thành chuỗi nếu cần
-        contractDetailsFromBlockchain = JSON.parse(
-            JSON.stringify(contractDetailsFromBlockchain, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value,
-            ),
-        );
-
-        // Kết hợp dữ liệu từ cơ sở dữ liệu và blockchain
-        const combinedContractDetails = {
-            contractId: contractId,
-            ownerId: contract.ownerId,
-            renterId: contract.renterId,
-            propertyId: contract.propertyId,
-            startDate: contract.startDate,
-            endDate: contract.endDate,
-            contractTerms: contract.contractTerms,
-            monthlyRent: contractDetailsFromBlockchain.monthlyRent,
-            status: contractDetailsFromBlockchain.status, // Trạng thái từ blockchain
-            depositAmount: contractDetailsFromBlockchain.depositAmount,
-            transactionHashContract: contract.transactionHashContract,
-            ownerWalletAddress: contract.owner.walletAddress,
-            renterWalletAddress: contract.renter.walletAddress,
-        };
-
-        return combinedContractDetails;
-    } catch (error) {
-        console.error('Error in getContractDetails:', error);
-        throw new Error(`Failed to get contract details: ${(error as Error).message}`);
-    }
+            renter: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    userId: true,
+                    email: true,
+                },
+            },
+            cancellationRequests: {
+                where: {
+                    deleted: false,
+                    status: {
+                        in: ['PENDING', 'REJECTED'],
+                    },
+                },
+                orderBy: {
+                    updatedAt: 'desc',
+                },
+                take: 1,
+            },
+        },
+    });
 };
 
-export const getContractsByOwner = (ownerId: IUserId) => {
+export const getContractsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
     return prisma.contract.findMany({
         where: {
-            ownerId: ownerId,
+            ownerId,
         },
         include: {
             renter: {
@@ -606,13 +567,23 @@ export const getContractsByOwner = (ownerId: IUserId) => {
         orderBy: {
             createdAt: 'desc',
         },
+        skip,
+        take,
     });
 };
 
-export const getContractsByRenter = (renterId: IUserId) => {
+export const countContractsByOwner = (ownerId: IUserId) => {
+    return prisma.contract.count({
+        where: {
+            ownerId,
+        },
+    });
+};
+
+export const getContractsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
     return prisma.contract.findMany({
         where: {
-            renterId: renterId,
+            renterId,
         },
         include: {
             owner: {
@@ -630,6 +601,16 @@ export const getContractsByRenter = (renterId: IUserId) => {
         },
         orderBy: {
             createdAt: 'desc',
+        },
+        skip,
+        take,
+    });
+};
+
+export const countContractsByRenter = (renterId: IUserId) => {
+    return prisma.contract.count({
+        where: {
+            renterId,
         },
     });
 };

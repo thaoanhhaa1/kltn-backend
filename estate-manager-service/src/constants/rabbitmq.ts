@@ -45,6 +45,13 @@ export const SYNC_MESSAGE_QUEUE = {
     },
 };
 
+export const SYNC_MESSAGE_QUEUE_CONTRACT = {
+    name: 'sync-message-queue-contract',
+    type: {
+        GET_PROPERTY_DETAIL: 'GET_PROPERTY_DETAIL',
+    },
+};
+
 export const CREATE_CHAT_QUEUE = {
     name: 'create-chat-queue',
     type: {
