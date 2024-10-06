@@ -1,4 +1,5 @@
 import { ContractCancellationRequestStatus } from '@prisma/client';
+import { isSameDay } from 'date-fns';
 import { IContractId } from '../interfaces/contract';
 import { ICancellationRequest } from '../interfaces/contractCancellationRequest';
 import { IUserId } from '../interfaces/user';
@@ -17,6 +18,7 @@ import { CreateContractCancellationRequest } from '../schemas/contractCancellati
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
 import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
+import { endContractService } from './contract.service';
 
 const getTextByStatus = (status: ContractCancellationRequestStatus) => {
     switch (status) {
@@ -136,6 +138,21 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
                 }),
             ),
         ]);
+
+        if (
+            (status === 'APPROVED' || status === 'UNILATERAL_CANCELLATION') &&
+            isSameDay(request.cancelDate, new Date())
+        ) {
+            const contract = await endContractService({
+                contractId: request.contractId,
+                id: requestId,
+            });
+
+            return {
+                request: cancelRequest,
+                contract,
+            };
+        }
 
         return {
             request: cancelRequest,

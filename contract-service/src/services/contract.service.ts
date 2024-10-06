@@ -548,8 +548,8 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
         const fee = Number(feeEth) * ethVnd;
 
         const queries = [
-            updatePropertyStatus(contract.propertyId, 'ACTIVE'),
             updateStatusContract(contractId, 'ENDED'),
+            updatePropertyStatus(contract.propertyId, 'ACTIVE'),
             createTransaction({
                 amount: contract.depositAmount,
                 contractId: contract.contractId,
@@ -589,7 +589,7 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
             );
         }
 
-        await prisma.$transaction(queries);
+        const [newContract] = await prisma.$transaction(queries);
 
         RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
             data: {
@@ -598,6 +598,8 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
             },
             type: CONTRACT_QUEUE.type.UPDATE_STATUS,
         });
+
+        return newContract;
     } catch (error) {
         throw error;
     }
