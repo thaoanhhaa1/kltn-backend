@@ -25,29 +25,30 @@ type MediaType {
   type String
 }
 
-model Chat {
-  chatId       String        @id @map("_id")
-  conversation String
-  sender       UserBaseEmbed
-  receiver     UserBaseEmbed
-  message      String?
-  medias       MediaType[]
-  savedBy      String[]      @default([])
-  deletedBy    String[]      @default([])
-  status       chatStatus    @default(RECEIVED)
-  createdAt    DateTime
-  updatedAt    DateTime      @updatedAt
+type Chat {
+  chatId    String
+  senderId  String
+  message   String?
+  medias    MediaType[]
+  savedBy   String[]
+  deletedBy String[]
+  status    chatStatus
+  createdAt DateTime
+  updatedAt DateTime
+}
 
-  @@map("chats")
+type ConversationDelete {
+  deletedBy String
+  deletedAt DateTime
 }
 
 model Conversation {
-  conversationId String          @id @map("_id")
+  conversationId String               @id @map("_id")
   participants   UserBaseEmbed[]
-  lastChat       ChatEmbed
-  deletedBy      String[]        @default([])
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  delete         ConversationDelete[]
+  chats          Chat[]
+  createdAt      DateTime
+  updatedAt      DateTime
 
   @@map("conversations")
 }

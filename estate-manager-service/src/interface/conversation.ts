@@ -1,7 +1,5 @@
-import { ChatEmbed, UserBaseEmbed } from '@prisma/client';
+import { ICreateChatReq } from './chat';
 
-export interface ICreateConversation {
+export interface ICreateConversation extends ICreateChatReq {
     conversationId: string;
-    participants: UserBaseEmbed[];
-    lastChat: ChatEmbed;
 }

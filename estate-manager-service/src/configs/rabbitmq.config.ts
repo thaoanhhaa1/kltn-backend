@@ -58,7 +58,9 @@ class RabbitMQ {
     async sendToQueue(queue: string, message: { type: string; data: any }) {
         if (!this.channels[queue]) await this.createChannel({ name: queue });
 
-        this.channels[queue]!.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+        const res = this.channels[queue]!.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+
+        console.log(`Message sent to queue ${queue}: ${JSON.stringify(message)}`, res);
     }
 
     async consumeQueue(queue: string, callback: (message: amqp.Message | null) => void) {

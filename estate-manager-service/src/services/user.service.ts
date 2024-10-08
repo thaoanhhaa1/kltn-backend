@@ -1,7 +1,11 @@
+import { UserBaseEmbed } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { IPagination } from '../interface/pagination';
 import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyRequest } from '../interface/user';
 import prisma from '../prisma/prismaClient';
+import { updateUserInfoInConversation } from '../repositories/conversation.repository';
+import { updateUserInfoInProperty } from '../repositories/property.repository';
+import { updateUserInfoInReview } from '../repositories/review.repository';
 import {
     countUsers,
     findPassword,
@@ -48,10 +52,27 @@ export const updateUserService = async (userId: IUserId, user: IUpdateUserParams
     if (user.phoneNumber) {
         const findUser = await findUserByPhone(user.phoneNumber);
 
-        if (findUser && findUser.userId !== userId) throw new CustomError(400, 'Phone number is already in use');
+        if (findUser && findUser.userId !== userId) throw new CustomError(400, 'Số điện thoại đã được sử dụng');
     }
 
-    return updateUser(userId, user);
+    const userBaseEmbed: UserBaseEmbed = {
+        avatar: user.avatar ?? null,
+        name: user.name,
+        userId,
+    };
+    const userPropertyEmbed = {
+        ...userBaseEmbed,
+        phoneNumber: user.phoneNumber ?? null,
+    };
+
+    const [userUpdated] = await prisma.$transaction([
+        updateUser(userId, user),
+        updateUserInfoInConversation(userBaseEmbed),
+        updateUserInfoInProperty(userPropertyEmbed),
+        updateUserInfoInReview(userBaseEmbed),
+    ]);
+
+    return userUpdated;
 };
 
 export const updatePasswordService = async (userId: IUserId, { oldPassword, password }: UpdatePasswordInput) => {

@@ -1,4 +1,4 @@
-import { PropertyStatus } from '@prisma/client';
+import { PropertyStatus, UserPropertyEmbed } from '@prisma/client';
 import { v4 } from 'uuid';
 import { IPagination } from '../interface/pagination';
 import {
@@ -397,3 +397,22 @@ export const updateStatus = (propertyId: IPropertyId, status: PropertyStatus) =>
 // TODO: bản đồ
 // TODO: dành cho bạn (gợi ý)
 // TODO: tin đã xem
+
+export const updateUserInfoInProperty = ({ userId, ...rest }: Omit<UserPropertyEmbed, 'email'>) => {
+    return prisma.property.updateMany({
+        where: {
+            owner: {
+                is: {
+                    userId,
+                },
+            },
+        },
+        data: {
+            owner: {
+                update: {
+                    ...rest,
+                },
+            },
+        },
+    });
+};

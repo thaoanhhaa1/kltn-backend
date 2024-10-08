@@ -33,7 +33,7 @@ class TaskService {
                             } cho hợp đồng **${contract.contractId}**`,
                             fromId: contract.renterId,
                             toId: contract.ownerId,
-                            endDate: dateAfter(3, true),
+                            endDate: dateAfter(14, true),
                             type: 'RENT',
                         }),
                     );
