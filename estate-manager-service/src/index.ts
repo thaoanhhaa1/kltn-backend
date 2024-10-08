@@ -4,10 +4,11 @@ import elasticClient from './configs/elastic.config';
 import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
 import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from './constants/rabbitmq';
+import { IReadConversation } from './interface/chat';
 import errorHandler from './middlewares/error.middleware';
 import { updateStatus } from './repositories/property.repository';
 import router from './routes';
-import { createChatService } from './services/chat.service';
+import { addChatService, readChatService } from './services/conversation.service';
 import { getNotPendingPropertiesService } from './services/property.service';
 import socketService from './services/socket.io.service';
 
@@ -81,12 +82,20 @@ rabbitMQ.consumeQueue(CONTRACT_QUEUE.name, async (message) => {
 });
 
 rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
+    console.log(`Consume message ${message?.content} on queue ${CREATE_CHAT_QUEUE.name}`);
     if (!message) return;
 
     const { type, data } = JSON.parse(message.content.toString());
 
     if (type === CREATE_CHAT_QUEUE.type.CREATE_CHAT) {
-        await createChatService(data);
+        await addChatService({
+            ...data,
+            createdAt: new Date(data.createdAt),
+        });
+    } else if (type === CREATE_CHAT_QUEUE.type.READ_CHAT) {
+        const readChat = data as IReadConversation;
+
+        await readChatService(readChat);
     }
 });
 

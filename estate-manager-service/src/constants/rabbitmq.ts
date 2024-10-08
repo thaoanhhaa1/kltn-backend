@@ -53,8 +53,9 @@ export const SYNC_MESSAGE_QUEUE_CONTRACT = {
 };
 
 export const CREATE_CHAT_QUEUE = {
-    name: 'create-chat-queue',
+    name: 'conversation-queue',
     type: {
         CREATE_CHAT: 'CREATE_CHAT',
+        READ_CHAT: 'READ_CHAT',
     },
 };

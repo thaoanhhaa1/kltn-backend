@@ -33609,10 +33609,16 @@
       "links": {},
       "address": "0xC126324d453f4542eE58272B64D1Afd345915cF2",
       "transactionHash": "0x351e05a8299c450935c98621fdf3740b68c93afb76ee84aff57807c86d928c70"
+    },
+    "1728228063316": {
+      "events": {},
+      "links": {},
+      "address": "0xA561862FDC885356c947099048BF628382e7b917",
+      "transactionHash": "0xb56076e04af582339f9a4b3398832996f4d0c34a37928e9fa33eb76f418b0f7d"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-10-06T13:36:33.512Z",
+  "updatedAt": "2024-10-06T15:27:03.848Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",

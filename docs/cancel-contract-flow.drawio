@@ -1,0 +1,140 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0" version="24.7.16">
+  <diagram name="Page-1" id="puf9Nv0YsPYA_HsdApfV">
+    <mxGraphModel dx="1106" dy="601" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-1" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Người dùng A&lt;/font&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="280" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-2" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Người dùng B&lt;/font&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="280" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-3" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-1" target="vyCpTiO4IDwTQ8MXbwPp-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="340" as="sourcePoint" />
+            <mxPoint x="440" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-4" value="Gửi yêu cầu huỷ hợp đồng" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" vertex="1" connectable="0" parent="vyCpTiO4IDwTQ8MXbwPp-3">
+          <mxGeometry x="0.184" relative="1" as="geometry">
+            <mxPoint x="-23" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-5" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="340" as="sourcePoint" />
+            <mxPoint x="440" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-6" value="Đồng ý" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" vertex="1" connectable="0" parent="vyCpTiO4IDwTQ8MXbwPp-5">
+          <mxGeometry x="-0.3766" relative="1" as="geometry">
+            <mxPoint x="16" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-7" value="- Cập nhật trạng thái hợp đồng và trạng thái yêu cầu&lt;div style=&quot;font-size: 14px;&quot;&gt;- Tới ngày được yêu cầu thì kết thúc hợp đồng và hoàn trả tiền cọc cho người thuê&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="440" y="190" width="330" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-8" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;fontSize=12;strokeWidth=2;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="340" as="sourcePoint" />
+            <mxPoint x="440" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-9" value="Từ chối yêu cầu" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" vertex="1" connectable="0" parent="vyCpTiO4IDwTQ8MXbwPp-8">
+          <mxGeometry x="0.2112" y="3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-10" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Người dùng A&lt;/font&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="430" y="420" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-11" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeWidth=2;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-10">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="270" y="520" as="sourcePoint" />
+            <mxPoint x="80" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-12" value="Tiếp tục thuê" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" vertex="1" connectable="0" parent="vyCpTiO4IDwTQ8MXbwPp-11">
+          <mxGeometry x="0.3361" y="4" relative="1" as="geometry">
+            <mxPoint x="53" y="-17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-13" value="- Cập nhật trạng thái hợp đồng" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry y="560" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-14" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeWidth=2;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" target="vyCpTiO4IDwTQ8MXbwPp-16">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="480" as="sourcePoint" />
+            <mxPoint x="610" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-15" value="Đơn phương chấm dứt hợp đồng" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=14;" vertex="1" connectable="0" parent="vyCpTiO4IDwTQ8MXbwPp-14">
+          <mxGeometry x="0.3361" y="4" relative="1" as="geometry">
+            <mxPoint x="3" y="9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-16" value="4 trường hợp" style="rounded=0;whiteSpace=wrap;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="560" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-17" value="" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-16">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="540" as="sourcePoint" />
+            <mxPoint x="200" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-19" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="490" y="590" as="sourcePoint" />
+            <mxPoint x="400" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-23" target="vyCpTiO4IDwTQ8MXbwPp-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-23" value="Người thuê gửi yêu cầu sau 30 ngày" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="140" y="680" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-32" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-24" target="vyCpTiO4IDwTQ8MXbwPp-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-24" value="Người thuê gửi yêu cầu trước 30 ngày" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="340" y="680" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-33" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-25" target="vyCpTiO4IDwTQ8MXbwPp-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-25" value="Chủ nhà gửi yêu cầu trước 30 ngày" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="520" y="680" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-26" target="vyCpTiO4IDwTQ8MXbwPp-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-26" value="Chủ nhà gửi yêu cầu sau 30 ngày" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="690" y="680" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-27" value="" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-16" target="vyCpTiO4IDwTQ8MXbwPp-26">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="600" as="sourcePoint" />
+            <mxPoint x="410" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-28" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="vyCpTiO4IDwTQ8MXbwPp-16" target="vyCpTiO4IDwTQ8MXbwPp-25">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="580" y="600" as="sourcePoint" />
+            <mxPoint x="765" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-29" value="Tiền cọc sẽ được chuyển từ Smart Contract tới chủ nhà" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="140" y="840" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-31" value="Tiền cọc sẽ được hoàn về cho người thuê" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="445" y="840" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="vyCpTiO4IDwTQ8MXbwPp-34" value="Tiền cọc sẽ được chuyển từ Smart contract tới người thuê&lt;div&gt;Và chủ nhà sẽ chuyển 1 tháng tiền nhà cho người thuê&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="645" y="830" width="220" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

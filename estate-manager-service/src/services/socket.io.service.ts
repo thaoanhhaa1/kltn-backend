@@ -3,7 +3,7 @@ import { DefaultEventsMap, ExtendedError, Server, Socket } from 'socket.io';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CREATE_CHAT_QUEUE } from '../constants/rabbitmq';
-import { ICreateChatReq, IReceiveChatSocket } from '../interface/chat';
+import { ICreateChatReq, IReadConversation, IReceiveChatSocket } from '../interface/chat';
 import { IUserId } from '../interface/user';
 import { getUserBaseEmbedById } from '../repositories/user.repository';
 import createChatConversation from '../utils/createChatConversation.util';
@@ -51,9 +51,9 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
 
             const dataQueue: ICreateChatReq = {
                 ...data,
-                conversation: createChatConversation(data.sender.userId, data.receiver.userId),
                 createdAt,
                 chatId: `${createdAt.getTime()}-${v4()}`,
+                conversationId: createChatConversation(data.sender.userId, data.receiver.userId),
             };
 
             if (receiverSocketId) socketId.to(receiverSocketId).emit('send-message', dataQueue);
@@ -63,6 +63,14 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
                 type: CREATE_CHAT_QUEUE.type.CREATE_CHAT,
                 data: dataQueue,
             });
+        });
+
+        socket.on('readConversation', (data: IReadConversation) => {
+            RabbitMQ.getInstance().sendToQueue(CREATE_CHAT_QUEUE.name, {
+                type: CREATE_CHAT_QUEUE.type.READ_CHAT,
+                data,
+            });
+            console.log('🚀 ~ socket::readConversation ~ data:', data);
         });
 
         socket.on('disconnect', () => {
