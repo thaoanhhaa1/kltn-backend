@@ -1,9 +1,8 @@
 import { UserBaseEmbed } from '@prisma/client';
 import { DefaultEventsMap, ExtendedError, Server, Socket } from 'socket.io';
-import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
 import { CREATE_CHAT_QUEUE } from '../constants/rabbitmq';
-import { ICreateChatReq, IReadConversation, IReceiveChatSocket } from '../interface/chat';
+import { IBlockUser, ICreateChatReq, IReadConversation, IReceiveChatSocket } from '../interface/chat';
 import { IUserId } from '../interface/user';
 import { getUserBaseEmbedById } from '../repositories/user.repository';
 import createChatConversation from '../utils/createChatConversation.util';
@@ -47,12 +46,9 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
         socket.on('receive-message', (data: IReceiveChatSocket) => {
             const receiverSocketId = Object.keys(socketIds).find((key) => socketIds[key] === data.receiver.userId);
 
-            const createdAt = new Date();
-
             const dataQueue: ICreateChatReq = {
                 ...data,
-                createdAt,
-                chatId: `${createdAt.getTime()}-${v4()}`,
+                createdAt: new Date(data.createdAt),
                 conversationId: createChatConversation(data.sender.userId, data.receiver.userId),
             };
 
@@ -65,12 +61,32 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
             });
         });
 
-        socket.on('readConversation', (data: IReadConversation) => {
+        socket.on('read-conversation', (data: IReadConversation) => {
             RabbitMQ.getInstance().sendToQueue(CREATE_CHAT_QUEUE.name, {
                 type: CREATE_CHAT_QUEUE.type.READ_CHAT,
                 data,
             });
-            console.log('🚀 ~ socket::readConversation ~ data:', data);
+
+            const otherSocketId = Object.keys(socketIds).find((key) => socketIds[key] === data.userId);
+
+            if (otherSocketId) socketId.to(otherSocketId).emit('read-conversation', data);
+        });
+
+        socket.on('blocked', ({ conversationId, blocker }: IBlockUser) => {
+            const blockerSocketId = Object.keys(socketIds).find((key) => socketIds[key] === blocker);
+
+            if (blockerSocketId) {
+            }
+
+            RabbitMQ.getInstance().sendToQueue(CREATE_CHAT_QUEUE.name, {
+                type: CREATE_CHAT_QUEUE.type.BLOCK_USER,
+                data: {
+                    conversationId,
+                    blocker,
+                },
+            });
+
+            console.log('🚀 ~ socket::blocked ~ conversationId:', conversationId);
         });
 
         socket.on('disconnect', () => {

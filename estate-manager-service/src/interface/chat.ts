@@ -1,4 +1,5 @@
 import { Chat, Conversation, UserBaseEmbed } from '@prisma/client';
+import { IUserId } from './user';
 
 export type IChatId = Chat['chatId'];
 
@@ -12,7 +13,9 @@ export interface ICreateChatReq {
     conversationId: Conversation['conversationId'];
 }
 
-export type IReceiveChatSocket = Omit<ICreateChatReq, 'createdAt' | 'chatId'>;
+export type IReceiveChatSocket = Omit<ICreateChatReq, 'createdAt'> & {
+    createdAt: string;
+};
 
 export type ICreateChat = Omit<Chat, 'savedBy' | 'deletedBy' | 'status' | 'updatedAt'>;
 
@@ -24,4 +27,11 @@ export interface IGetChatsByUserId {
 export interface IReadConversation {
     conversationId: Conversation['conversationId'];
     time: string;
+    chatId: Chat['chatId'];
+    userId: IUserId;
+}
+
+export interface IBlockUser {
+    conversationId: Conversation['conversationId'];
+    blocker: IUserId;
 }

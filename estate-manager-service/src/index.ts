@@ -6,6 +6,7 @@ import RabbitMQ from './configs/rabbitmq.config';
 import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from './constants/rabbitmq';
 import { IReadConversation } from './interface/chat';
 import errorHandler from './middlewares/error.middleware';
+import { findChatById } from './repositories/conversation.repository';
 import { updateStatus } from './repositories/property.repository';
 import router from './routes';
 import { addChatService, readChatService } from './services/conversation.service';
@@ -87,15 +88,32 @@ rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
 
     const { type, data } = JSON.parse(message.content.toString());
 
-    if (type === CREATE_CHAT_QUEUE.type.CREATE_CHAT) {
-        await addChatService({
-            ...data,
-            createdAt: new Date(data.createdAt),
-        });
-    } else if (type === CREATE_CHAT_QUEUE.type.READ_CHAT) {
-        const readChat = data as IReadConversation;
+    switch (type) {
+        case CREATE_CHAT_QUEUE.type.CREATE_CHAT:
+            console.log('Create chat', Date.now());
+            await addChatService({
+                ...data,
+                createdAt: new Date(data.createdAt),
+            });
+            console.log('Chat added', data);
 
-        await readChatService(readChat);
+            break;
+        case CREATE_CHAT_QUEUE.type.READ_CHAT:
+            const readChat = data as IReadConversation;
+
+            const conversation = await findChatById(readChat.conversationId, readChat.chatId);
+
+            if (!conversation) throw new Error('Conversation not found');
+
+            console.log('Read chat', Date.now());
+            await readChatService(readChat);
+            console.log('Chat read', readChat);
+
+            break;
+        case CREATE_CHAT_QUEUE.type.BLOCK_USER:
+            break;
+        default:
+            throw new Error(`Queue ${CREATE_CHAT_QUEUE.name} has no type ${type}`);
     }
 });
 

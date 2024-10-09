@@ -47,6 +47,8 @@ model Conversation {
   participants   UserBaseEmbed[]
   delete         ConversationDelete[]
   chats          Chat[]
+  isBlocked      Boolean              @default(false)
+  blockedBy      String[]
   createdAt      DateTime
   updatedAt      DateTime
 

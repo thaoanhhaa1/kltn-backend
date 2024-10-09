@@ -57,5 +57,6 @@ export const CREATE_CHAT_QUEUE = {
     type: {
         CREATE_CHAT: 'CREATE_CHAT',
         READ_CHAT: 'READ_CHAT',
+        BLOCK_USER: 'BLOCK_USER',
     },
 };
