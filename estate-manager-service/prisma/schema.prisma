@@ -21,6 +21,8 @@ enum chatStatus {
 }
 
 type MediaType {
+  key  String
+  name String
   url  String
   type String
 }
