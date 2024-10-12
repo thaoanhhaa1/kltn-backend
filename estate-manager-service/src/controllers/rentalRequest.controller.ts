@@ -40,7 +40,7 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
             .then((user) =>
                 createNotificationService({
                     title: 'Yêu cầu thuê nhà mới',
-                    body: `Bạn có một yêu cầu thuê nhà mới từ ${user?.name}`,
+                    body: `Bạn có một yêu cầu thuê nhà mới từ **${user?.name}**`,
                     to: rentalRequest.ownerId,
                     type: 'RENTAL_REQUEST',
                     from: userId,

@@ -24,6 +24,7 @@ import {
     deposit as depositInRepo,
     findCancelContracts,
     findContractById,
+    getContractById,
     getContractDetail as getContractDetailInRepo,
     getContractInRange,
     getContractsByOwner,
@@ -271,104 +272,6 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
     }
 };
 
-// // Hàm để hủy hợp đồng bởi người thuê
-// export const cancelContractByRenterService = async (
-//     contractId: string,
-//     ren.renterId: IUserId,
-//     cancellationDate: Date,
-// ): Promise<PrismaContract> => {
-//     try {
-//         const [contract, renter] = await Promise.all([findContractById(contractId), findUserById(ren.renterId)]);
-
-//         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
-
-//         if (!renter || !renter.walletAddress)
-//             throw new CustomError(404, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví');
-
-//         const notifyBefore30Days = isNotificationBefore30Days(cancellationDate);
-
-//         const receipt = await cancelSmartContractByRenterService({
-//             contractId,
-//             notifyBefore30Days,
-//             renterAddress: renter.walletAddress,
-//         });
-
-//         const ethVnd = await getCoinPriceService({
-//             coin: 'ethereum',
-//             currency: 'vnd',
-//         });
-
-//         const queries = [];
-
-//         if (notifyBefore30Days) {
-//             queries.push(
-//                 createTransaction({
-//                     amount: contract.depositAmount,
-//                     contractId: contractId,
-//                     status: 'COMPLETED',
-//                     title: 'Hoàn trả tiền đặt cọc',
-//                     description: `Hoàn trả tiền đặt cọc cho hợp đồng **${contractId}**`,
-//                     to_id: ren.renterId,
-//                     amountEth: contract.depositAmount/ ethVnd,
-//                     fee: Number(receipt.gasUsed) / 1e18,
-//                     transactionHash: receipt.transactionHash,
-//                 }),
-//             );
-//         } else {
-//             queries.push(
-//                 createTransaction({
-//                     amount: contract.depositAmount,
-//                     contractId: contractId,
-//                     status: 'COMPLETED',
-//                     title: 'Thanh toán tiền đặt cọc cho chủ nhà',
-//                     description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
-//                     to_id: contract.owner,
-//                     amountEth: contract.depositAmount/ ethVnd,
-//                     fee: Number(receipt.gasUsed) / 1e18,
-//                     transactionHash: receipt.transactionHash,
-//                 }),
-//             );
-//         }
-
-//         // // Cập nhật trạng thái property trong cơ sở dữ liệu
-//         // await prisma.property.update({
-//         //     where: { property_id: contract.propertyId},
-//         //     data: {
-//         //         status: PropertyStatus.ACTIVE, // Hoặc trạng thái phù hợp với yêu cầu của bạn
-//         //     },
-//         // });
-
-//         // RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
-//         //     data: {
-//         //         propertyId: contract.propertyId,
-//         //         status: PropertyStatus.ACTIVE,
-//         //     },
-//         //     type: CONTRACT_QUEUE.type.UPDATE_STATUS,
-//         // });
-
-//         // Gọi phương thức repository để thực hiện hủy hợp đồng
-//         return await cancelContractByRenterInRepo(contractId, ren.renterId, cancellationDate);
-//     } catch (error) {
-//         console.error('Error processing contract cancellation:', error);
-//         throw new Error('Could not process contract cancellation');
-//     }
-// };
-
-// // Hàm để hủy hợp đồng bởi chủ nhà
-// export const cancelContractByOwnerService = async (
-//     contractId: string,
-//     owner: IUserId,
-//     cancellationDate: Date,
-// ): Promise<PrismaContract> => {
-//     try {
-//         // Gọi phương thức repository để thực hiện hủy hợp đồng
-//         return await cancelContractByOwnerInRepo(contractId, owner, cancellationDate);
-//     } catch (error) {
-//         console.error('Error processing contract cancellation:', error);
-//         throw new Error('Could not process contract cancellation');
-//     }
-// };
-
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactionsService = async (contractId: string, userId: IUserId): Promise<any[]> => {
     try {
@@ -603,4 +506,8 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
     } catch (error) {
         throw error;
     }
+};
+
+export const getContractByIdService = (params: { contractId: string; userId: string }) => {
+    return getContractById(params);
 };
