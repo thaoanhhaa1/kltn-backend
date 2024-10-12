@@ -744,3 +744,23 @@ export const cancelContractBeforeDeposit = ({ contractId, userId }: ICancelContr
         },
     });
 };
+
+export const getContractById = ({ contractId, userId }: { contractId: string; userId: string }) => {
+    return prisma.contract.findUnique({
+        where: {
+            contractId: contractId,
+            OR: [
+                {
+                    ownerId: userId,
+                },
+                {
+                    renterId: userId,
+                },
+            ],
+        },
+        include: {
+            owner: true,
+            renter: true,
+        },
+    });
+};

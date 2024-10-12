@@ -1,5 +1,5 @@
 import { User } from '@prisma/client';
-import { createUser, updateUser } from '../repositories/user.repository';
+import { createUser, findUserById, updateUser } from '../repositories/user.repository';
 import { IUserId } from '../interfaces/user';
 
 export const createUserService = (user: User) => {
@@ -7,3 +7,7 @@ export const createUserService = (user: User) => {
 };
 
 export const updateUserService = (userId: IUserId, user: Omit<User, 'userId'>) => updateUser(userId, user);
+
+export const findUserByIdService = (userId: IUserId) => {
+    return findUserById(userId);
+};

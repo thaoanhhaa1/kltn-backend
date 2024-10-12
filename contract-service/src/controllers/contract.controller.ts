@@ -1,4 +1,5 @@
 import { NextFunction, Response } from 'express';
+import { ICreateNotification } from '../interfaces/notification';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
@@ -7,6 +8,7 @@ import {
     // cancelContractByRenterService,
     createContractService,
     depositService,
+    getContractByIdService,
     getContractDetailService,
     getContractsByOwnerService,
     getContractsByRenterService,
@@ -14,6 +16,8 @@ import {
     payMonthlyRentService,
     terminateForNonPaymentService,
 } from '../services/contract.service';
+import { createNotificationQueue } from '../services/rabbitmq.service';
+import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 
@@ -31,6 +35,22 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
             ...contractData,
             ownerId: userId,
         });
+
+        Promise.all([findUserByIdService(userId), findUserByIdService(contractData.renterId)])
+            .then(([owner, renter]) => {
+                const notification: ICreateNotification = {
+                    body: `**${owner?.name}** đã tạo hợp đồng cho bạn với mã hợp đồng ${createdContract.contractId}`,
+                    title: 'Hợp đồng thuê nhà',
+                    type: 'RENTER_CONTRACT',
+                    from: owner?.userId,
+                    to: renter?.userId,
+                    docId: createdContract.contractId,
+                };
+
+                return createNotificationQueue(notification);
+            })
+            .then(() => console.log('Notification sent'))
+            .catch((error) => console.log('Error sending notification', error));
 
         // Phản hồi với dữ liệu hợp đồng đã tạo
         res.status(201).json(createdContract);
@@ -53,6 +73,20 @@ export const deposit = async (req: AuthenticatedRequest, res: Response, next: Ne
             transactionId,
         });
 
+        findUserByIdService(userId)
+            .then((renter) =>
+                createNotificationQueue({
+                    body: `**${renter?.name}** đã thực hiện thanh toán cọc cho hợp đồng **${contractId}**`,
+                    title: 'Thanh toán cọc',
+                    type: 'OWNER_CONTRACT',
+                    from: userId,
+                    to: result.ownerId,
+                    docId: contractId,
+                }),
+            )
+            .then(() => console.log('Notification sent'))
+            .catch((error) => console.log('Error sending notification', error));
+
         res.status(200).json(result);
     } catch (error) {
         next(error);
@@ -74,52 +108,25 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
             transactionId,
         });
 
+        findUserByIdService(userId)
+            .then((renter) =>
+                createNotificationQueue({
+                    body: `**${renter?.name}** đã thực hiện thanh toán tiền thuê cho hợp đồng **${contractId}**`,
+                    title: 'Thanh toán tiền thuê',
+                    type: 'OWNER_CONTRACT',
+                    from: userId,
+                    to: updatedContract.toId!,
+                    docId: contractId,
+                }),
+            )
+            .then(() => console.log('Notification sent'))
+            .catch((error) => console.log('Error sending notification', error));
+
         res.status(200).json(updatedContract);
     } catch (error) {
         next(error);
     }
 };
-
-// export const cancelContractByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const { contractId, ownerUserId, cancellationDate } = req.body;
-
-//         // Chuyển đổi cancellationDate từ chuỗi thành đối tượng Date
-//         const parsedCancellationDate = new Date(cancellationDate);
-
-//         // Kiểm tra dữ liệu đầu vào
-//         if (
-//             typeof contractId !== 'string' ||
-//             typeof ownerUserId !== 'string' ||
-//             isNaN(parsedCancellationDate.getTime())
-//         ) {
-//             throw new Error('Contract ID, ownerUserId, and cancellationDate are required and must be valid.');
-//         }
-//         const updatedContract = await cancelContractByOwnerService(contractId, ownerUserId, parsedCancellationDate);
-//         res.status(200).json(updatedContract);
-//     } catch (error) {
-//         // Chuyển lỗi cho middleware xử lý lỗi
-//         next(error);
-//     }
-// };
-
-// export const cancelContractByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//     try {
-//         const { contractId, cancellationDate } = req.body;
-//         const userId = req.user!.id;
-
-//         const parsedCancellationDate = new Date(cancellationDate);
-
-//         if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
-//         if (!cancellationDate) throw new CustomError(400, 'Ngày hủy không được để trống');
-
-//         const updatedContract = await cancelContractByRenterService(contractId, userId, cancellationDate);
-//         res.status(200).json(updatedContract);
-//     } catch (error) {
-//         // Chuyển lỗi cho middleware xử lý lỗi
-//         next(error);
-//     }
-// };
 
 // Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
 export const getContractTransactions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -231,6 +238,30 @@ export const cancelContractBeforeDeposit = async (req: AuthenticatedRequest, res
         const userId = req.user!.id;
 
         const updatedContract = await cancelContractBeforeDepositService({ contractId, userId });
+
+        getContractByIdService({
+            contractId,
+            userId,
+        })
+            .then((contract) => {
+                if (!contract) throw new CustomError(404, 'Contract not found');
+
+                return contract;
+            })
+            .then((contract) =>
+                createNotificationQueue({
+                    body: `Hợp đồng **${contractId}** đã bị hủy trước khi thanh toán cọc bởi **${
+                        userId === contract?.ownerId ? contract.owner.name : contract?.renter.name
+                    }**`,
+                    title: 'Hủy hợp đồng',
+                    type: userId === contract?.ownerId ? 'RENTER_CONTRACT' : 'OWNER_CONTRACT',
+                    from: userId,
+                    to: userId === contract?.ownerId ? contract.renterId : contract.ownerId,
+                    docId: contractId,
+                }),
+            )
+            .then(() => console.log('Notification sent'))
+            .catch((error) => console.log('Error sending notification', error));
 
         res.status(200).json(updatedContract);
     } catch (error) {

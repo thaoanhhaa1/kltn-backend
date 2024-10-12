@@ -12,6 +12,7 @@ import router from './routes';
 import { addChatService, readChatService } from './services/conversation.service';
 import { getNotPendingPropertiesService } from './services/property.service';
 import socketService from './services/socket.io.service';
+import { createNotificationService } from './services/notification.service';
 
 const app = express();
 
@@ -79,6 +80,12 @@ rabbitMQ.consumeQueue(CONTRACT_QUEUE.name, async (message) => {
             },
             name: PROPERTY_QUEUE.name,
         });
+    } else if (type === CONTRACT_QUEUE.type.NOTIFICATION_CREATED) {
+        console.log('Notification created', data);
+
+        createNotificationService(data)
+            .then((notification) => console.log('Notification created', notification))
+            .catch((error) => console.error('Error creating notification', error));
     }
 });
 
