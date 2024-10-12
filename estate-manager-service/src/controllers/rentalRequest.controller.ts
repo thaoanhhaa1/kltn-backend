@@ -44,6 +44,7 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
                     to: rentalRequest.ownerId,
                     type: 'RENTAL_REQUEST',
                     from: userId,
+                    docId: rentalRequest.requestId,
                 }),
             )
             .then(() => console.log('Notification created'))
