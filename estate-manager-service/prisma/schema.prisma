@@ -21,6 +21,8 @@ enum chatStatus {
 }
 
 type MediaType {
+  key  String
+  name String
   url  String
   type String
 }
@@ -47,6 +49,8 @@ model Conversation {
   participants   UserBaseEmbed[]
   delete         ConversationDelete[]
   chats          Chat[]
+  isBlocked      Boolean              @default(false)
+  blockedBy      String[]
   createdAt      DateTime
   updatedAt      DateTime
 
@@ -71,6 +75,12 @@ enum NotificationType {
   RENTAL_REQUEST
   PROPERTY
   REVIEW
+  OWNER_PROPERTY
+  OWNER_DETAIL_PROPERTY
+  OWNER_CONTRACT
+  RENTER_CONTRACT
+  CONTRACT_DETAIL
+  RENTER_PAYMENT
 }
 
 model Notification {
@@ -81,7 +91,9 @@ model Notification {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   from      String?          @db.ObjectId
-  to        String           @db.ObjectId
+  to        String?          @db.ObjectId
+  toRole    UserType?
+  docId     String?
   type      NotificationType
 
   @@map("notifications")
@@ -143,7 +155,7 @@ model PropertyType {
 
 model RejectReason {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  propertyId String   @db.ObjectId
+  propertyId String
   reason     String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

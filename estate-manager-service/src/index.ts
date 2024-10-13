@@ -6,10 +6,13 @@ import RabbitMQ from './configs/rabbitmq.config';
 import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from './constants/rabbitmq';
 import { IReadConversation } from './interface/chat';
 import errorHandler from './middlewares/error.middleware';
-import { updateStatus } from './repositories/property.repository';
+import { findChatById } from './repositories/conversation.repository';
+import { getPropertyById, updateStatus } from './repositories/property.repository';
+import { findUserDetailByUserId } from './repositories/userDetail.repository';
 import router from './routes';
 import { addChatService, readChatService } from './services/conversation.service';
-import { getNotPendingPropertiesService } from './services/property.service';
+import { createNotificationService } from './services/notification.service';
+import { getNotPendingPropertiesService, getPropertyBySlugService } from './services/property.service';
 import socketService from './services/socket.io.service';
 
 const app = express();
@@ -78,6 +81,12 @@ rabbitMQ.consumeQueue(CONTRACT_QUEUE.name, async (message) => {
             },
             name: PROPERTY_QUEUE.name,
         });
+    } else if (type === CONTRACT_QUEUE.type.NOTIFICATION_CREATED) {
+        console.log('Notification created', data);
+
+        createNotificationService(data)
+            .then((notification) => console.log('Notification created', notification))
+            .catch((error) => console.error('Error creating notification', error));
     }
 });
 
@@ -87,15 +96,32 @@ rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
 
     const { type, data } = JSON.parse(message.content.toString());
 
-    if (type === CREATE_CHAT_QUEUE.type.CREATE_CHAT) {
-        await addChatService({
-            ...data,
-            createdAt: new Date(data.createdAt),
-        });
-    } else if (type === CREATE_CHAT_QUEUE.type.READ_CHAT) {
-        const readChat = data as IReadConversation;
+    switch (type) {
+        case CREATE_CHAT_QUEUE.type.CREATE_CHAT:
+            console.log('Create chat', Date.now());
+            await addChatService({
+                ...data,
+                createdAt: new Date(data.createdAt),
+            });
+            console.log('Chat added', data);
 
-        await readChatService(readChat);
+            break;
+        case CREATE_CHAT_QUEUE.type.READ_CHAT:
+            const readChat = data as IReadConversation;
+
+            const conversation = await findChatById(readChat.conversationId, readChat.chatId);
+
+            if (!conversation) throw new Error('Conversation not found');
+
+            console.log('Read chat', Date.now());
+            await readChatService(readChat);
+            console.log('Chat read', readChat);
+
+            break;
+        case CREATE_CHAT_QUEUE.type.BLOCK_USER:
+            break;
+        default:
+            throw new Error(`Queue ${CREATE_CHAT_QUEUE.name} has no type ${type}`);
     }
 });
 
@@ -107,13 +133,29 @@ rabbitMQ.receiveSyncMessage({
         const { data, type } = JSON.parse(message);
 
         switch (type) {
-            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL:
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL: {
                 const property = await elasticClient.get({
                     index: 'properties',
                     id: data,
                 });
 
                 return property._source;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_USER_DETAIL: {
+                const user = await findUserDetailByUserId(data);
+
+                return user;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_SLUG: {
+                const property = await getPropertyBySlugService(data);
+
+                return property;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_ID: {
+                const property = await getPropertyById(data);
+
+                return property;
+            }
             default:
                 throw new Error(`Queue ${SYNC_MESSAGE_QUEUE_CONTRACT.name} has no type ${type}`);
         }

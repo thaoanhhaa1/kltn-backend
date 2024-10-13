@@ -1,5 +1,5 @@
 import { QueryDslQueryContainer, Sort } from '@elastic/elasticsearch/lib/api/types';
-import { PropertyStatus } from '@prisma/client';
+import { PropertyStatus, UserType } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -10,6 +10,7 @@ import { IPaginationResponse } from '../interface/pagination';
 import { IOwnerFilterProperties, IResProperty } from '../interface/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
+import { createNotificationService, deleteNotificationsByDocIdService } from '../services/notification.service';
 import {
     countNotPendingPropertiesService,
     createPropertyService,
@@ -23,6 +24,7 @@ import {
     updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
+import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
@@ -75,6 +77,20 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
                 data: property,
             },
         });
+
+        findUserByIdService(req.user!.id)
+            .then((user) =>
+                createNotificationService({
+                    body: `Tài sản **${property.title}** của **${user?.name}** đang chờ duyệt`,
+                    title: 'Tài sản mới',
+                    type: 'OWNER_PROPERTY',
+                    from: req.user!.id,
+                    toRole: 'admin',
+                    docId: property.propertyId,
+                }),
+            )
+            .then(() => console.log('Notification created'))
+            .catch((err) => console.error('Notification error:', err));
 
         res.status(201).json(property);
     } catch (error) {
@@ -135,6 +151,21 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
                 data: property,
             },
         });
+
+        // [ ] Check
+        findUserByIdService(req.user!.id)
+            .then((user) =>
+                createNotificationService({
+                    body: `Tài sản **${property.title}** của **${user?.name}** đã được cập nhật`,
+                    title: 'Tài sản cập nhật',
+                    type: 'OWNER_PROPERTY',
+                    from: req.user!.id,
+                    toRole: 'admin',
+                    docId: property.propertyId,
+                }),
+            )
+            .then(() => console.log('Notification created'))
+            .catch((err) => console.error('Notification error:', err));
 
         res.status(201).json(property);
     } catch (error) {
@@ -516,6 +547,7 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
     try {
         const { propertyId } = req.params;
         const userId = req.user!.id;
+        const userTypes = req.user!.userTypes as UserType[];
 
         if (!propertyId) throw new CustomError(400, 'Property id is required');
 
@@ -535,10 +567,27 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
             },
         });
 
-        elasticClient.delete({
-            index: 'properties',
-            id: propertyId,
-        });
+        elasticClient
+            .deleteByQuery({
+                index: 'properties',
+                body: {
+                    query: {
+                        match: {
+                            propertyId,
+                        },
+                    },
+                },
+            })
+            .then(() => console.log('Property deleted from ElasticSearch'))
+            .catch((err) => console.error('ElasticSearch error:', err));
+
+        deleteNotificationsByDocIdService({
+            docId: propertyId,
+            userId,
+            userTypes,
+        })
+            .then(() => console.log('Notifications deleted of property'))
+            .catch((err) => console.error('Notification error:', err));
 
         res.status(response.status).json(response);
     } catch (error) {
@@ -602,6 +651,20 @@ export const updatePropertiesStatus = async (req: AuthenticatedRequest, res: Res
                     data: item,
                 },
             }),
+        );
+
+        response.map((item) =>
+            createNotificationService({
+                body: `Tài sản **${item.title}** của bạn đã ${
+                    status === PropertyStatus.ACTIVE ? 'được duyệt' : 'bị từ chối vì lý do: ' + reason
+                }`,
+                title: `${status === PropertyStatus.ACTIVE ? 'Duyệt' : 'Từ chối'} tài sản`,
+                type: 'OWNER_DETAIL_PROPERTY',
+                to: item.owner.userId,
+                docId: item.propertyId,
+            })
+                .then(() => console.log('Notification created'))
+                .catch((err) => console.error('Notification error:', err)),
         );
 
         res.status(200).json(response);

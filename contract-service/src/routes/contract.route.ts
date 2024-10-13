@@ -1,7 +1,7 @@
 import express from 'express';
 import {
     cancelContractBeforeDeposit,
-    createContract,
+    createContractAndApprovalRequest,
     deposit,
     getContractDetail,
     getContractsByOwner,
@@ -18,7 +18,8 @@ import roleMiddleware from '../middlewares/role.middleware';
 
 const router = express.Router();
 
-router.post('/', authMiddleware, roleMiddleware('owner'), createContract);
+router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndApprovalRequest);
+// router.post('/', authMiddleware, roleMiddleware('owner'), createContract);
 
 // Route để thực hiện đặt cọc và tạo hợp đồng thành công
 router.post('/deposit', authMiddleware, roleMiddleware('renter'), deposit);

@@ -27,3 +27,17 @@ export const findUserById = (userId: IUserId) => {
         },
     });
 };
+
+export const isConnectToWallet = (userId: IUserId) => {
+    return prisma.user.findFirst({
+        where: {
+            userId,
+            walletAddress: {
+                not: null,
+            },
+        },
+        select: {
+            walletAddress: true,
+        },
+    });
+};

@@ -8,7 +8,7 @@ import { CONTRACT_QUEUE } from '../constants/rabbitmq';
 import {
     ICancelContract,
     ICancelContractBeforeDeposit,
-    IContract,
+    ICreateContract,
     IFindContractByIdAndUser,
     IGetContractDetail,
     IGetContractInRange,
@@ -28,12 +28,7 @@ if (!web3.utils.isAddress(contractAddress)) {
 
 const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contractAddress);
 
-export const createContract = async (
-    contract: IContract & {
-        transactionHash: string;
-    },
-): Promise<PrismaContract> => {
-    // Lưu hợp đồng vào cơ sở dữ liệu
+export const createContract = (contract: ICreateContract) => {
     return prisma.contract.create({
         data: {
             contractId: contract.contractId,
@@ -741,6 +736,26 @@ export const cancelContractBeforeDeposit = ({ contractId, userId }: ICancelContr
         },
         data: {
             status: 'CANCELLED',
+        },
+    });
+};
+
+export const getContractById = ({ contractId, userId }: { contractId: string; userId: string }) => {
+    return prisma.contract.findUnique({
+        where: {
+            contractId: contractId,
+            OR: [
+                {
+                    ownerId: userId,
+                },
+                {
+                    renterId: userId,
+                },
+            ],
+        },
+        include: {
+            owner: true,
+            renter: true,
         },
     });
 };

@@ -9,6 +9,7 @@ import { dateAfter } from '../utils/dateAfter';
 import { getCoinPriceService } from './coingecko.service';
 import { endContractService } from './contract.service';
 import { updateStatusRequestService } from './contractCancellationRequest.service';
+import { createNotificationQueue } from './rabbitmq.service';
 
 class TaskService {
     private createMonthlyRentTask = () => {
@@ -37,6 +38,16 @@ class TaskService {
                             type: 'RENT',
                         }),
                     );
+
+                    createNotificationQueue({
+                        body: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1} cho hợp đồng **${
+                            contract.contractId
+                        }**`,
+                        title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
+                        type: 'RENTER_PAYMENT',
+                        docId: contract.contractId,
+                        to: contract.renterId,
+                    });
                 }
             });
 
@@ -64,7 +75,22 @@ class TaskService {
             });
 
             const result = await Promise.allSettled(queries);
-            console.log('🚀 ~ job ~ result:', result);
+
+            result.forEach((res) => {
+                if (res.status === 'rejected') return;
+
+                const isRejected = res.value.request.status === 'REJECTED';
+
+                if (isRejected) return;
+
+                createNotificationQueue({
+                    body: `Yêu cầu hủy hợp đồng của bạn đã bị từ chối`,
+                    title: `Yêu cầu hủy hợp đồng đã bị từ chối`,
+                    type: 'RENTER_CONTRACT',
+                    docId: res.value.request.contractId,
+                    to: res.value.request.requestedBy,
+                });
+            });
 
             console.log('task.service::Reject contract cancel request task finished');
         });
@@ -83,6 +109,25 @@ class TaskService {
             const result = await Promise.allSettled(requests.map(endContractService));
             console.log('🚀 ~ job ~ requests:', requests);
             console.log('🚀 ~ job ~ result:', result);
+
+            result.forEach((res: any) => {
+                if (res.status === 'rejected') return;
+
+                createNotificationQueue({
+                    body: `Hợp đồng **${res.value.contractId}** đã được hủy`,
+                    title: `Hợp đồng đã được hủy`,
+                    type: 'RENTER_CONTRACT',
+                    docId: res.value.contractId,
+                    to: res.value.fromId,
+                });
+                createNotificationQueue({
+                    body: `Hợp đồng **${res.value.contractId}** đã được hủy`,
+                    title: `Hợp đồng đã được hủy`,
+                    type: 'OWNER_CONTRACT',
+                    docId: res.value.contractId,
+                    to: res.value.toId,
+                });
+            });
 
             console.log('task.service::End contract by request task finished');
         });

@@ -1,14 +1,18 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractCancellationRequestSchema } from '../schemas/contractCancellationRequest.schema';
+import { getContractByIdService } from '../services/contract.service';
 import {
     createCancellationRequestService,
     getHandledCancelRequestByContractIdService,
     getNotHandledCancelRequestByContractIdService,
     updateStatusRequestService,
 } from '../services/contractCancellationRequest.service';
+import { createNotificationQueue } from '../services/rabbitmq.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
+import getCancelRequestStatusText from '../utils/getCancelRequestStatusText';
+import getOtherUserInContract from '../utils/getOtherUserInContract';
 
 export const createCancellationRequest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -28,6 +32,23 @@ export const createCancellationRequest = async (req: AuthenticatedRequest, res: 
 
         const result = await createCancellationRequestService(safeParser.data);
 
+        const { otherUser, user } = getOtherUserInContract({
+            myId: userId,
+            owner: result.contract.owner,
+            renter: result.contract.renter,
+        });
+
+        createNotificationQueue({
+            body: `**${user.name}** đã gửi yêu cầu huỷ hợp đồng **${result.contract.contractId}**`,
+            title: 'Yêu cầu huỷ hợp đồng',
+            type: 'CONTRACT_DETAIL',
+            docId: result.contract.contractId,
+            from: userId,
+            to: otherUser.userId,
+        })
+            .then(() => console.log('Notification sent'))
+            .catch((err) => console.log(err));
+
         res.status(201).json(result);
     } catch (error) {
         next(error);
@@ -44,7 +65,40 @@ export const updateCancellationRequestStatus = async (req: AuthenticatedRequest,
         if (!Number.isInteger(requestId)) throw new CustomError(400, 'Mã yêu cầu không hợp lệ');
         if (!status) throw new CustomError(400, 'Trạng thái không được để trống');
 
-        return res.json(await updateStatusRequestService({ requestId, userId, status }));
+        const request = await updateStatusRequestService({ requestId, userId, status });
+
+        // 'REJECTED', 'CONTINUE', 'APPROVED', 'UNILATERAL_CANCELLATION'
+        getContractByIdService({
+            contractId: request.request.contractId,
+            userId,
+        })
+            .then((contract) => {
+                if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+
+                return contract;
+            })
+            .then((contract) => {
+                const { otherUser } = getOtherUserInContract({
+                    myId: userId,
+                    owner: contract.owner,
+                    renter: contract.renter,
+                });
+
+                return createNotificationQueue({
+                    body: `Yêu cầu huỷ hợp đồng **${
+                        request.request.contractId
+                    }** đã được **${getCancelRequestStatusText(status).toLowerCase()}**`,
+                    title: 'Yêu cầu huỷ hợp đồng',
+                    type: 'CONTRACT_DETAIL',
+                    docId: request.request.contractId,
+                    from: userId,
+                    to: otherUser.userId,
+                });
+            })
+            .then(() => console.log('Notification sent'))
+            .catch((err) => console.log(err));
+
+        return res.json(request);
     } catch (error) {
         next(error);
     }

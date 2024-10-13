@@ -35,6 +35,7 @@ export const CONTRACT_QUEUE = {
         UPDATED: 'PROPERTY_UPDATED',
         DELETED: 'PROPERTY_DELETED',
         UPDATE_STATUS: 'PROPERTY_UPDATE_STATUS',
+        NOTIFICATION_CREATED: 'NOTIFICATION_CREATED',
     },
 };
 
@@ -49,6 +50,9 @@ export const SYNC_MESSAGE_QUEUE_CONTRACT = {
     name: 'sync-message-queue-contract',
     type: {
         GET_PROPERTY_DETAIL: 'GET_PROPERTY_DETAIL',
+        GET_USER_DETAIL: 'GET_USER_DETAIL',
+        GET_PROPERTY_BY_SLUG: 'GET_PROPERTY_BY_SLUG',
+        GET_PROPERTY_BY_ID: 'GET_PROPERTY_BY_ID',
     },
 };
 
@@ -57,5 +61,6 @@ export const CREATE_CHAT_QUEUE = {
     type: {
         CREATE_CHAT: 'CREATE_CHAT',
         READ_CHAT: 'READ_CHAT',
+        BLOCK_USER: 'BLOCK_USER',
     },
 };

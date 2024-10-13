@@ -18,7 +18,7 @@ const dirname = __dirname
     .replace('/build/src/configs', '')
     .replace('/build/configs', '')
     .replace('\\build\\configs', '')
-    .replace('\\configs', '');
+    .replace('\\src\\configs', '');
 
 console.log(dirname);
 

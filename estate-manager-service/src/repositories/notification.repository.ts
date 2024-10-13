@@ -1,6 +1,11 @@
-import { ICreateNotification, IUpdateNotificationStatus } from '../interface/notification';
-import { IPagination } from '../interface/pagination';
-import { IUserId } from '../interface/user';
+import {
+    ICountNewNotificationsByUserId,
+    ICreateNotification,
+    IDeleteNotificationsByDocId,
+    IGetNotificationsByUserId,
+    IReadAllNotifications,
+    IUpdateNotificationStatus,
+} from '../interface/notification';
 import prisma from '../prisma/prismaClient';
 
 export const createNotification = (params: ICreateNotification) => {
@@ -9,10 +14,19 @@ export const createNotification = (params: ICreateNotification) => {
     });
 };
 
-export const getNotificationsByUserId = (userId: IUserId, pagination: IPagination) => {
+export const getNotificationsByUserId = ({ pagination, userId, userTypes }: IGetNotificationsByUserId) => {
     return prisma.notification.findMany({
         where: {
-            to: userId,
+            OR: [
+                {
+                    to: userId,
+                },
+                {
+                    toRole: {
+                        in: userTypes,
+                    },
+                },
+            ],
             status: {
                 not: 'DELETED',
             },
@@ -25,19 +39,37 @@ export const getNotificationsByUserId = (userId: IUserId, pagination: IPaginatio
     });
 };
 
-export const countNewNotificationsByUserId = (userId: IUserId) => {
+export const countNewNotificationsByUserId = ({ userId, userTypes }: ICountNewNotificationsByUserId) => {
     return prisma.notification.count({
         where: {
-            to: userId,
+            OR: [
+                {
+                    to: userId,
+                },
+                {
+                    toRole: {
+                        in: userTypes,
+                    },
+                },
+            ],
             status: 'RECEIVED',
         },
     });
 };
 
-export const countNotificationsByUserId = (userId: IUserId) => {
+export const countNotificationsByUserId = ({ userId, userTypes }: ICountNewNotificationsByUserId) => {
     return prisma.notification.count({
         where: {
-            to: userId,
+            OR: [
+                {
+                    to: userId,
+                },
+                {
+                    toRole: {
+                        in: userTypes,
+                    },
+                },
+            ],
             status: {
                 not: 'DELETED',
             },
@@ -45,16 +77,57 @@ export const countNotificationsByUserId = (userId: IUserId) => {
     });
 };
 
-export const updateNotificationStatus = ({ notificationIds, status, userId }: IUpdateNotificationStatus) => {
+export const updateNotificationStatus = ({ notificationIds, status, userId, userTypes }: IUpdateNotificationStatus) => {
     return prisma.notification.updateMany({
         where: {
             id: {
                 in: notificationIds,
             },
-            to: userId,
+            OR: [
+                {
+                    to: userId,
+                },
+                {
+                    toRole: {
+                        in: userTypes,
+                    },
+                },
+            ],
         },
         data: {
             status,
+        },
+    });
+};
+
+export const readAll = ({ userId, userTypes }: IReadAllNotifications) => {
+    return prisma.notification.updateMany({
+        where: {
+            OR: [
+                {
+                    to: userId,
+                },
+                {
+                    toRole: {
+                        in: userTypes,
+                    },
+                },
+            ],
+            status: 'RECEIVED',
+        },
+        data: {
+            status: 'READ',
+        },
+    });
+};
+
+export const deleteNotificationsByDocId = ({ docId }: IDeleteNotificationsByDocId) => {
+    return prisma.notification.updateMany({
+        where: {
+            docId,
+        },
+        data: {
+            status: 'DELETED',
         },
     });
 };

@@ -1,7 +1,8 @@
 import { Conversation } from '@prisma/client';
-import { ICreateChatReq, IReadConversation } from '../interface/chat';
+import { IBlockUser, ICreateChatReq, IReadConversation } from '../interface/chat';
 import { IPagination, IPaginationResponse } from '../interface/pagination';
 import {
+    blockUser,
     countConversationsByUserId,
     createConversation,
     getConversationsByUserId,
@@ -32,4 +33,8 @@ export const getConversationsByUserIdService = async (userId: string, pagination
 
 export const readChatService = (data: IReadConversation) => {
     return readChat(data);
+};
+
+export const blockUserService = (data: IBlockUser) => {
+    return blockUser(data);
 };

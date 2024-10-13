@@ -35,6 +35,9 @@ export const getTransactionsByRenter = (userId: IUserId) => {
     return prisma.transaction.findMany({
         where: {
             fromId: userId,
+            type: {
+                in: ['RENT', 'DEPOSIT'],
+            },
         },
         orderBy: {
             createdAt: 'desc',

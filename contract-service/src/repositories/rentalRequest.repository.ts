@@ -1,16 +1,12 @@
 import { IPagination } from '../interfaces/pagination';
-import {
-    IOwnerUpdateRentalRequestStatus,
-    IRenterUpdateRentalRequestStatus,
-    IRequestId,
-} from '../interfaces/rentalRequest';
+import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interfaces/rentalRequest';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
 
 export const createRentalRequest = async ({
     ownerId,
-    property,
+    propertyId,
     rentalDeposit,
     rentalEndDate,
     rentalPrice,
@@ -19,12 +15,8 @@ export const createRentalRequest = async ({
 }: ICreateRentalRequest) => {
     const rentalRequest = await prisma.rentalRequest.findFirst({
         where: {
-            renterId: renterId,
-            property: {
-                is: {
-                    propertyId: property.propertyId,
-                },
-            },
+            renterId,
+            propertyId,
             status: 'PENDING',
         },
     });
@@ -35,23 +27,23 @@ export const createRentalRequest = async ({
                 requestId: rentalRequest.requestId,
             },
             data: {
-                rentalDeposit: rentalDeposit,
-                rentalEndDate: rentalEndDate,
-                rentalPrice: rentalPrice,
-                rentalStartDate: rentalStartDate,
+                rentalDeposit,
+                rentalEndDate,
+                rentalPrice,
+                rentalStartDate,
                 status: 'PENDING',
             },
         });
 
     return prisma.rentalRequest.create({
         data: {
-            propertyId: property.propertyId,
-            rentalDeposit: rentalDeposit,
-            rentalEndDate: rentalEndDate,
-            rentalPrice: rentalPrice,
-            rentalStartDate: rentalStartDate,
-            renterId: renterId,
-            ownerId: ownerId,
+            rentalDeposit,
+            rentalEndDate,
+            rentalPrice,
+            rentalStartDate,
+            renterId,
+            ownerId,
+            propertyId,
         },
     });
 };
@@ -59,20 +51,26 @@ export const createRentalRequest = async ({
 export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
         where: {
-            renterId: renterId,
+            renterId,
             status: {
                 not: 'CANCELLED',
             },
         },
         skip,
         take,
+        include: {
+            property: true,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
     });
 };
 
 export const countRentalRequestsByRenter = (renterId: IUserId) => {
     return prisma.rentalRequest.count({
         where: {
-            renterId: renterId,
+            renterId,
             status: {
                 not: 'CANCELLED',
             },
@@ -83,10 +81,13 @@ export const countRentalRequestsByRenter = (renterId: IUserId) => {
 export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
     return prisma.rentalRequest.findMany({
         where: {
-            ownerId: ownerId,
+            ownerId,
             status: {
                 not: 'CANCELLED',
             },
+        },
+        include: {
+            property: true,
         },
         skip,
         take,
@@ -99,7 +100,7 @@ export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagi
 export const countRentalRequestsByOwner = (ownerId: IUserId) => {
     return prisma.rentalRequest.count({
         where: {
-            ownerId: ownerId,
+            ownerId,
             status: {
                 not: 'CANCELLED',
             },
@@ -110,7 +111,7 @@ export const countRentalRequestsByOwner = (ownerId: IUserId) => {
 export const getRentalRequestByRenter = (renterId: IUserId, slug: string) => {
     return prisma.rentalRequest.findFirst({
         where: {
-            renterId: renterId,
+            renterId,
             property: {
                 is: {
                     slug,
@@ -123,7 +124,7 @@ export const getRentalRequestByRenter = (renterId: IUserId, slug: string) => {
 export const getRentalRequestByOwner = (ownerId: IUserId, slug: string) => {
     return prisma.rentalRequest.findFirst({
         where: {
-            ownerId: ownerId,
+            ownerId,
             property: {
                 is: {
                     slug,
@@ -136,15 +137,11 @@ export const getRentalRequestByOwner = (ownerId: IUserId, slug: string) => {
     });
 };
 
-export const ownerUpdateRentalRequestStatus = ({ ownerId, slug, status }: IOwnerUpdateRentalRequestStatus) => {
+export const ownerUpdateRentalRequestStatus = ({ ownerId, requestId, status }: IOwnerUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
-            ownerId: ownerId,
-            property: {
-                is: {
-                    slug,
-                },
-            },
+            ownerId,
+            requestId,
             status: 'PENDING',
         },
         data: {
@@ -153,15 +150,11 @@ export const ownerUpdateRentalRequestStatus = ({ ownerId, slug, status }: IOwner
     });
 };
 
-export const renterUpdateRentalRequestStatus = ({ renterId, slug, status }: IRenterUpdateRentalRequestStatus) => {
+export const renterUpdateRentalRequestStatus = ({ renterId, requestId, status }: IRenterUpdateRentalRequestStatus) => {
     return prisma.rentalRequest.updateMany({
         where: {
-            renterId: renterId,
-            property: {
-                is: {
-                    slug,
-                },
-            },
+            renterId,
+            requestId,
             status: 'PENDING',
         },
         data: {
@@ -170,10 +163,10 @@ export const renterUpdateRentalRequestStatus = ({ renterId, slug, status }: IRen
     });
 };
 
-export const getRentalRequestById = (requestId: IRequestId) => {
+export const getRentalRequestById = (requestId: number) => {
     return prisma.rentalRequest.findUnique({
         where: {
-            requestId: requestId,
+            requestId,
         },
     });
 };

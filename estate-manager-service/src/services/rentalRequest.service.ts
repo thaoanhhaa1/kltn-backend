@@ -52,8 +52,8 @@ export const createRentalRequestService = async ({ rentalEndDate, rentalStartDat
         throw new CustomError(
             400,
             `Bất động sản đã có hợp đồng trong thời gian ${convertDateToString(
-                new Date(contract.start_date),
-            )} - ${convertDateToString(new Date(contract.end_date))}`,
+                new Date(contract.startDate),
+            )} - ${convertDateToString(new Date(contract.endDate))}`,
         );
 
     const renterId = rest.renterId;

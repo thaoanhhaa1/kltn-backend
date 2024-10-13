@@ -1,7 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createRentalRequestSchema } from '../schemas/rentalRequest.schema';
-import { createNotificationService } from '../services/notification.service';
+import { createNotificationQueue } from '../services/rabbitmq.service';
 import {
     createRentalRequestService,
     generateContractService,
@@ -13,7 +13,6 @@ import {
     renterUpdateRentalRequestStatusService,
 } from '../services/rentalRequest.service';
 import { findUserByIdService } from '../services/user.service';
-import { ResponseType } from '../types/response.type';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 
@@ -38,13 +37,13 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
 
         findUserByIdService(userId)
             .then((user) =>
-                createNotificationService({
+                createNotificationQueue({
                     title: 'Yêu cầu thuê nhà mới',
                     body: `Bạn có một yêu cầu thuê nhà mới từ **${user?.name}**`,
                     to: rentalRequest.ownerId,
                     type: 'RENTAL_REQUEST',
                     from: userId,
-                    docId: rentalRequest.requestId,
+                    docId: String(rentalRequest.requestId),
                 }),
             )
             .then(() => console.log('Notification created'))
@@ -129,7 +128,7 @@ export const ownerUpdateRentalRequestStatus = async (req: AuthenticatedRequest, 
 
         if (!rentalRequest.count) throw new CustomError(400, 'Cập nhật trạng thái yêu cầu thuê không thành công');
 
-        const result: ResponseType = {
+        const result = {
             success: true,
             message: 'Cập nhật trạng thái yêu cầu thuê thành công',
             statusCode: 200,
@@ -154,7 +153,7 @@ export const renterUpdateRentalRequestStatus = async (req: AuthenticatedRequest,
 
         if (!rentalRequest.count) throw new CustomError(400, 'Cập nhật trạng thái yêu cầu thuê không thành công');
 
-        const result: ResponseType = {
+        const result = {
             success: true,
             message: 'Cập nhật trạng thái yêu cầu thuê thành công',
             statusCode: 200,
