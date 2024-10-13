@@ -170,3 +170,18 @@ export const getRentalRequestById = (requestId: number) => {
         },
     });
 };
+
+export const getRentalRequestAndPropertyById = (requestId: number) => {
+    return prisma.rentalRequest.findUnique({
+        where: {
+            requestId,
+        },
+        include: {
+            property: {
+                select: {
+                    title: true,
+                },
+            },
+        },
+    });
+};

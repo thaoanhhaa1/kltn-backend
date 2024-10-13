@@ -5,6 +5,7 @@ import { createNotificationQueue } from '../services/rabbitmq.service';
 import {
     createRentalRequestService,
     generateContractService,
+    getRentalRequestAndPropertyByIdService,
     getRentalRequestByOwnerService,
     getRentalRequestByRenterService,
     getRentalRequestsByOwnerService,
@@ -120,6 +121,8 @@ export const ownerUpdateRentalRequestStatus = async (req: AuthenticatedRequest, 
         const userId = req.user!.id;
         const { requestId, status } = req.body;
 
+        if (status === 'APPROVED') throw new CustomError(400, 'Không thể cập nhật trạng thái yêu cầu thuê thành công');
+
         const rentalRequest = await ownerUpdateRentalRequestStatusService({
             ownerId: userId,
             requestId,
@@ -133,6 +136,20 @@ export const ownerUpdateRentalRequestStatus = async (req: AuthenticatedRequest, 
             message: 'Cập nhật trạng thái yêu cầu thuê thành công',
             statusCode: 200,
         };
+
+        getRentalRequestAndPropertyByIdService(requestId)
+            .then((request) =>
+                createNotificationQueue({
+                    title: 'Yêu cầu thuê nhà',
+                    body: `Yêu cầu thuê nhà **${request.property.title}** của bạn đã bị **từ chối**`,
+                    type: 'RENTER_RENTAL_REQUEST',
+                    docId: String(requestId),
+                    from: userId,
+                    to: request.renterId,
+                }),
+            )
+            .then(() => console.log('Notification created'))
+            .catch((error) => console.log('Notification error', error));
 
         res.json(result);
     } catch (error) {

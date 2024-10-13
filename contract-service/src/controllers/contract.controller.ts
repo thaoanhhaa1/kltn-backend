@@ -40,6 +40,20 @@ export const createContractAndApprovalRequest = async (
             status: 'APPROVED',
         });
 
+        findUserByIdService(req.user!.id)
+            .then((owner) =>
+                createNotificationQueue({
+                    body: `**${owner?.name}** đã tạo hợp đồng cho bạn với mã hợp đồng **${result.contractId}** dựa trên yêu cầu thuê nhà của bạn`,
+                    title: 'Hợp đồng thuê nhà',
+                    type: 'RENTER_CONTRACT',
+                    docId: result.contractId,
+                    from: owner?.userId,
+                    to: result.renterId,
+                }),
+            )
+            .then(() => console.log('Notification sent'))
+            .catch((error) => console.log('Error sending notification', error));
+
         res.status(201).json(result);
     } catch (error) {
         next(error);
