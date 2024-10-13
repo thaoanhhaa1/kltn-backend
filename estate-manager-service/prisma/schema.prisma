@@ -80,6 +80,7 @@ enum NotificationType {
   OWNER_CONTRACT
   RENTER_CONTRACT
   CONTRACT_DETAIL
+  RENTER_PAYMENT
 }
 
 model Notification {
