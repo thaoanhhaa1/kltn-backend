@@ -50,5 +50,8 @@ export const SYNC_MESSAGE_QUEUE_CONTRACT = {
     name: 'sync-message-queue-contract',
     type: {
         GET_PROPERTY_DETAIL: 'GET_PROPERTY_DETAIL',
+        GET_USER_DETAIL: 'GET_USER_DETAIL',
+        GET_PROPERTY_BY_SLUG: 'GET_PROPERTY_BY_SLUG',
+        GET_PROPERTY_BY_ID: 'GET_PROPERTY_BY_ID',
     },
 };

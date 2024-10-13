@@ -13,6 +13,7 @@ import {
     IGetContractInRange,
 } from '../interfaces/contract';
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
+import { IOwnerUpdateRentalRequestStatus } from '../interfaces/rentalRequest';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
@@ -36,6 +37,7 @@ import {
 } from '../repositories/contract.repository';
 import { getCancelRequestById } from '../repositories/contractCancellationRequest.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
+import { ownerUpdateRentalRequestStatus } from '../repositories/rentalRequest.repository';
 import {
     cancelTransactions,
     createTransaction,
@@ -59,6 +61,81 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
+
+export const createContractAndApprovalRequestService = async (
+    contract: CreateContractReq,
+    updatedRequest: IOwnerUpdateRentalRequestStatus,
+) => {
+    try {
+        const [owner, renter] = await Promise.all([findUserById(contract.ownerId), findUserById(contract.renterId)]);
+
+        if (!owner || !owner.walletAddress) {
+            throw new CustomError(400, 'Không tìm thấy chủ nhà hoặc chủ nhà chưa có địa chỉ ví.');
+        }
+
+        if (!renter || !renter.walletAddress) {
+            throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
+        }
+
+        const contractId = v4();
+
+        const [receipt, ethPrice] = await Promise.all([
+            createSmartContractService({
+                ...contract,
+                contractId: contractId,
+                ownerWalletAddress: owner.walletAddress,
+                renterWalletAddress: renter.walletAddress,
+            }),
+            getCoinPriceService(),
+        ]);
+
+        const eth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+        const fee = eth * ethPrice;
+
+        const [result] = await prisma.$transaction([
+            createContractInRepo({
+                ...contract,
+                ownerWalletAddress: owner.walletAddress,
+                renterWalletAddress: renter.walletAddress,
+                contractId: contractId,
+                transactionHash: receipt.transactionHash,
+            }),
+            ownerUpdateRentalRequestStatus(updatedRequest),
+        ]);
+
+        createTransaction({
+            fromId: owner.userId,
+            amount: fee,
+            contractId: contractId,
+            status: 'COMPLETED',
+            title: 'Thanh toán phí tạo hợp đồng',
+            description: `Thanh toán phí tạo hợp đồng **${contractId}**`,
+            transactionHash: receipt.transactionHash,
+            type: 'CREATE_CONTRACT',
+            amountEth: eth,
+        })
+            .then(() => console.log('Transaction created'))
+            .catch((error) => console.error('Error creating transaction:', error));
+
+        createTransaction({
+            fromId: renter.userId,
+            amount: contract.depositAmount,
+            contractId: contractId,
+            title: 'Thanh toán tiền đặt cọc',
+            description: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
+            status: 'PENDING',
+            endDate: dateAfter(3, true),
+            type: 'DEPOSIT',
+        })
+            .then(() => console.log('Transaction created'))
+            .catch((error) => console.error('Error creating transaction:', error));
+
+        return result;
+    } catch (error) {
+        console.error('Error creating contract:', error);
+        throw new Error('Could not create contract');
+    }
+};
 
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {

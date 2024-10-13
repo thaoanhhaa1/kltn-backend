@@ -7,12 +7,13 @@ import { CONTRACT_QUEUE, CREATE_CHAT_QUEUE, PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE_C
 import { IReadConversation } from './interface/chat';
 import errorHandler from './middlewares/error.middleware';
 import { findChatById } from './repositories/conversation.repository';
-import { updateStatus } from './repositories/property.repository';
+import { getPropertyById, updateStatus } from './repositories/property.repository';
+import { findUserDetailByUserId } from './repositories/userDetail.repository';
 import router from './routes';
 import { addChatService, readChatService } from './services/conversation.service';
-import { getNotPendingPropertiesService } from './services/property.service';
-import socketService from './services/socket.io.service';
 import { createNotificationService } from './services/notification.service';
+import { getNotPendingPropertiesService, getPropertyBySlugService } from './services/property.service';
+import socketService from './services/socket.io.service';
 
 const app = express();
 
@@ -132,13 +133,29 @@ rabbitMQ.receiveSyncMessage({
         const { data, type } = JSON.parse(message);
 
         switch (type) {
-            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL:
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL: {
                 const property = await elasticClient.get({
                     index: 'properties',
                     id: data,
                 });
 
                 return property._source;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_USER_DETAIL: {
+                const user = await findUserDetailByUserId(data);
+
+                return user;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_SLUG: {
+                const property = await getPropertyBySlugService(data);
+
+                return property;
+            }
+            case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_ID: {
+                const property = await getPropertyById(data);
+
+                return property;
+            }
             default:
                 throw new Error(`Queue ${SYNC_MESSAGE_QUEUE_CONTRACT.name} has no type ${type}`);
         }

@@ -4,8 +4,7 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createContractReq } from '../schemas/contract.schema';
 import {
     cancelContractBeforeDepositService,
-    // cancelContractByOwnerService,
-    // cancelContractByRenterService,
+    createContractAndApprovalRequestService,
     createContractService,
     depositService,
     getContractByIdService,
@@ -20,6 +19,32 @@ import { createNotificationQueue } from '../services/rabbitmq.service';
 import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
+
+export const createContractAndApprovalRequest = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const safeParse = createContractReq.safeParse(req.body);
+
+        if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
+
+        const contractData = safeParse.data;
+
+        const { requestId } = req.body;
+
+        const result = await createContractAndApprovalRequestService(contractData, {
+            ownerId: req.user!.id,
+            requestId,
+            status: 'APPROVED',
+        });
+
+        res.status(201).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
 
 export const createContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {

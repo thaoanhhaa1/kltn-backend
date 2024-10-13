@@ -63,3 +63,7 @@ export interface IGetContractDetail {
     contractId: IContractId;
     userId: IUserId;
 }
+
+export interface ICreateContract extends IContract {
+    transactionHash: string;
+}
