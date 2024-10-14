@@ -61,6 +61,7 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
+import { createNotificationQueue } from './rabbitmq.service';
 
 export const createContractAndApprovalRequestService = async (
     contract: CreateContractReq,
@@ -127,6 +128,15 @@ export const createContractAndApprovalRequestService = async (
             endDate: dateAfter(3, true),
             type: 'DEPOSIT',
         })
+            .then(() =>
+                createNotificationQueue({
+                    body: `Thanh toán tiền đặt cọc cho hợp đồng **${contractId}**`,
+                    title: 'Thanh toán tiền đặt cọc',
+                    type: 'RENTER_PAYMENT',
+                    docId: contractId,
+                    to: renter.userId,
+                }),
+            )
             .then(() => console.log('Transaction created'))
             .catch((error) => console.error('Error creating transaction:', error));
 
@@ -276,6 +286,17 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
                 endDate: dateAfter(14, true),
                 type: 'RENT',
             })
+                .then(() =>
+                    createNotificationQueue({
+                        body: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1} cho hợp đồng **${
+                            contract.contractId
+                        }**`,
+                        title: 'Thanh toán tiền thuê',
+                        type: 'RENTER_PAYMENT',
+                        docId: contract.contractId,
+                        to: contract.renterId,
+                    }),
+                )
                 .then(() => console.log('Transaction created'))
                 .catch((error) => console.error('Error creating transaction:', error));
         }

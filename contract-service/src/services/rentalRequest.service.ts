@@ -11,6 +11,7 @@ import {
     countRentalRequestsByOwner,
     countRentalRequestsByRenter,
     createRentalRequest,
+    getRentalRequestAndPropertyById,
     getRentalRequestById,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
@@ -185,4 +186,12 @@ export const generateContractService = async ({ ownerId, propertyId, renterId, r
 
         throw error;
     }
+};
+
+export const getRentalRequestAndPropertyByIdService = async (requestId: number) => {
+    const rentalRequest = await getRentalRequestAndPropertyById(requestId);
+
+    if (!rentalRequest) throw new CustomError(404, 'Yêu cầu thuê không tồn tại');
+
+    return rentalRequest;
 };

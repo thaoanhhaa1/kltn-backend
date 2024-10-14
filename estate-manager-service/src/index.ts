@@ -102,6 +102,16 @@ rabbitMQ.consumeQueueWithAck(CREATE_CHAT_QUEUE.name, async (message) => {
             await addChatService({
                 ...data,
                 createdAt: new Date(data.createdAt),
+                sender: {
+                    avatar: data.sender.avatar,
+                    userId: data.sender.userId,
+                    name: data.sender.name,
+                },
+                receiver: {
+                    avatar: data.receiver.avatar,
+                    userId: data.receiver.userId,
+                    name: data.receiver.name,
+                },
             });
             console.log('Chat added', data);
 
