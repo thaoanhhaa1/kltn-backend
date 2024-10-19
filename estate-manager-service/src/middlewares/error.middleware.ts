@@ -1,9 +1,12 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import CustomError, { EntryError } from '../utils/error.util';
+import sendMessageToTelegram from '../utils/sendMessageToTelegram.util';
 
 const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
     const statusCode = err.statusCode || err.response?.status || 500;
     const message = err.message || 'Internal Server Error';
+
+    sendMessageToTelegram(`Estate-manager-service::Error: ${message}`);
 
     if (err instanceof EntryError)
         return res.status(statusCode).json({

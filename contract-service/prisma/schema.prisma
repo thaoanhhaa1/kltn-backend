@@ -91,6 +91,7 @@ model Contract {
   propertyId              String                        @map("property_id")
   startDate               DateTime                      @map("start_date")
   endDate                 DateTime                      @map("end_date")
+  endDateActual           DateTime                      @map("end_date_actual")
   deleted                 Boolean                       @default(false)
   status                  Status                        @default(WAITING)
   createdAt               DateTime                      @default(now()) @map("created_at")

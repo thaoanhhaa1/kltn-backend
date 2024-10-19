@@ -147,3 +147,17 @@ export const findByContractAndRented = (contractId: IContractId) => {
         },
     });
 };
+
+export const getOverdueTransactions = () => {
+    return prisma.transaction.findMany({
+        where: {
+            status: 'PENDING',
+            type: {
+                in: ['RENT', 'DEPOSIT'],
+            },
+            endDate: {
+                lte: new Date(),
+            },
+        },
+    });
+};

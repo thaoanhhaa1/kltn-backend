@@ -1,13 +1,18 @@
+import { ContractCancellationRequest } from '@prisma/client';
 import { CronJob } from 'cron';
 import { getContractForRentTransaction } from '../repositories/contract.repository';
 import {
     getCancelRequestOverdue,
     getRequestsCancelContract,
 } from '../repositories/contractCancellationRequest.repository';
-import { createTransaction } from '../repositories/transaction.repository';
+import { createTransaction, getOverdueTransactions } from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
 import { getCoinPriceService } from './coingecko.service';
-import { endContractService } from './contract.service';
+import {
+    cancelContractBeforeDepositService,
+    endContractService,
+    endContractWhenOverdueService,
+} from './contract.service';
 import { updateStatusRequestService } from './contractCancellationRequest.service';
 import { createNotificationQueue } from './rabbitmq.service';
 
@@ -15,12 +20,13 @@ class TaskService {
     private createMonthlyRentTask = () => {
         const job = new CronJob('0 0 0 * * *', async () => {
             const contracts = await getContractForRentTransaction();
+            console.log('🚀 ~ TaskService ~ job ~ contracts:', contracts);
 
             const queries: any[] = [];
+            const currentDate = new Date().getDate();
 
             contracts.forEach((contract) => {
                 const startDate = contract.startDate.getDate();
-                const currentDate = new Date().getDate();
 
                 if (startDate === currentDate) {
                     queries.push(
@@ -38,21 +44,30 @@ class TaskService {
                             type: 'RENT',
                         }),
                     );
-
-                    createNotificationQueue({
-                        body: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1} cho hợp đồng **${
-                            contract.contractId
-                        }**`,
-                        title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
-                        type: 'RENTER_PAYMENT',
-                        docId: contract.contractId,
-                        to: contract.renterId,
-                    });
                 }
             });
 
             await getCoinPriceService();
-            await Promise.all(queries);
+            const res = await Promise.allSettled(queries);
+            console.log('🚀 ~ TaskService ~ job ~ res:', res);
+
+            res.forEach((item, index) => {
+                if (item.status === 'rejected') return;
+
+                const contract = contracts[index];
+
+                createNotificationQueue({
+                    body: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1} cho hợp đồng **${
+                        contract.contractId
+                    }**`,
+                    title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
+                    type: 'RENTER_PAYMENT',
+                    docId: contract.contractId,
+                    to: contract.renterId,
+                })
+                    .then(() => console.log('Notification sent to renter'))
+                    .catch((err) => console.log('Notification error', err));
+            });
 
             console.log('task.service::Monthly rent task executed');
         });
@@ -81,15 +96,16 @@ class TaskService {
 
                 const isRejected = res.value.request.status === 'REJECTED';
 
-                if (isRejected) return;
+                const request = res.value.request as ContractCancellationRequest;
 
-                createNotificationQueue({
-                    body: `Yêu cầu hủy hợp đồng của bạn đã bị từ chối`,
-                    title: `Yêu cầu hủy hợp đồng đã bị từ chối`,
-                    type: 'RENTER_CONTRACT',
-                    docId: res.value.request.contractId,
-                    to: res.value.request.requestedBy,
-                });
+                if (isRejected)
+                    createNotificationQueue({
+                        body: `Yêu cầu hủy hợp đồng của bạn đã bị từ chối`,
+                        title: `Yêu cầu hủy hợp đồng đã bị từ chối`,
+                        type: 'RENTER_CONTRACT',
+                        docId: request.contractId,
+                        to: request.requestedBy,
+                    });
             });
 
             console.log('task.service::Reject contract cancel request task finished');
@@ -135,6 +151,36 @@ class TaskService {
         job.start();
     };
 
+    private handleOverdueTransactionTask = () => {
+        // const job = new CronJob('0 5 0 * * *', async () => {
+        const job = new CronJob('0 14 20 * * *', async () => {
+            // run at 00:10:16
+            console.log('task.service::Overdue transaction task executed');
+
+            const transactions = await getOverdueTransactions();
+            console.log('🚀 ~ job ~ transactions:', transactions);
+
+            const queries = transactions.map((transaction) => {
+                if (transaction.type === 'DEPOSIT')
+                    return cancelContractBeforeDepositService({
+                        userId: transaction.fromId!,
+                        contractId: transaction.contractId,
+                        isOverdue: true,
+                    });
+
+                return endContractWhenOverdueService(transaction.contractId);
+            });
+
+            const res = await Promise.allSettled(queries);
+
+            console.log('handleOverdueTransactionTask::res', JSON.stringify(res));
+
+            console.log('task.service::Overdue transaction task finished');
+        });
+
+        job.start();
+    };
+
     // TODO: Overdue deposit, rent
     // TODO: End contract
 
@@ -142,6 +188,7 @@ class TaskService {
         this.createMonthlyRentTask();
         this.handleOverdueContractCancelRequestTask();
         this.handleEndContractByRequestTask();
+        this.handleOverdueTransactionTask();
     };
 }
 

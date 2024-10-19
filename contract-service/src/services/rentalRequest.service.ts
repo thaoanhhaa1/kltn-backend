@@ -44,7 +44,7 @@ export const createRentalRequestService = async ({ rentalEndDate, rentalStartDat
             400,
             `Bất động sản đã có hợp đồng trong thời gian ${convertDateToString(
                 new Date(contract.startDate),
-            )} - ${convertDateToString(new Date(contract.endDate))}`,
+            )} - ${convertDateToString(new Date(contract.endDateActual))}`,
         );
 
     const renterId = rest.renterId;
