@@ -132,3 +132,17 @@ export const getNotHandledCancelRequestByContractId = (contractId: IContractId) 
         },
     });
 };
+
+export const cancelRequestWhenEndContract = (contractId: IContractId) => {
+    return prisma.contractCancellationRequest.updateMany({
+        where: {
+            contractId,
+            status: {
+                in: ['PENDING', 'REJECTED'],
+            },
+        },
+        data: {
+            status: 'CANCELLED',
+        },
+    });
+};

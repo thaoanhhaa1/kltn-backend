@@ -42,6 +42,7 @@ export interface ICancelContract {
 export interface ICancelSmartContractBeforeDeposit {
     userId: IUserId;
     contractId: IContractId;
+    isOverdue?: boolean;
 }
 
 export interface ICancelContractBeforeDeposit {

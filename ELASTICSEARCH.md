@@ -112,3 +112,5 @@
 ## zero_terms_query
 
 -   The `zero_terms_query` parameter specifies what to do when the query string is empty. The default behavior is to return no documents.
+
+`sudo sysctl -w vm.max_map_count=262144`

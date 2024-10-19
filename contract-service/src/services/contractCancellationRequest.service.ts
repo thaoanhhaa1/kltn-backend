@@ -128,7 +128,7 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
         throw new CustomError(400, `Bạn không thể ${getTextByStatus(status)} yêu cầu của người khác`);
 
     if (['REJECTED', 'CONTINUE', 'APPROVED', 'UNILATERAL_CANCELLATION'].includes(status)) {
-        const [cancelRequest, contract] = await prisma.$transaction([
+        const queries = [
             updateCancelRequestStatus(requestId, status),
             updateStatusContract(
                 request.contractId,
@@ -136,8 +136,11 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
                     status,
                     isRented: !!isRented,
                 }),
+                ['APPROVED', 'UNILATERAL_CANCELLATION'].includes(status) ? request.cancelDate : undefined,
             ),
-        ]);
+        ];
+
+        const [cancelRequest, contract] = await prisma.$transaction(queries);
 
         if (
             (status === 'APPROVED' || status === 'UNILATERAL_CANCELLATION') &&

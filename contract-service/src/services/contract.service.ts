@@ -30,12 +30,13 @@ import {
     getContractInRange,
     getContractsByOwner,
     getContractsByRenter,
-    getContractTransactions as getContractTransactionsInRepo,
     payMonthlyRent as payMonthlyRentInRepo,
-    terminateForNonPayment as terminateForNonPaymentInRepo,
     updateStatusContract,
 } from '../repositories/contract.repository';
-import { getCancelRequestById } from '../repositories/contractCancellationRequest.repository';
+import {
+    cancelRequestWhenEndContract,
+    getCancelRequestById,
+} from '../repositories/contractCancellationRequest.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
 import { ownerUpdateRentalRequestStatus } from '../repositories/rentalRequest.repository';
 import {
@@ -370,17 +371,6 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
     }
 };
 
-// Hàm để lấy danh sách giao dịch của hợp đồng từ blockchain
-export const getContractTransactionsService = async (contractId: string, userId: IUserId): Promise<any[]> => {
-    try {
-        // Gọi phương thức repository để lấy danh sách giao dịch
-        return await getContractTransactionsInRepo(contractId, userId);
-    } catch (error) {
-        console.error('Error fetching contract transactions:', error);
-        throw new Error('Could not fetch contract transactions');
-    }
-};
-
 // Hàm để lấy chi tiết hợp đồng
 export const getContractDetailService = async (params: IGetContractDetail): Promise<any> => {
     try {
@@ -404,17 +394,6 @@ export const getContractDetailService = async (params: IGetContractDetail): Prom
     } catch (error) {
         console.error('Error fetching contract details:', error);
         throw new Error('Could not fetch contract details');
-    }
-};
-
-// Hàm để hủy hợp đồng do không thanh toán
-export const terminateForNonPaymentService = async (contractId: string, owner: string): Promise<PrismaContract> => {
-    try {
-        // Gọi phương thức repository để thực hiện hủy hợp đồng do không thanh toán
-        return await terminateForNonPaymentInRepo(contractId, owner);
-    } catch (error) {
-        console.error('Error terminating contract for non-payment:', error);
-        throw new Error('Could not terminate contract for non-payment');
     }
 };
 
@@ -466,7 +445,11 @@ export const getContractInRangeService = (params: IGetContractInRange) => {
     return getContractInRange(params);
 };
 
-export const cancelContractBeforeDepositService = async ({ contractId, userId }: ICancelSmartContractBeforeDeposit) => {
+export const cancelContractBeforeDepositService = async ({
+    contractId,
+    userId,
+    isOverdue,
+}: ICancelSmartContractBeforeDeposit) => {
     try {
         const [contract, user] = await Promise.all([findContractById(contractId), findUserById(userId)]);
 
@@ -503,6 +486,30 @@ export const cancelContractBeforeDepositService = async ({ contractId, userId }:
             )
             .then(() => console.log('Transaction cancelled'))
             .catch((error) => console.error('Error creating transaction:', error));
+
+        if (isOverdue) {
+            // Send notification to owner
+            createNotificationQueue({
+                body: `Hợp đồng **${contract.contractId}** đã bị hủy do quá hạn đặt cọc`,
+                title: 'Hợp đồng bị hủy',
+                type: 'OWNER_CONTRACT',
+                docId: contract.contractId,
+                to: contract.ownerId,
+            }).catch((error) => {
+                console.error('Error sending notification:', error);
+            });
+
+            // Send notification to renter
+            createNotificationQueue({
+                body: `Hợp đồng **${contract.contractId}** đã bị hủy do quá hạn đặt cọc`,
+                title: 'Hợp đồng bị hủy',
+                type: 'RENTER_CONTRACT',
+                docId: contract.contractId,
+                to: contract.renterId,
+            }).catch((error) => {
+                console.error('Error sending notification:', error);
+            });
+        }
 
         return cancelContractBeforeDeposit({
             contractId,
@@ -608,4 +615,89 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
 
 export const getContractByIdService = (params: { contractId: string; userId: string }) => {
     return getContractById(params);
+};
+
+export const endContractWhenOverdueService = async (contractId: string) => {
+    try {
+        const contract = await getContractById({ contractId });
+
+        if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
+        if (!contract.renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+
+        const [{ receipt }, ethVnd] = await Promise.all([
+            cancelSmartContractByRenterService({
+                contractId,
+                userAddress: contract.renter.walletAddress,
+                notifyBefore30Days: false,
+            }),
+            getCoinPriceService(),
+        ]);
+
+        const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+        const fee = feeEth * ethVnd;
+
+        const [newContract] = await prisma.$transaction([
+            updateStatusContract(contractId, 'CANCELLED'),
+            updatePropertyStatus(contract.propertyId, 'ACTIVE'),
+            createTransaction({
+                amount: contract.depositAmount,
+                contractId: contract.contractId,
+                status: 'COMPLETED',
+                title: `Bồi thường tiền huỷ hợp đồng`,
+                description: `Bồi thường tiền huỷ hợp đồng **${contract.contractId}**`,
+                toId: contract.ownerId,
+                type: 'COMPENSATION',
+                amountEth: contract.depositAmount / ethVnd,
+                transactionHash: receipt.transactionHash,
+                fee,
+                feeEth,
+            }),
+            createTransaction({
+                title: 'Phí hủy hợp đồng',
+                amount: fee,
+                contractId: contractId,
+                status: 'COMPLETED',
+                type: 'CANCEL_CONTRACT',
+                amountEth: feeEth,
+                transactionHash: receipt.transactionHash,
+                description: `Thanh toán phí hủy hợp đồng **${contractId}**`,
+                fromId: contract.renterId,
+            }),
+            cancelTransactions([contractId]),
+            cancelRequestWhenEndContract(contractId),
+        ]);
+
+        createNotificationQueue({
+            title: 'Hợp đồng bị hủy',
+            body: `Hợp đồng **${contract.contractId}** đã bị hủy do quá hạn thanh toán`,
+            type: 'OWNER_CONTRACT',
+            docId: contract.contractId,
+            to: contract.ownerId,
+        })
+            .then(() => console.log('Notification sent to owner'))
+            .catch((error) => console.error('Error sending notification:', error));
+
+        createNotificationQueue({
+            title: 'Hợp đồng bị hủy',
+            body: `Hợp đồng **${contract.contractId}** đã bị hủy do quá hạn thanh toán`,
+            type: 'RENTER_CONTRACT',
+            docId: contract.contractId,
+            to: contract.renterId,
+        })
+            .then(() => console.log('Notification sent to renter'))
+            .catch((error) => console.error('Error sending notification:', error));
+
+        RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+            data: {
+                propertyId: contract.propertyId,
+                status: PropertyStatus.ACTIVE,
+            },
+            type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+        });
+
+        return newContract;
+    } catch (error) {
+        console.error('Error ending contract when overdue:', error);
+        throw new Error('Could not end contract when overdue');
+    }
 };
