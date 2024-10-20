@@ -152,9 +152,7 @@ class TaskService {
     };
 
     private handleOverdueTransactionTask = () => {
-        // const job = new CronJob('0 5 0 * * *', async () => {
-        const job = new CronJob('0 14 20 * * *', async () => {
-            // run at 00:10:16
+        const job = new CronJob('0 5 0 * * *', async () => {
             console.log('task.service::Overdue transaction task executed');
 
             const transactions = await getOverdueTransactions();
