@@ -1,4 +1,6 @@
 import { Notification } from '@prisma/client';
+import RabbitMQ from '../configs/rabbitmq.config';
+import { INTERNAL_ESTATE_MANAGER_QUEUE } from '../constants/rabbitmq';
 import {
     ICountNewNotificationsByUserId,
     ICreateNotification,
@@ -19,8 +21,15 @@ import {
 } from '../repositories/notification.repository';
 import getPageInfo from '../utils/getPageInfo';
 
-export const createNotificationService = (params: ICreateNotification) => {
-    return createNotification(params);
+export const createNotificationService = async (params: ICreateNotification) => {
+    const res = await createNotification(params);
+
+    RabbitMQ.getInstance().sendToQueue(INTERNAL_ESTATE_MANAGER_QUEUE.name, {
+        type: INTERNAL_ESTATE_MANAGER_QUEUE.type.CREATE_NOTIFICATION,
+        data: res,
+    });
+
+    return res;
 };
 
 export const getNotificationsByUserIdService = async ({ pagination, userId, userTypes }: IGetNotificationsByUserId) => {

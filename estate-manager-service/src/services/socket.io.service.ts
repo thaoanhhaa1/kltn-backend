@@ -1,7 +1,7 @@
 import { UserBaseEmbed } from '@prisma/client';
 import { DefaultEventsMap, ExtendedError, Server, Socket } from 'socket.io';
 import RabbitMQ from '../configs/rabbitmq.config';
-import { CREATE_CHAT_QUEUE } from '../constants/rabbitmq';
+import { CREATE_CHAT_QUEUE, INTERNAL_ESTATE_MANAGER_QUEUE } from '../constants/rabbitmq';
 import { IBlockUser, ICreateChatReq, IReadConversation, IReceiveChatSocket } from '../interface/chat';
 import { IUserId } from '../interface/user';
 import { getUserBaseEmbedById } from '../repositories/user.repository';
@@ -95,6 +95,24 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
             console.log('🚀 ~ socket::disconnect ~ socket.id:', socket.id);
             delete socketIds[socket.id];
             delete users[socket.id];
+        });
+
+        RabbitMQ.getInstance().consumeQueue(INTERNAL_ESTATE_MANAGER_QUEUE.name, (msg) => {
+            console.log('🚀 ~ socket::consumeQueue ~ msg:', msg);
+
+            if (!msg) return;
+
+            const { data, type } = JSON.parse(msg.content.toString());
+
+            switch (type) {
+                case INTERNAL_ESTATE_MANAGER_QUEUE.type.CREATE_NOTIFICATION:
+                    const userId = data.to;
+
+                    userId && emitToUser(userId, 'create-notification', data);
+                    break;
+                default:
+                    break;
+            }
         });
     });
 };

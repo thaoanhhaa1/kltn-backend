@@ -33615,10 +33615,16 @@
       "links": {},
       "address": "0xA561862FDC885356c947099048BF628382e7b917",
       "transactionHash": "0xb56076e04af582339f9a4b3398832996f4d0c34a37928e9fa33eb76f418b0f7d"
+    },
+    "1729443828874": {
+      "events": {},
+      "links": {},
+      "address": "0xcd8807318d7cEb9e3714883c9915E756774a66B8",
+      "transactionHash": "0x289ba7c71451f9c80f8112e27843080eecb0a79c19cb68bfa8670c10ad414615"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-10-06T15:27:03.848Z",
+  "updatedAt": "2024-10-20T17:14:31.569Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",

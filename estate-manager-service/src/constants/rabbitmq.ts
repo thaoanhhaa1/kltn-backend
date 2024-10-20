@@ -64,3 +64,10 @@ export const CREATE_CHAT_QUEUE = {
         BLOCK_USER: 'BLOCK_USER',
     },
 };
+
+export const INTERNAL_ESTATE_MANAGER_QUEUE = {
+    name: 'internal-estate-manager-queue',
+    type: {
+        CREATE_NOTIFICATION: 'CREATE_NOTIFICATION',
+    },
+};
