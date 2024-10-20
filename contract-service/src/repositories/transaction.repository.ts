@@ -161,3 +161,14 @@ export const getOverdueTransactions = () => {
         },
     });
 };
+
+export const updateEndDate = (id: number, endDate: Date) => {
+    return prisma.transaction.update({
+        where: {
+            id,
+        },
+        data: {
+            endDate,
+        },
+    });
+};

@@ -1,7 +1,7 @@
 import { UserBaseEmbed } from '@prisma/client';
 import { DefaultEventsMap, ExtendedError, Server, Socket } from 'socket.io';
 import RabbitMQ from '../configs/rabbitmq.config';
-import { CREATE_CHAT_QUEUE } from '../constants/rabbitmq';
+import { CREATE_CHAT_QUEUE, INTERNAL_ESTATE_MANAGER_QUEUE } from '../constants/rabbitmq';
 import { IBlockUser, ICreateChatReq, IReadConversation, IReceiveChatSocket } from '../interface/chat';
 import { IUserId } from '../interface/user';
 import { getUserBaseEmbedById } from '../repositories/user.repository';
@@ -30,6 +30,12 @@ const users: {
 } = {};
 
 const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) => {
+    const emitToUser = (userId: string, event: string, data: any) => {
+        Object.keys(socketIds).forEach((key) => {
+            if (socketIds[key] === userId) socketId.to(key).emit(event, data);
+        });
+    };
+
     socketId.on('connection', (socket: Socket) => {
         socket.on('online', (userId: IUserId) => {
             console.log('🚀 ~ socket::online ~ userId:', userId);
@@ -44,15 +50,13 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
         });
 
         socket.on('receive-message', (data: IReceiveChatSocket) => {
-            const receiverSocketId = Object.keys(socketIds).find((key) => socketIds[key] === data.receiver.userId);
-
             const dataQueue: ICreateChatReq = {
                 ...data,
                 createdAt: new Date(data.createdAt),
                 conversationId: createChatConversation(data.sender.userId, data.receiver.userId),
             };
 
-            if (receiverSocketId) socketId.to(receiverSocketId).emit('send-message', dataQueue);
+            if (data.receiver.userId) emitToUser(data.receiver.userId, 'send-message', dataQueue);
             socketId.to(socket.id).emit('send-message', dataQueue);
 
             RabbitMQ.getInstance().sendToQueue(CREATE_CHAT_QUEUE.name, {
@@ -67,9 +71,7 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
                 data,
             });
 
-            const otherSocketId = Object.keys(socketIds).find((key) => socketIds[key] === data.userId);
-
-            if (otherSocketId) socketId.to(otherSocketId).emit('read-conversation', data);
+            emitToUser(data.userId, 'read-conversation', data);
         });
 
         socket.on('blocked', ({ conversationId, blocker }: IBlockUser) => {
@@ -93,6 +95,24 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
             console.log('🚀 ~ socket::disconnect ~ socket.id:', socket.id);
             delete socketIds[socket.id];
             delete users[socket.id];
+        });
+
+        RabbitMQ.getInstance().consumeQueue(INTERNAL_ESTATE_MANAGER_QUEUE.name, (msg) => {
+            console.log('🚀 ~ socket::consumeQueue ~ msg:', msg);
+
+            if (!msg) return;
+
+            const { data, type } = JSON.parse(msg.content.toString());
+
+            switch (type) {
+                case INTERNAL_ESTATE_MANAGER_QUEUE.type.CREATE_NOTIFICATION:
+                    const userId = data.to;
+
+                    userId && emitToUser(userId, 'create-notification', data);
+                    break;
+                default:
+                    break;
+            }
         });
     });
 };

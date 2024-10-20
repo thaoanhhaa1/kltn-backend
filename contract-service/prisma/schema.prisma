@@ -199,3 +199,30 @@ model ContractCancellationRequest {
 
   @@map("`contract_cancellation_requests`")
 }
+
+enum ContractExtensionRequestType {
+  EXTEND_CONTRACT
+  EXTEND_PAYMENT
+}
+
+enum ContractExtensionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ContractExtensionRequest {
+  id            Int                            @id @default(autoincrement())
+  contractId    String                         @map("contract_id")
+  transactionId Int?                           @map("transaction_id")
+  type          ContractExtensionRequestType   @map("type")
+  status        ContractExtensionRequestStatus @default(PENDING)
+  date          DateTime                       @map("date")
+  extensionDate DateTime                       @map("extension_date")
+  reason        String?                        @map("reason")
+  createdAt     DateTime                       @default(now()) @map("created_at")
+  updatedAt     DateTime                       @updatedAt @map("updated_at")
+
+  @@map("`contract_extension_requests`")
+}

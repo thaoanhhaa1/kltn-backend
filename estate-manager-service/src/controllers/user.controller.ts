@@ -85,7 +85,16 @@ export const getMyInfo = async (req: Request, res: Response, next: NextFunction)
 
         const { email } = reqAuth.user!;
 
+        const userRedis = await Redis.getInstance().getClient().get(`user:${email}`);
+        console.log('🚀 ~ getMyInfo ~ userRedis:', userRedis);
+
+        if (userRedis) return res.json(userRedis);
+
         const user = await getMyInfoService(email);
+
+        await Redis.getInstance().getClient().set(`user:${email}`, JSON.stringify(user), {
+            type: 'string',
+        });
 
         res.json(user);
     } catch (error) {
@@ -144,6 +153,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
                 type: USER_QUEUE.type.UPDATED,
             },
         });
+        Redis.getInstance().getClient().del(`user:${reqAuth.user!.email}`);
 
         res.json(updatedUser);
     } catch (error) {
@@ -233,6 +243,7 @@ export const updateWalletAddress = async (req: Request, res: Response, next: Nex
                 type: USER_QUEUE.type.UPDATED,
             },
         });
+        Redis.getInstance().getClient().del(`user:${reqAuth.user!.email}`);
 
         const response: ResponseType = {
             message: 'Địa chỉ ví đã được cập nhật',
@@ -290,6 +301,16 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
         };
 
         const result = await verifyUserService(userId, userData);
+
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: USER_QUEUE.exchange,
+            name: USER_QUEUE.name,
+            message: {
+                data: result,
+                type: USER_QUEUE.type.UPDATED,
+            },
+        });
+        Redis.getInstance().getClient().del(`user:${req.user!.email}`);
 
         res.json(result);
     } catch (error) {

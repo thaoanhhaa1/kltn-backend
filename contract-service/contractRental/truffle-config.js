@@ -72,7 +72,7 @@ module.exports = {
         },
         staging: {
             host: '103.252.136.170',
-            port: 8545,
+            port: 9999,
             network_id: '*',
             // Custom out directory
             outDir: './build/contracts/staging',
