@@ -159,12 +159,12 @@ export const countFavoritePropertyInteractions = async (
         const userId = req.user!.id;
 
         if (!req.user?.userTypes.includes('renter'))
-            return {
+            return res.json({
                 message: 'Số lượng bất động sản yêu thích',
                 statusCode: 200,
                 success: true,
                 data: 0,
-            };
+            });
 
         const count = await countFavoritePropertyInteractionsService(userId);
 

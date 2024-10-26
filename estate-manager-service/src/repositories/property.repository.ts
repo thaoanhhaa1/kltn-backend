@@ -242,7 +242,7 @@ export const getPropertyById = async (propertyId: string) => {
     });
 };
 
-export const deletePropertyById = async ({ ownerId, propertyId }: IDeleteProperty) => {
+export const deletePropertyById = ({ ownerId, propertyId }: IDeleteProperty) => {
     return prisma.property.update({
         where: {
             propertyId,

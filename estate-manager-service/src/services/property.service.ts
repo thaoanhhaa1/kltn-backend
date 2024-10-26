@@ -30,6 +30,7 @@ import {
     updateProperty,
     updatePropertyStatus,
 } from '../repositories/property.repository';
+import { softDeleteByPropertyId, softDeleteByPropertyIds } from '../repositories/propertyInteraction.repository';
 import { addRejectReason } from '../repositories/rejectReason.repository';
 import { findUserById } from '../repositories/user.repository';
 import { ResponseError } from '../types/error.type';
@@ -133,18 +134,22 @@ export const deletePropertyService = async (deleteProperty: IDeleteProperty) => 
             success: true,
         };
 
+        softDeleteByPropertyId(deleteProperty.propertyId).then(() => console.log('Soft delete property interactions'));
+
         return response;
     }
 
     throw new CustomError(404, 'Property not found');
 };
 
-export const updatePropertyService = async (property_id: string, property: IUpdateProperty) => {
-    const res = await updateProperty(property_id, property);
+export const updatePropertyService = async (propertyId: string, property: IUpdateProperty) => {
+    const res = await updateProperty(propertyId, property);
 
-    if (res) return convertToDTO(res);
+    if (!res) throw new CustomError(404, 'Property not found');
 
-    throw new CustomError(404, 'Property not found');
+    softDeleteByPropertyId(propertyId).then(() => console.log('Soft delete property interactions'));
+
+    return convertToDTO(res);
 };
 
 export const updatePropertyStatusService = async (params: IUpdatePropertyStatus) => {
@@ -162,12 +167,15 @@ export const updatePropertiesStatusService = async (params: IUpdatePropertiesSta
         if (params.reason && params.status === 'REJECTED')
             queries.push(
                 addRejectReason({
-                    property_ids: params.properties,
+                    propertyIds: params.properties,
                     reason: params.reason,
                 }),
             );
 
         const [res] = await prisma.$transaction(queries);
+
+        if (['INACTIVE', 'REJECTED'].includes(params.status))
+            softDeleteByPropertyIds(params.properties).then(() => console.log('Soft delete property interactions'));
 
         if (res.count) {
             const properties = await getPropertiesDetailByIds(params);
