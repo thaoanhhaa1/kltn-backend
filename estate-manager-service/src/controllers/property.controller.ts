@@ -114,6 +114,7 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
             ...req.body,
             images: imageUrls,
             ...(typeof req.body.conditions === 'string' && { conditions: JSON.parse(req.body.conditions) }),
+            ...(typeof req.body.type === 'string' && { type: JSON.parse(req.body.type) }),
         });
 
         if (!safePare.success)
@@ -171,7 +172,7 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
             .then(() => console.log('Notification created'))
             .catch((err) => console.error('Notification error:', err));
 
-        res.status(201).json(property);
+        res.status(200).json(property);
     } catch (error) {
         next(error);
     }
@@ -596,7 +597,7 @@ export const deleteProperty = async (req: AuthenticatedRequest, res: Response, n
         const userId = req.user!.id;
         const userTypes = req.user!.userTypes as UserType[];
 
-        if (!propertyId) throw new CustomError(400, 'Property id is required');
+        if (!propertyId) throw new CustomError(400, 'Mã bất động sản không hợp lệ');
 
         const response = await deletePropertyService({
             propertyId: propertyId,

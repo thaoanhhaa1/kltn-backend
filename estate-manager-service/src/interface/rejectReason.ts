@@ -1,4 +1,4 @@
 export interface ICreateRejectReason {
-    property_ids: string[];
+    propertyIds: string[];
     reason: string;
 }

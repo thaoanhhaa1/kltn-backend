@@ -1,4 +1,6 @@
+import { PropertyInteractionEmbed } from '@prisma/client';
 import { IPagination } from '../interface/pagination';
+import { IPropertyId } from '../interface/property';
 import {
     IPropertyInteractionDeleteReq,
     IPropertyInteractionReq,
@@ -120,7 +122,51 @@ export const softDeletePropertyInteraction = async ({
 
 export const deletePropertyInteraction = async ({
     interactionId,
-    userId,
 }: IPropertyInteractionDeleteReq): Promise<IPropertyInteractionRes> => {
-    return prisma.userPropertyInteraction.delete({ where: { interactionId, userId } });
+    return prisma.userPropertyInteraction.delete({ where: { interactionId } });
+};
+
+export const softDeleteByPropertyId = (propertyId: string) => {
+    return prisma.userPropertyInteraction.updateMany({
+        where: {
+            property: {
+                is: {
+                    propertyId,
+                },
+            },
+        },
+        data: {
+            deleted: true,
+        },
+    });
+};
+
+export const softDeleteByPropertyIds = (propertyIds: string[]) => {
+    return prisma.userPropertyInteraction.updateMany({
+        where: {
+            property: {
+                is: {
+                    propertyId: {
+                        in: propertyIds,
+                    },
+                },
+            },
+        },
+        data: {
+            deleted: true,
+        },
+    });
+};
+
+export const updateProperty = (propertyId: IPropertyId, data: PropertyInteractionEmbed) => {
+    return prisma.userPropertyInteraction.updateMany({
+        where: {
+            property: {
+                is: {
+                    propertyId,
+                },
+            },
+        },
+        data,
+    });
 };

@@ -1,4 +1,4 @@
-import { UserPropertyInteraction } from '@prisma/client';
+import { PropertyInteractionEmbed, UserPropertyInteraction } from '@prisma/client';
 import { IPagination, IPaginationResponse } from '../interface/pagination';
 import {
     IPropertyInteractionDeleteReq,
@@ -19,6 +19,7 @@ import {
     getFavoritePropertyInteractions,
     getPropertyInteractionById,
     softDeletePropertyInteraction,
+    updateProperty,
     updatePropertyInteraction,
 } from '../repositories/propertyInteraction.repository';
 import CustomError from '../utils/error.util';
@@ -100,4 +101,8 @@ export const countFavoritePropertyInteractionsService = (userId: IUserId) => {
 
 export const getFavoritePropertyInteractionBySlugService = (userId: IUserId, slug: string) => {
     return getFavoritePropertyInteractionBySlug(userId, slug);
+};
+
+export const updatePropertyEmbedService = async (property: PropertyInteractionEmbed) => {
+    return updateProperty(property.propertyId, property);
 };
