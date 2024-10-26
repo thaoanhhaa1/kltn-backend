@@ -1,7 +1,9 @@
 import { v4 } from 'uuid';
+import elasticClient from '../configs/elastic.config';
 import { DeleteReviewService, UpdateReview } from '../interface/review';
 import { IUserId } from '../interface/user';
-import { getPropertyById } from '../repositories/property.repository';
+import { createNotification } from '../repositories/notification.repository';
+import { getPropertyById, getRating, updateRating } from '../repositories/property.repository';
 import {
     createReview,
     deleteReplyReviewById,
@@ -14,7 +16,30 @@ import {
 } from '../repositories/review.repository';
 import { CreateReviewRequest } from '../schemas/review.schema';
 import CustomError from '../utils/error.util';
+import { IUpdateRating } from './../interface/property';
 import { getContractByIdService } from './contract.service';
+
+const updateRatingPromise = ({ count, propertyId, rating }: IUpdateRating) =>
+    Promise.all([
+        updateRating({
+            propertyId,
+            rating,
+            count,
+        }),
+        elasticClient.updateByQuery({
+            index: 'properties',
+            body: {
+                script: {
+                    source: `ctx._source.rating = ${rating}; ctx._source.ratingCount = ${count}`,
+                },
+                query: {
+                    term: {
+                        _id: propertyId,
+                    },
+                },
+            },
+        }),
+    ]);
 
 export const createReviewService = async (userId: IUserId, review: CreateReviewRequest) => {
     const [property, contract, reviewFind] = await Promise.all([
@@ -35,19 +60,19 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
     if (!reviewFind && contract.owner.userId === userId)
         throw new CustomError(400, 'Chỉ người thuê mới có thể đánh giá');
 
+    let result;
+
     if (reviewFind) {
-        const reply = await replyReview(reviewFind.id, {
+        result = await replyReview(reviewFind.id, {
             content: review.content,
             medias: review.medias,
             rating: review.rating,
             id: v4(),
             userId,
         });
-
-        return reply;
     }
 
-    const reviewResult = await createReview({
+    result = await createReview({
         ...review,
         slug: property.slug,
         renter: {
@@ -62,7 +87,35 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
         },
     });
 
-    return reviewResult;
+    getRating(review.propertyId)
+        .then((property) => {
+            if (!property) return;
+
+            const count = property.ratingCount || 0;
+            const newRating = (property.rating * count + review.rating) / (count + 1);
+            const newRatingCount = count + 1;
+
+            return updateRatingPromise({
+                count: newRatingCount,
+                propertyId: review.propertyId,
+                rating: newRating,
+            });
+        })
+        .then(() => console.log('Update rating success'))
+        .catch((err) => console.log(err));
+
+    createNotification({
+        title: 'Đánh giá mới',
+        body: `Bạn vừa nhận được một đánh giá mới từ **${contract.renter.name}** cho hợp đồng **${contract.contractId}**`,
+        type: 'REVIEW',
+        docId: result.contractId,
+        from: userId,
+        to: property.owner.userId === userId ? contract.renter.userId : property.owner.userId,
+    })
+        .then(() => console.log('Create notification success'))
+        .catch((err) => console.log(err));
+
+    return result;
 };
 
 export const getReviewByIdService = async () => {};
@@ -103,5 +156,24 @@ export const updateReviewByIdService = async ({ data, id, userId, replyId }: Upd
 export const deleteReviewByIdService = async ({ id, userId, replyId }: DeleteReviewService) => {
     if (replyId) return deleteReplyReviewById({ id, replyId, userId });
 
-    return deleteReviewById({ id, userId });
+    const result = await deleteReviewById({ id, userId });
+
+    getRating(result.propertyId)
+        .then((property) => {
+            if (!property) return;
+
+            const count = property.ratingCount || 0;
+            const newRating = count === 1 ? 0 : (property.rating * count - result.rating) / (count - 1);
+            const newRatingCount = count - 1;
+
+            return updateRatingPromise({
+                count: newRatingCount,
+                propertyId: result.propertyId,
+                rating: newRating,
+            });
+        })
+        .then(() => console.log('Update rating success'))
+        .catch((err) => console.log(err));
+
+    return result;
 };

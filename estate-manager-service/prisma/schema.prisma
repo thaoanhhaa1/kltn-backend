@@ -136,6 +136,8 @@ model Property {
   status           PropertyStatus      @default(PENDING)
   rentalConditions RentalCondition[]
   attributes       PropertyAttribute[]
+  rating           Float               @default(0)
+  ratingCount      Int                 @default(0)
 
   @@map("properties")
 }

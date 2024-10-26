@@ -10,6 +10,7 @@ import {
     IUpdatePropertiesStatus,
     IUpdateProperty,
     IUpdatePropertyStatus,
+    IUpdateRating,
 } from '../interface/property';
 import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
@@ -413,6 +414,30 @@ export const updateUserInfoInProperty = ({ userId, ...rest }: Omit<UserPropertyE
                     ...rest,
                 },
             },
+        },
+    });
+};
+
+export const getRating = (propertyId: IPropertyId) => {
+    return prisma.property.findUnique({
+        where: {
+            propertyId,
+        },
+        select: {
+            rating: true,
+            ratingCount: true,
+        },
+    });
+};
+
+export const updateRating = ({ count, propertyId, rating }: IUpdateRating) => {
+    return prisma.property.update({
+        where: {
+            propertyId,
+        },
+        data: {
+            rating,
+            ratingCount: count,
         },
     });
 };
