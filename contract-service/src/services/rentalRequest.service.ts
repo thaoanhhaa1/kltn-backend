@@ -33,11 +33,20 @@ import { findUserDetailByUserIdService } from './user.service';
 export const createRentalRequestService = async ({ rentalEndDate, rentalStartDate, ...rest }: ICreateRentalRequest) => {
     console.log("Here's the rentalEndDate:", rentalEndDate);
 
-    const contract = await getContractInRange({
-        propertyId: rest.propertyId,
-        rentalEndDate: convertDateToDB(rentalEndDate),
-        rentalStartDate: convertDateToDB(rentalStartDate),
-    });
+    const renterId = rest.renterId;
+
+    const [isConnect, userDetail, contract] = await Promise.all([
+        isConnectToWallet(renterId),
+        findUserDetailByUserIdService(renterId),
+        getContractInRange({
+            propertyId: rest.propertyId,
+            rentalEndDate: convertDateToDB(rentalEndDate),
+            rentalStartDate: convertDateToDB(rentalStartDate),
+        }),
+    ]);
+
+    if (!isConnect) throw new CustomError(400, 'Tài khoản chưa kết nối ví điện tử');
+    if (!userDetail) throw new CustomError(400, 'Tài khoản chưa xác thực thông tin');
 
     if (contract)
         throw new CustomError(
@@ -46,16 +55,6 @@ export const createRentalRequestService = async ({ rentalEndDate, rentalStartDat
                 new Date(contract.startDate),
             )} - ${convertDateToString(new Date(contract.endDateActual))}`,
         );
-
-    const renterId = rest.renterId;
-
-    const [isConnect, userDetail] = await Promise.all([
-        isConnectToWallet(renterId),
-        findUserDetailByUserIdService(renterId),
-    ]);
-
-    if (!isConnect) throw new CustomError(400, 'Tài khoản chưa kết nối ví điện tử');
-    if (!userDetail) throw new CustomError(400, 'Tài khoản chưa xác thực thông tin');
 
     return createRentalRequest({
         ...rest,

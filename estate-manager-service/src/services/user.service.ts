@@ -5,7 +5,7 @@ import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyRequest } fro
 import prisma from '../prisma/prismaClient';
 import { updateUserInfoInConversation } from '../repositories/conversation.repository';
 import { updateUserInfoInProperty } from '../repositories/property.repository';
-import { updateUserInfoInReview } from '../repositories/review.repository';
+import { updateOwnerInfoInReview, updateUserInfoInReview } from '../repositories/review.repository';
 import {
     countUsers,
     findPassword,
@@ -70,6 +70,7 @@ export const updateUserService = async (userId: IUserId, user: IUpdateUserParams
         updateUserInfoInConversation(userBaseEmbed),
         updateUserInfoInProperty(userPropertyEmbed),
         updateUserInfoInReview(userBaseEmbed),
+        updateOwnerInfoInReview(userBaseEmbed),
     ]);
 
     return userUpdated;

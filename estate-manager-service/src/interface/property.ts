@@ -56,3 +56,9 @@ export interface IOwnerFilterProperties {
     district?: Address['district'];
     ward?: Address['ward'];
 }
+
+export interface IUpdateRating {
+    propertyId: IPropertyId;
+    rating: number;
+    count: number;
+}

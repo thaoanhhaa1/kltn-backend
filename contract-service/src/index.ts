@@ -5,7 +5,7 @@ import RabbitMQ from './configs/rabbitmq.config';
 import { PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE, USER_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
 import routes from './routes';
-import { getContractInRangeService } from './services/contract.service';
+import { getContractByIdService, getContractInRangeService } from './services/contract.service';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
 import TaskService from './services/task.service';
 import { createUserService, updateUserService } from './services/user.service';
@@ -109,10 +109,16 @@ rabbitMQ.receiveSyncMessage({
         const { type, data } = JSON.parse(message);
 
         switch (type) {
-            case SYNC_MESSAGE_QUEUE.type.GET_CONTRACT_IN_RANGE:
+            case SYNC_MESSAGE_QUEUE.type.GET_CONTRACT_IN_RANGE: {
                 const contract = await getContractInRangeService(data);
 
                 return contract;
+            }
+            case SYNC_MESSAGE_QUEUE.type.GET_CONTRACT_BY_ID: {
+                const contract = await getContractByIdService(data);
+
+                return contract;
+            }
         }
     },
 });
