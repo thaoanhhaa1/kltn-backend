@@ -136,7 +136,13 @@ export const deletePropertyInteraction = async (req: AuthenticatedRequest, res: 
 export const getFavoritePropertyInteractions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const interactions = await getFavoritePropertyInteractionsService(userId);
+        const take = req.query.take ? Number(req.query.take) : 10;
+        const skip = req.query.skip ? Number(req.query.skip) : 0;
+
+        const interactions = await getFavoritePropertyInteractionsService(userId, {
+            skip,
+            take,
+        });
 
         res.status(200).json(interactions);
     } catch (error) {

@@ -1,10 +1,11 @@
-import { IUserId } from '../interface/user';
+import { IPagination } from '../interface/pagination';
 import {
     IPropertyInteractionDeleteReq,
     IPropertyInteractionReq,
     IPropertyInteractionRes,
     IPropertyInteractionUpdateReq,
 } from '../interface/propertyInteraction';
+import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 
 export const createPropertyInteraction = async (
@@ -26,7 +27,22 @@ export const getPropertyInteractionById = async (interactionId: string): Promise
     return prisma.userPropertyInteraction.findUnique({ where: { interactionId, deleted: false } });
 };
 
-export const getFavoritePropertyInteractions = (userId: IUserId) => {
+export const getFavoritePropertyInteractions = (userId: IUserId, { skip, take }: IPagination) => {
+    return prisma.userPropertyInteraction.findMany({
+        where: {
+            userId,
+            interactionType: 'FAVORITED',
+            deleted: false,
+        },
+        orderBy: {
+            updatedAt: 'desc',
+        },
+        take,
+        skip,
+    });
+};
+
+export const getAllFavoritePropertyInteractions = (userId: IUserId) => {
     return prisma.userPropertyInteraction.findMany({
         where: {
             userId,

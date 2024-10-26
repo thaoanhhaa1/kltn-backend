@@ -221,6 +221,7 @@ type PropertyInteractionEmbed {
   rentalConditions RentalCondition[]
   address          Address
   owner            UserPropertyEmbed
+  createdAt        DateTime
 }
 
 type ReviewChildren {

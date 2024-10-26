@@ -378,6 +378,7 @@ export const getPropertyInteractionEmbedById = (propertyId: IPropertyId) => {
             address: true,
             owner: true,
             slug: true,
+            createdAt: true,
         },
     });
 };

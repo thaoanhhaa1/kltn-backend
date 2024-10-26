@@ -25,8 +25,8 @@ import {
     updatePropertyService,
 } from '../services/property.service';
 import {
+    getAllFavoritePropertyInteractionsService,
     getFavoritePropertyInteractionBySlugService,
-    getFavoritePropertyInteractionsService,
 } from '../services/propertyInteraction.service';
 import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
@@ -535,7 +535,7 @@ export const searchProperties = async (req: AuthenticatedRequest, res: Response,
 
         const userId = req.user?.id;
         if (userId) {
-            queries.push(getFavoritePropertyInteractionsService(userId));
+            queries.push(getAllFavoritePropertyInteractionsService(userId));
         } else {
             queries.push(Promise.resolve([]));
         }

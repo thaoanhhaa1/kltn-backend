@@ -1,3 +1,5 @@
+import { UserPropertyInteraction } from '@prisma/client';
+import { IPagination, IPaginationResponse } from '../interface/pagination';
 import {
     IPropertyInteractionDeleteReq,
     IPropertyInteractionInput,
@@ -10,6 +12,7 @@ import {
     countFavoritePropertyInteractions,
     createPropertyInteraction,
     deletePropertyInteraction,
+    getAllFavoritePropertyInteractions,
     getAllPropertyInteraction,
     getFavoritePropertyInteractionByPropertyId,
     getFavoritePropertyInteractionBySlug,
@@ -19,6 +22,7 @@ import {
     updatePropertyInteraction,
 } from '../repositories/propertyInteraction.repository';
 import CustomError from '../utils/error.util';
+import getPageInfo from '../utils/getPageInfo';
 
 export const createPropertyInteractionService = async ({
     propertyId,
@@ -69,8 +73,25 @@ export const deletePropertyInteractionService = async (
     return deletePropertyInteraction(params);
 };
 
-export const getFavoritePropertyInteractionsService = (userId: IUserId) => {
-    return getFavoritePropertyInteractions(userId);
+export const getAllFavoritePropertyInteractionsService = async (userId: IUserId) => {
+    return getAllFavoritePropertyInteractions(userId);
+};
+
+export const getFavoritePropertyInteractionsService = async (userId: IUserId, pagination: IPagination) => {
+    const [favorites, count] = await Promise.all([
+        getFavoritePropertyInteractions(userId, pagination),
+        countFavoritePropertyInteractions(userId),
+    ]);
+
+    const result: IPaginationResponse<UserPropertyInteraction> = {
+        data: favorites,
+        pageInfo: getPageInfo({
+            count,
+            ...pagination,
+        }),
+    };
+
+    return result;
 };
 
 export const countFavoritePropertyInteractionsService = (userId: IUserId) => {
