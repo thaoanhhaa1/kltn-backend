@@ -1,10 +1,11 @@
-import { IUserId } from '../interface/user';
+import { IPagination } from '../interface/pagination';
 import {
     IPropertyInteractionDeleteReq,
     IPropertyInteractionReq,
     IPropertyInteractionRes,
     IPropertyInteractionUpdateReq,
 } from '../interface/propertyInteraction';
+import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 
 export const createPropertyInteraction = async (
@@ -26,13 +27,75 @@ export const getPropertyInteractionById = async (interactionId: string): Promise
     return prisma.userPropertyInteraction.findUnique({ where: { interactionId, deleted: false } });
 };
 
+export const getFavoritePropertyInteractions = (userId: IUserId, { skip, take }: IPagination) => {
+    return prisma.userPropertyInteraction.findMany({
+        where: {
+            userId,
+            interactionType: 'FAVORITED',
+            deleted: false,
+        },
+        orderBy: {
+            updatedAt: 'desc',
+        },
+        take,
+        skip,
+    });
+};
+
+export const getAllFavoritePropertyInteractions = (userId: IUserId) => {
+    return prisma.userPropertyInteraction.findMany({
+        where: {
+            userId,
+            interactionType: 'FAVORITED',
+            deleted: false,
+        },
+    });
+};
+
+export const countFavoritePropertyInteractions = (userId: IUserId) => {
+    return prisma.userPropertyInteraction.count({
+        where: {
+            userId,
+            interactionType: 'FAVORITED',
+            deleted: false,
+        },
+    });
+};
+
+export const getFavoritePropertyInteractionBySlug = (userId: IUserId, slug: string) => {
+    return prisma.userPropertyInteraction.findFirst({
+        where: {
+            userId,
+            interactionType: 'FAVORITED',
+            deleted: false,
+            property: {
+                is: {
+                    slug,
+                },
+            },
+        },
+    });
+};
+
+export const getFavoritePropertyInteractionByPropertyId = (userId: IUserId, propertyId: string) => {
+    return prisma.userPropertyInteraction.findFirst({
+        where: {
+            userId,
+            deleted: false,
+            property: {
+                is: {
+                    propertyId,
+                },
+            },
+        },
+    });
+};
+
 export const updatePropertyInteraction = async ({
     userId,
     interactionType,
     interactionId,
-}: IPropertyInteractionUpdateReq): Promise<IPropertyInteractionRes> => {
-    console.log(interactionId, userId);
-
+}: IPropertyInteractionUpdateReq) => {
     return prisma.userPropertyInteraction.update({
         where: { interactionId, userId },
         data: {

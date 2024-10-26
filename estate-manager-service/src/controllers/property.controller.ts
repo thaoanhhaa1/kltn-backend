@@ -1,5 +1,5 @@
-import { QueryDslQueryContainer, Sort } from '@elastic/elasticsearch/lib/api/types';
-import { PropertyStatus, UserType } from '@prisma/client';
+import { QueryDslQueryContainer, SearchResponse, Sort } from '@elastic/elasticsearch/lib/api/types';
+import { PropertyStatus, UserPropertyInteraction, UserType } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import elasticClient from '../configs/elastic.config';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -24,6 +24,10 @@ import {
     updatePropertiesStatusService,
     updatePropertyService,
 } from '../services/property.service';
+import {
+    getAllFavoritePropertyInteractionsService,
+    getFavoritePropertyInteractionBySlugService,
+} from '../services/propertyInteraction.service';
 import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError, { EntryError } from '../utils/error.util';
@@ -255,7 +259,7 @@ export const getNotDeletedPropertiesByOwnerId = async (
     }
 };
 
-export const getPropertyBySlug = async (req: Request, res: Response, next: NextFunction) => {
+export const getPropertyBySlug = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { slug } = req.params;
 
@@ -267,7 +271,19 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: NextF
             return;
         }
 
-        const property = await getPropertyBySlugService(slug);
+        const queries = [];
+
+        queries.push(getPropertyBySlugService(slug));
+
+        const userId = req.user?.id;
+
+        if (userId) {
+            queries.push(getFavoritePropertyInteractionBySlugService(userId, slug));
+        } else {
+            queries.push(Promise.resolve({}));
+        }
+
+        const [property, interaction] = await Promise.all(queries);
         Redis.getInstance()
             .getClient()
             .set(KEY, property, {
@@ -275,13 +291,16 @@ export const getPropertyBySlug = async (req: Request, res: Response, next: NextF
             })
             .then(() => console.log('Property cached'));
 
-        res.status(200).json(property);
+        res.status(200).json({
+            ...property,
+            isFavorite: Boolean(interaction),
+        });
     } catch (error) {
         next(error);
     }
 };
 
-export const searchProperties = async (req: Request, res: Response, next: NextFunction) => {
+export const searchProperties = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const {
             q,
@@ -495,27 +514,55 @@ export const searchProperties = async (req: Request, res: Response, next: NextFu
             sortElastic = { createdAt: 'asc' };
         }
 
-        const result = await elasticClient.search({
-            index: 'properties',
-            body: {
-                query: {
-                    bool: {
-                        must,
-                        filter,
-                    },
-                },
-                sort: sortElastic,
-                size: Number(take),
-                from: Number(skip),
-            },
-        });
+        const queries = [];
 
-        const searchResult = result.hits.hits.map((item) => item._source);
+        queries.push(
+            elasticClient.search({
+                index: 'properties',
+                body: {
+                    query: {
+                        bool: {
+                            must,
+                            filter,
+                        },
+                    },
+                    sort: sortElastic,
+                    size: Number(take),
+                    from: Number(skip),
+                },
+            }),
+        );
+
+        const userId = req.user?.id;
+        if (userId) {
+            queries.push(getAllFavoritePropertyInteractionsService(userId));
+        } else {
+            queries.push(Promise.resolve([]));
+        }
+
+        const data: any[] = await Promise.all(queries);
+        console.log('🚀 ~ searchProperties ~ data:', data[1]);
+
+        const result: SearchResponse<any> = data[0];
+        const interactions: UserPropertyInteraction[] = data[1];
+
+        const searchResult = result.hits.hits.map((item) => {
+            const property: IResProperty = item._source as IResProperty;
+
+            const interaction = interactions.find(
+                (interaction: any) => interaction.property.propertyId === property.propertyId,
+            );
+
+            return {
+                ...property,
+                isFavorite: Boolean(interaction),
+            };
+        });
         const total = result.hits.total;
         const totalProperties = total ? (typeof total === 'number' ? total : total.value) : 0;
 
         const responseResult: IPaginationResponse<IResProperty> = {
-            data: searchResult as IResProperty[],
+            data: searchResult,
             pageInfo: getPageInfo({
                 count: totalProperties,
                 skip: Number(skip),
