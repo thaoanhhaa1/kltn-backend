@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import Redis from '../configs/redis.config';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
     createPropertyInteractionService,
@@ -7,8 +8,13 @@ import {
     softDeletePropertyInteractionService,
     updatePropertyInteractionService,
 } from '../services/propertyInteraction.service';
+import { ResponseType } from '../types/response.type';
 import CustomError from '../utils/error.util';
-import Redis from '../configs/redis.config';
+import {
+    countFavoritePropertyInteractionsService,
+    getFavoritePropertyInteractionBySlugService,
+    getFavoritePropertyInteractionsService,
+} from './../services/propertyInteraction.service';
 
 const REDIS_KEY = {
     PROPERTY: 'propertyInteractions:',
@@ -122,6 +128,67 @@ export const deletePropertyInteraction = async (req: AuthenticatedRequest, res: 
                 userId,
             }),
         );
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getFavoritePropertyInteractions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const interactions = await getFavoritePropertyInteractionsService(userId);
+
+        res.status(200).json(interactions);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countFavoritePropertyInteractions = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const userId = req.user!.id;
+
+        if (!req.user?.userTypes.includes('renter'))
+            return {
+                message: 'Số lượng bất động sản yêu thích',
+                statusCode: 200,
+                success: true,
+                data: 0,
+            };
+
+        const count = await countFavoritePropertyInteractionsService(userId);
+
+        const result: ResponseType = {
+            message: 'Số lượng bất động sản yêu thích',
+            statusCode: 200,
+            success: true,
+            data: count,
+        };
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getFavoritePropertyInteractionBySlug = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const userId = req.user!.id;
+        const { slug } = req.params;
+
+        const interaction = await getFavoritePropertyInteractionBySlugService(userId, slug);
+
+        if (!interaction) throw new CustomError(404, 'Không tìm thấy bất động sản');
+
+        res.status(200).json(interaction);
     } catch (error) {
         next(error);
     }

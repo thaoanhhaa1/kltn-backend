@@ -377,6 +377,25 @@ export const getPropertyInteractionEmbedById = (propertyId: IPropertyId) => {
             rentalConditions: true,
             address: true,
             owner: true,
+            slug: true,
+        },
+    });
+};
+
+export const getPropertyInteractionEmbedBySlug = (slug: string) => {
+    return prisma.property.findUnique({
+        where: {
+            slug,
+        },
+        select: {
+            propertyId: true,
+            title: true,
+            description: true,
+            images: true,
+            price: true,
+            rentalConditions: true,
+            address: true,
+            owner: true,
         },
     });
 };

@@ -1,3 +1,6 @@
 {
-    "prismaERDPreviewer.preferredTheme": "light"
+    "prismaERDPreviewer.preferredTheme": "light",
+    "cSpell.words": [
+        "FAVORITED"
+    ]
 }
