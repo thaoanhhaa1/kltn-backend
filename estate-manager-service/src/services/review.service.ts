@@ -70,22 +70,21 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
             id: v4(),
             userId,
         });
-    }
-
-    result = await createReview({
-        ...review,
-        slug: property.slug,
-        renter: {
-            userId,
-            name: contract.renter.name,
-            avatar: contract.renter.avatar,
-        },
-        owner: {
-            userId: property.owner.userId,
-            name: property.owner.name,
-            avatar: property.owner.avatar,
-        },
-    });
+    } else
+        result = await createReview({
+            ...review,
+            slug: property.slug,
+            renter: {
+                userId,
+                name: contract.renter.name,
+                avatar: contract.renter.avatar,
+            },
+            owner: {
+                userId: property.owner.userId,
+                name: property.owner.name,
+                avatar: property.owner.avatar,
+            },
+        });
 
     getRating(review.propertyId)
         .then((property) => {
