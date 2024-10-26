@@ -7,6 +7,7 @@ import property from './property.route';
 import propertyInteraction from './propertyInteraction.route';
 import propertyTypeRoute from './propertyType.route';
 import rentalRequest from './rentalRequest.route';
+import reviewRoute from './review.route';
 import userRoute from './user.route';
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.use('/property-interactions', propertyInteraction);
 router.use('/rental-requests', rentalRequest);
 router.use('/notifications', notificationRoute);
 router.use('/conversations', conversationRoute);
+router.use('/reviews', reviewRoute);
 
 export default router;

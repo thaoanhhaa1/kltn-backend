@@ -43,6 +43,7 @@ export const SYNC_MESSAGE_QUEUE = {
     name: 'sync-message-queue',
     type: {
         GET_CONTRACT_IN_RANGE: 'GET_CONTRACT_IN_RANGE',
+        GET_CONTRACT_BY_ID: 'GET_CONTRACT_BY_ID',
     },
 };
 

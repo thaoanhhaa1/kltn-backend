@@ -29,7 +29,7 @@ export const createRentalRequest = async (req: AuthenticatedRequest, res: Respon
         if (!safeParse.success) {
             throw convertZodIssueToEntryErrors({
                 issue: safeParse.error.issues,
-                message: 'Invalid rental request data',
+                message: 'Dữ liệu không hợp lệ',
                 status: 400,
             });
         }

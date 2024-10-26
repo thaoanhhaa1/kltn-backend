@@ -220,17 +220,30 @@ type PropertyInteractionEmbed {
   owner            UserPropertyEmbed
 }
 
+type ReviewChildren {
+  id        String
+  content   String?
+  rating    Int      @default(0)
+  medias    String[] @default([])
+  userId    String
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 model Review {
-  id         String        @id @default(auto()) @map("_id") @db.ObjectId
-  content    String
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  content    String?
   rating     Int
-  medias     String[]      @default([])
-  parentId   String?       @db.ObjectId
-  propertyId String        @db.ObjectId
-  user       UserBaseEmbed
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  deleted    Boolean       @default(false)
+  medias     String[]         @default([])
+  propertyId String
+  slug       String
+  contractId String
+  renter     UserBaseEmbed
+  owner      UserBaseEmbed
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  deleted    Boolean          @default(false)
+  children   ReviewChildren[]
 
   @@map("reviews")
 }
