@@ -18,6 +18,8 @@ const EnvSchema = z.object({
     KV_REST_API_TOKEN: z.string(),
     BIT_GET_API: z.string(),
     BIT_KAN_API: z.string(),
+    INFURA_API_KEY: z.string(),
+    CHAIN_ID: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -140,6 +140,15 @@ contract RentalContract {
         );
     }
 
+    function transferToAddress(address payable recipient, uint256 amount) public {
+        require(address(this).balance >= amount, unicode'Số dư không đủ để chuyển tiền');
+        recipient.transfer(amount);
+    }
+
+    function transferToSmartContract() public payable {
+        require(msg.value > 0, unicode'Số tiền chuyển phải lớn hơn 0');
+    }
+
     function contractualIndemnity(string memory _contractID) public payable onlyOwner(_contractID) {
         Contract storage contractInfo = contracts[_contractID];
 

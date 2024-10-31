@@ -14,11 +14,15 @@ import {
     updateCancelRequestStatus,
 } from '../repositories/contractCancellationRequest.repository';
 import { findByContractAndRented } from '../repositories/transaction.repository';
+import { findUserById } from '../repositories/user.repository';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
 import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
+import { convertGasToEthService, transferToSmartContractService } from './blockchain.service';
+import { getCoinPriceService } from './coingecko.service';
 import { endContractService } from './contract.service';
+import { createTransactionService } from './transaction.service';
 
 const getTextByStatus = (status: ContractCancellationRequestStatus) => {
     switch (status) {
@@ -88,7 +92,7 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
 
     if (!request) throw new CustomError(404, 'Yêu cầu huỷ hợp đồng không tồn tại');
 
-    const [contract, isRented] = await Promise.all([
+    const [contract, isRented, user] = await Promise.all([
         userId
             ? findContractByIdAndUser({
                   contractId: request.contractId,
@@ -96,6 +100,7 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
               })
             : findContractById(request.contractId),
         findByContractAndRented(request.contractId),
+        userId ? findUserById(userId) : Promise.resolve(null),
     ]);
 
     if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
@@ -119,6 +124,35 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
         if (request.status === 'REJECTED') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đã bị từ chối');
     } else if (status === 'UNILATERAL_CANCELLATION') {
         if (request.status === 'PENDING') throw new CustomError(400, 'Yêu cầu huỷ hợp đồng đang chờ xác nhận');
+        if (!user?.walletAddress) throw new CustomError(400, 'Người dùng chưa kết nối ví');
+
+        // is owner
+        if (request.requestedBy === contract.ownerId) {
+            const ethVnd = await getCoinPriceService();
+            const receipt = await transferToSmartContractService({
+                amount: contract.monthlyRent,
+                senderAddress: user.walletAddress,
+            });
+
+            const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+            const fee = feeEth * ethVnd;
+
+            createTransactionService({
+                amount: contract.monthlyRent,
+                contractId: contract.contractId,
+                status: 'COMPLETED',
+                title: 'Bồi thường tiền huỷ hợp đồng',
+                type: 'COMPENSATION',
+                amountEth: contract.monthlyRent / ethVnd,
+                description: `Bồi thường tiền huỷ hợp đồng cho hợp đồng **${contract.contractId}**`,
+                fee,
+                feeEth,
+                fromId: contract.ownerId,
+                transactionHash: receipt.transactionHash,
+            })
+                .then(() => console.log('Transaction created successfully'))
+                .catch((error) => console.error('Error creating transaction:', error));
+        }
     }
 
     const isByRequestOwner = request.requestedBy === userId;

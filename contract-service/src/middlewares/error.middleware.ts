@@ -6,7 +6,7 @@ const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunctio
     const statusCode = err.statusCode || err.response?.status || 500;
     const message = err.message || 'Internal Server Error';
 
-    sendMessageToTelegram(`Estate-manager-service::Error: ${message}`);
+    sendMessageToTelegram(`Contract-service::Error: ${JSON.stringify(err)}`);
 
     if (err instanceof EntryError)
         return res.status(statusCode).json({

@@ -1,6 +1,6 @@
 import { ContractCancellationRequest } from '@prisma/client';
 import { CronJob } from 'cron';
-import { getContractForRentTransaction } from '../repositories/contract.repository';
+import { getContractForRentTransaction, startedContract } from '../repositories/contract.repository';
 import {
     getCancelRequestOverdue,
     getRequestsCancelContract,
@@ -12,6 +12,7 @@ import {
     cancelContractBeforeDepositService,
     endContractService,
     endContractWhenOverdueService,
+    startRentService,
 } from './contract.service';
 import { updateStatusRequestService } from './contractCancellationRequest.service';
 import { createNotificationQueue } from './rabbitmq.service';
@@ -179,7 +180,23 @@ class TaskService {
         job.start();
     };
 
-    // TODO: Overdue deposit, rent
+    private startRentalTask = () => {
+        const job = new CronJob('0 0 0 * * *', async () => {
+            console.log('task.service::Start rental task executed');
+
+            const contracts = await startedContract();
+
+            const queries = contracts.map((contract) => startRentService(contract.contractId));
+
+            const res = await Promise.allSettled(queries);
+            console.log('🚀 ~ job ~ res:', res);
+
+            console.log('task.service::Start rental task finished');
+        });
+
+        job.start();
+    };
+
     // TODO: End contract
 
     public start = () => {
@@ -187,6 +204,7 @@ class TaskService {
         this.handleOverdueContractCancelRequestTask();
         this.handleEndContractByRequestTask();
         this.handleOverdueTransactionTask();
+        this.startRentalTask();
     };
 }
 

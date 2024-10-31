@@ -367,3 +367,15 @@ export const updateEndDateActual = (contractId: string, endDateActual: Date) => 
         },
     });
 };
+
+export const startedContract = () => {
+    return prisma.contract.findMany({
+        where: {
+            status: 'DEPOSITED',
+            deleted: false,
+            startDate: {
+                lte: new Date(),
+            },
+        },
+    });
+};
