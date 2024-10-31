@@ -161,7 +161,6 @@ model RejectReason {
   propertyId String
   reason     String
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
   @@map("rejectReasons")
 }
@@ -207,6 +206,7 @@ model UserPropertyInteraction {
   deleted         Boolean                  @default(false)
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
+  user            User                     @relation(fields: [userId], references: [userId])
 
   @@map("userPropertyInteractions")
 }
@@ -266,20 +266,22 @@ enum UserType {
 }
 
 model User {
-  userId              String          @id @default(auto()) @map("_id") @db.ObjectId
-  name                String
-  avatar              String?
-  email               String          @unique
-  password            String
-  phoneNumber         String?
-  userTypes           UserType[]
-  walletAddress       String?
-  status              UserStatus      @default(ACTIVE)
-  isVerified          Boolean         @default(false)
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  RenterRentalRequest RentalRequest[] @relation("RenterRentalRequest")
-  OwnerRentalRequest  RentalRequest[] @relation("OwnerRentalRequest")
+  userId                  String                    @id @default(auto()) @map("_id") @db.ObjectId
+  name                    String
+  avatar                  String?
+  email                   String                    @unique
+  password                String
+  phoneNumber             String?
+  userTypes               UserType[]
+  walletAddress           String?
+  status                  UserStatus                @default(ACTIVE)
+  isVerified              Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  RenterRentalRequest     RentalRequest[]           @relation("RenterRentalRequest")
+  OwnerRentalRequest      RentalRequest[]           @relation("OwnerRentalRequest")
+  userDetail              UserDetail?
+  UserPropertyInteraction UserPropertyInteraction[]
 
   @@map("users")
 }
@@ -295,6 +297,7 @@ model UserDetail {
   idCardBack  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [userId])
 
   @@map("userDetails")
 }

@@ -1,6 +1,40 @@
 import envConfig from '../configs/env.config';
 import Redis from '../configs/redis.config';
+import web3 from '../configs/web3.config';
 import CustomError from '../utils/error.util';
+
+export const getGasPriceInfuraService = async () => {
+    const gasPriceInRedis = await Redis.getInstance().getClient().get('gasPrice');
+    console.log('🚀 ~ getGasPriceInfuraService ~ gasPriceInRedis:', gasPriceInRedis);
+
+    if (gasPriceInRedis) return gasPriceInRedis;
+
+    const response = await fetch(
+        `https://gas.api.infura.io/v3/${envConfig.INFURA_API_KEY}/networks/${envConfig.CHAIN_ID}/suggestedGasFees`,
+    );
+
+    if (!response.ok) throw new CustomError(500, 'Error getGasPriceInfuraService');
+
+    const result = await response.json();
+
+    const gasPrice =
+        Number(result.medium.suggestedMaxFeePerGas) + Number(result.estimatedBaseFee) * result.networkCongestion; // gwei
+    console.log('🚀 ~ getGasPriceInfuraService ~ gasPrice:', gasPrice);
+
+    const gasPriceInWei = web3.utils.toWei(gasPrice.toString(), 'gwei');
+    console.log('🚀 ~ getGasPriceInfuraService ~ gasPriceInWei:', gasPriceInWei);
+
+    Redis.getInstance()
+        .getClient()
+        .set('gasPrice', gasPriceInWei, {
+            ex: 15, // 10 seconds
+            type: 'string',
+        })
+        .then(() => console.log('Gas price has been saved to Redis.'))
+        .catch((err: any) => console.error('Failed to save gas price to Redis.', err));
+
+    return gasPriceInWei;
+};
 
 const getETHFromBitGet = async () => {
     const response = await fetch(envConfig.BIT_GET_API, {

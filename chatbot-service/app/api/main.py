@@ -80,6 +80,8 @@ async def health_check():
     return {"status": "ok"}
 
 def property_callback(message):
+    print("Received message: ", message)
+
     data = message.decode("utf-8")
     data_dict = json.loads(data)
     type = data_dict["type"]

@@ -172,3 +172,14 @@ export const updateEndDate = (id: number, endDate: Date) => {
         },
     });
 };
+
+export const getCompensationTransaction = (contractId: IContractId) => {
+    return prisma.transaction.findFirst({
+        where: {
+            contractId,
+            type: 'COMPENSATION',
+            status: 'COMPLETED',
+            toId: null,
+        },
+    });
+};
