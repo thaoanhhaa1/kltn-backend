@@ -461,3 +461,29 @@ export const updateRating = ({ count, propertyId, rating }: IUpdateRating) => {
         },
     });
 };
+
+export const countPropertiesByUser = (userId: IUserId) => {
+    return prisma.property.count({
+        where: {
+            owner: {
+                is: {
+                    userId,
+                },
+            },
+            deleted: false,
+        },
+    });
+};
+
+export const countUnavailablePropertiesByUser = (userId: IUserId) => {
+    return prisma.property.count({
+        where: {
+            owner: {
+                is: {
+                    userId,
+                },
+            },
+            status: 'UNAVAILABLE',
+        },
+    });
+};

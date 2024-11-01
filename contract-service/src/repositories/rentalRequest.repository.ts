@@ -185,3 +185,12 @@ export const getRentalRequestAndPropertyById = (requestId: number) => {
         },
     });
 };
+
+export const countRentalRequestByUserId = (userId: IUserId) => {
+    return prisma.rentalRequest.count({
+        where: {
+            ownerId: userId,
+            status: 'PENDING',
+        },
+    });
+};

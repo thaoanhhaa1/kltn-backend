@@ -44,3 +44,19 @@ export interface IHistoryTransaction {
     description: string | null;
     updatedAt: Date;
 }
+
+export interface ICalcAvgRevenueByMonth {
+    month: number;
+    year: number;
+    userId: IUserId;
+}
+
+export interface IGetIncomeTransactionsByMonth {
+    month: number;
+    income: number;
+}
+
+export interface IGetExpenditureTransactionsByMonth {
+    month: number;
+    expenditure: number;
+}

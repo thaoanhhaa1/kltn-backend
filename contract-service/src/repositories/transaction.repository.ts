@@ -1,6 +1,13 @@
 import { IContractId } from '../interfaces/contract';
 import { IPagination } from '../interfaces/pagination';
-import { ICreateTransaction, IGetTransactionsByUserId, IPaymentTransaction } from '../interfaces/transaction';
+import {
+    ICalcAvgRevenueByMonth,
+    ICreateTransaction,
+    IGetExpenditureTransactionsByMonth,
+    IGetIncomeTransactionsByMonth,
+    IGetTransactionsByUserId,
+    IPaymentTransaction,
+} from '../interfaces/transaction';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 
@@ -182,4 +189,82 @@ export const getCompensationTransaction = (contractId: IContractId) => {
             toId: null,
         },
     });
+};
+
+export const calcAvgRevenueByMonth = ({ month, userId, year }: ICalcAvgRevenueByMonth) => {
+    return prisma.transaction.aggregate({
+        where: {
+            fromId: {
+                not: null,
+            },
+            toId: userId,
+            type: 'RENT',
+            status: 'COMPLETED',
+            updatedAt: {
+                gte: new Date(year, month - 1, 1),
+                lt: new Date(year, month, 1),
+            },
+        },
+        _avg: {
+            amount: true,
+            amountEth: true,
+        },
+    });
+};
+
+export const getRevenueByMonth = ({ month, userId, year }: ICalcAvgRevenueByMonth) => {
+    return prisma.transaction.findMany({
+        where: {
+            fromId: {
+                not: null,
+            },
+            toId: userId,
+            type: 'RENT',
+            status: 'COMPLETED',
+            updatedAt: {
+                gte: new Date(year, month - 1, 1),
+                lt: new Date(year, month, 1),
+            },
+        },
+    });
+};
+
+export const getIncomeTransactionsByMonth = async (userId: IUserId, year: number) => {
+    const result = await prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            SUM(amount + COALESCE(fee, 0)) AS income 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            to_id = ${userId} AND 
+            status = 'COMPLETED' AND 
+            EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month 
+        ORDER BY 
+            month;
+    `;
+
+    return result as Array<IGetIncomeTransactionsByMonth>;
+};
+
+export const getExpenditureTransactionsByMonth = async (userId: IUserId, year: number) => {
+    const result = await prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            SUM(amount + COALESCE(fee, 0)) AS expenditure 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            from_id = ${userId} AND 
+            status = 'COMPLETED' AND 
+            EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month 
+        ORDER BY 
+            month;
+    `;
+
+    return result as Array<IGetExpenditureTransactionsByMonth>;
 };

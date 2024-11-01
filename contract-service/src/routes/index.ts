@@ -5,6 +5,7 @@ import contractCancellationRequestRoute from './contractCancellationRequest.rout
 import contractExtensionRequestRoute from './contractExtensionRequest.route';
 import rentalRequestRoute from './rentalRequest.route';
 import transactionRoute from './transaction.route';
+import dashboardRoute from './dashboard.route';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/transactions', transactionRoute);
 router.use('/rental-requests', rentalRequestRoute);
 router.use('/contract-cancellation-requests', contractCancellationRequestRoute);
 router.use('/contract-extension-requests', contractExtensionRequestRoute);
+router.use('/dashboard', dashboardRoute);
 
 export default router;

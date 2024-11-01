@@ -61,3 +61,14 @@ export const findContractExtensionRequestById = (id: ExtensionRequestId) => {
         },
     });
 };
+
+export const countExtensionRequestByUserId = (userId: string) => {
+    return prisma.contractExtensionRequest.count({
+        where: {
+            status: 'PENDING',
+            contract: {
+                ownerId: userId,
+            },
+        },
+    });
+};
