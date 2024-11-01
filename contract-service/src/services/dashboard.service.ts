@@ -1,7 +1,12 @@
+import { IGetRentalRequestRating, IGetRentalRequestRatingRes } from '../interfaces/dashboard';
 import { IUserId } from '../interfaces/user';
-import { countCancelRequestByUserId } from '../repositories/contractCancellationRequest.repository';
+import { getTenantDistributionByAreaForOwner } from '../repositories/contract.repository';
+import {
+    countCancelRequestByUserId,
+    getContractCancellationRateByMonthForOwner,
+} from '../repositories/contractCancellationRequest.repository';
 import { countExtensionRequestByUserId } from '../repositories/contractExtensionRequest.repository';
-import { countRentalRequestByUserId } from '../repositories/rentalRequest.repository';
+import { countRentalRequestByUserId, getRentalRequestRating } from '../repositories/rentalRequest.repository';
 import {
     calcAvgRevenueByMonth,
     getExpenditureTransactionsByMonth,
@@ -74,4 +79,61 @@ export const getIncomeExpenditureByMonthService = async (userId: IUserId) => {
     }
 
     return result;
+};
+
+export const getTenantDistributionByAreaForOwnerService = async (ownerId: IUserId) => {
+    const result = await getTenantDistributionByAreaForOwner(ownerId);
+
+    return result.map((item) => ({
+        ...item,
+        count: Number(item.count),
+    }));
+};
+
+export const getContractCancellationRateByMonthForOwnerService = async (ownerId: IUserId) => {
+    const year = new Date().getFullYear();
+
+    const result = await getContractCancellationRateByMonthForOwner(ownerId, year);
+
+    return result.map((item) => ({
+        ...item,
+        month: Number(item.month),
+        year: Number(item.year),
+        count: Number(item.count),
+    }));
+};
+
+export const getRentalRequestRatingService = async (ownerId: IUserId) => {
+    const year = new Date().getFullYear();
+
+    const result = await getRentalRequestRating(ownerId, year);
+    console.log('🚀 ~ getRentalRequestRatingService ~ result:', result);
+
+    return result.reduce(
+        (acc: Array<IGetRentalRequestRatingRes>, { count, status, ...cur }: IGetRentalRequestRating) => {
+            const last = acc.at(-1);
+            if (last && last.month === Number(cur.month) && last.year === Number(cur.year))
+                return [
+                    ...acc.slice(0, -1),
+                    {
+                        ...last,
+                        [status]: Number(count),
+                    },
+                ];
+
+            return [
+                ...acc,
+                {
+                    ...cur,
+                    APPROVED: 0,
+                    PENDING: 0,
+                    REJECTED: 0,
+                    month: Number(cur.month),
+                    year: Number(cur.year),
+                    [status]: Number(count),
+                },
+            ];
+        },
+        [] as Array<IGetRentalRequestRatingRes>,
+    );
 };

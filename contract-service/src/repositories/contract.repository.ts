@@ -7,6 +7,7 @@ import {
     IGetContractDetail,
     IGetContractInRange,
 } from '../interfaces/contract';
+import { IGetTenantDistributionByAreaForOwner } from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
@@ -219,6 +220,12 @@ export const getContractForRentTransaction = () => {
                 ],
             },
             deleted: false,
+            startDate: {
+                lte: new Date(),
+            },
+            endDateActual: {
+                gte: new Date(),
+            },
         },
     });
 };
@@ -378,4 +385,16 @@ export const startedContract = () => {
             },
         },
     });
+};
+
+export const getTenantDistributionByAreaForOwner = (
+    ownerId: string,
+): Promise<Array<IGetTenantDistributionByAreaForOwner>> => {
+    return prisma.$queryRaw`SELECT a.city, a.district, count(a.address_id) as count FROM "\`contract\`" as c
+            JOIN "\`property\`" as p ON p.property_id = c.property_id 
+            JOIN "\`address\`" as a ON a.address_id = p.address_id
+        where C.owner_user_id = ${ownerId}
+        GROUP BY a.city, a.district
+        ORDER BY a.city, a.district;
+    `;
 };

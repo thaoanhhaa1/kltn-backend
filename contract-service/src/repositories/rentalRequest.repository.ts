@@ -1,3 +1,4 @@
+import { IGetRentalRequestRating } from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
 import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interfaces/rentalRequest';
 import { IUserId } from '../interfaces/user';
@@ -193,4 +194,27 @@ export const countRentalRequestByUserId = (userId: IUserId) => {
             status: 'PENDING',
         },
     });
+};
+
+export const getRentalRequestRating = (ownerId: IUserId, year: number): Promise<Array<IGetRentalRequestRating>> => {
+    return prisma.$queryRaw`
+        SELECT
+            EXTRACT(MONTH FROM created_at) as month,
+            EXTRACT(YEAR FROM created_at) as year,
+            status,
+            COUNT(*) AS count
+        FROM
+            "\`rental_requests\`"
+        WHERE status != 'CANCELLED'
+            AND owner_id = ${ownerId}
+            AND EXTRACT(YEAR FROM created_at) = ${year}
+        GROUP BY
+            EXTRACT(MONTH FROM created_at),
+            EXTRACT(YEAR FROM created_at),
+            status
+        ORDER BY
+            EXTRACT(YEAR FROM created_at),
+            EXTRACT(MONTH FROM created_at),
+            status;
+    `;
 };

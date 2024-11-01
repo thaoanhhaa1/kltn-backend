@@ -1,6 +1,8 @@
 import { ContractCancellationRequestStatus } from '@prisma/client';
 import { IContractId } from '../interfaces/contract';
 import { ContractCancellationRequestId } from '../interfaces/contractCancellationRequest';
+import { IGetContractCancellationRateByMonthForOwner } from '../interfaces/dashboard';
+import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
 
@@ -159,4 +161,20 @@ export const countCancelRequestByUserId = (userId: string) => {
             },
         },
     });
+};
+
+export const getContractCancellationRateByMonthForOwner = (
+    userId: IUserId,
+    year: number,
+): Promise<Array<IGetContractCancellationRateByMonthForOwner>> => {
+    return prisma.$queryRaw`
+        SELECT EXTRACT(MONTH FROM ccr.updated_at) as month, 
+            EXTRACT(YEAR FROM ccr.updated_at) as year, 
+            count(ccr.id) as count FROM "\`contract\`" as c
+        JOIN "\`contract_cancellation_requests\`" as ccr ON ccr.contract_id = c.contract_id
+        WHERE ccr.status IN ('APPROVED', 'UNILATERAL_CANCELLATION') 
+            AND c.owner_user_id = ${userId} 
+            AND EXTRACT(YEAR FROM ccr.updated_at) = ${year}
+        GROUP BY EXTRACT(MONTH FROM ccr.updated_at), EXTRACT(YEAR FROM ccr.updated_at)
+    `;
 };
