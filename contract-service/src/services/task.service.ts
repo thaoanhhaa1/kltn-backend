@@ -20,11 +20,20 @@ import { createNotificationQueue } from './rabbitmq.service';
 class TaskService {
     private createMonthlyRentTask = () => {
         const job = new CronJob('0 0 0 * * *', async () => {
+            console.log('task.service::Monthly rent task executed');
+
             const contracts = await getContractForRentTransaction();
-            console.log('🚀 ~ TaskService ~ job ~ contracts:', contracts);
+            console.log(
+                contracts.map((contract) => ({
+                    contractId: contract.contractId,
+                    startDate: contract.startDate,
+                    endDateActual: contract.endDateActual,
+                })),
+            );
 
             const queries: any[] = [];
             const currentDate = new Date().getDate();
+            const currentMonth = new Date().getMonth() + 1;
 
             contracts.forEach((contract) => {
                 const startDate = contract.startDate.getDate();
@@ -35,10 +44,8 @@ class TaskService {
                             amount: contract.monthlyRent,
                             contractId: contract.contractId,
                             status: 'PENDING',
-                            title: `Thanh toán tiền thuê tháng ${contract.startDate.getMonth() + 1}`,
-                            description: `Thanh toán tiền thuê tháng ${
-                                contract.startDate.getMonth() + 1
-                            } cho hợp đồng **${contract.contractId}**`,
+                            title: `Thanh toán tiền thuê tháng ${currentMonth}`,
+                            description: `Thanh toán tiền thuê tháng ${currentMonth} cho hợp đồng **${contract.contractId}**`,
                             fromId: contract.renterId,
                             toId: contract.ownerId,
                             endDate: dateAfter(14, true),
