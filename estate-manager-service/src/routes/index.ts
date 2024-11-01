@@ -2,6 +2,7 @@ import express from 'express';
 import attribute from './attribute.route';
 import authRoute from './auth.route';
 import conversationRoute from './conversation.route';
+import dashboardRoute from './dashboard.route';
 import notificationRoute from './notification.route';
 import property from './property.route';
 import propertyInteraction from './propertyInteraction.route';
@@ -22,5 +23,6 @@ router.use('/rental-requests', rentalRequest);
 router.use('/notifications', notificationRoute);
 router.use('/conversations', conversationRoute);
 router.use('/reviews', reviewRoute);
+router.use('/dashboard', dashboardRoute);
 
 export default router;

@@ -105,6 +105,7 @@ model Contract {
   renter                  User                          @relation("RenterContracts", fields: [renterId], references: [userId])
   property                Property                      @relation("PropertyContracts", fields: [propertyId], references: [propertyId])
   cancellationRequests    ContractCancellationRequest[]
+  extensionRequests       ContractExtensionRequest[]
 
   @@map("`contract`")
 }
@@ -223,6 +224,7 @@ model ContractExtensionRequest {
   reason        String?                        @map("reason")
   createdAt     DateTime                       @default(now()) @map("created_at")
   updatedAt     DateTime                       @updatedAt @map("updated_at")
+  contract      Contract                       @relation(fields: [contractId], references: [contractId])
 
   @@map("`contract_extension_requests`")
 }

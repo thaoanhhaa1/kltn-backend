@@ -146,3 +146,17 @@ export const cancelRequestWhenEndContract = (contractId: IContractId) => {
         },
     });
 };
+
+export const countCancelRequestByUserId = (userId: string) => {
+    return prisma.contractCancellationRequest.count({
+        where: {
+            contract: {
+                ownerId: userId,
+            },
+            deleted: false,
+            status: {
+                in: ['PENDING', 'REJECTED'],
+            },
+        },
+    });
+};
