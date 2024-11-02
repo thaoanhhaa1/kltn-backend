@@ -102,6 +102,7 @@ export const getTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId
             amount: true,
             amountEth: true,
             fee: true,
+            feeEth: true,
             transactionHash: true,
             title: true,
             description: true,

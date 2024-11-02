@@ -231,7 +231,7 @@ export const cancelSmartContractByOwnerService = async ({
     const transaction = await getCompensationTransaction(contractId);
     const monthlyRentInWei = transaction?.amountEth ? web3.utils.toWei(transaction.amountEth.toString(), 'ether') : 0;
 
-    const transferMethod = rentalContract.methods.transferToAddress(renterAddress, monthlyRentInWei);
+    const transferMethod = rentalContract.methods.transferToAddress(contractId, renterAddress, monthlyRentInWei);
 
     const cancelContract = rentalContract.methods.cancelContractByOwner(contractId, depositAmountInWei);
 
@@ -301,14 +301,16 @@ export const cancelSmartContractBeforeDepositService = async ({
 };
 
 export const transferToSmartContractService = async ({
+    contractId,
     senderAddress,
     amount,
 }: {
+    contractId: string;
     senderAddress: string;
     amount: number;
 }) => {
     console.log('🚀 ~ senderAddress:', senderAddress);
-    const transferMethod = rentalContract.methods.transferToSmartContract();
+    const transferMethod = rentalContract.methods.transferToSmartContract(contractId);
 
     const amountInWei = await convertVNDToWei(Number(amount));
 
@@ -325,33 +327,6 @@ export const transferToSmartContractService = async ({
         value: amountInWei,
         gas: gasEstimate.toString(),
         gasPrice: gasPrice.toString(), // đơn vị wei
-    });
-
-    return receipt;
-};
-
-export const transferToAddressService = async ({
-    recipientAddress,
-    amount,
-    ownerAddress,
-}: {
-    recipientAddress: string;
-    amount: number;
-    ownerAddress: string;
-}) => {
-    const amountInWei = await convertVNDToWei(Number(amount));
-
-    const transferMethod = rentalContract.methods.transferToAddress(recipientAddress, amountInWei);
-
-    const [gasEstimate, gasPrice] = await Promise.all([
-        transferMethod.estimateGas({ from: ownerAddress }),
-        getGasPriceInfuraService(),
-    ]);
-
-    const receipt = await transferMethod.send({
-        from: ownerAddress,
-        gas: gasEstimate.toString(),
-        gasPrice: gasPrice.toString(),
     });
 
     return receipt;

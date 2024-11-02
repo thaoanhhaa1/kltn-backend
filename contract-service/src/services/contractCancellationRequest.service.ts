@@ -130,6 +130,7 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
         if (request.requestedBy === contract.ownerId) {
             const ethVnd = await getCoinPriceService();
             const receipt = await transferToSmartContractService({
+                contractId: request.contractId,
                 amount: contract.monthlyRent,
                 senderAddress: user.walletAddress,
             });
