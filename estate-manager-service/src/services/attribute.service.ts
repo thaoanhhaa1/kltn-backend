@@ -6,7 +6,9 @@ import {
     softDeleteAttribute,
     updateAttribute,
 } from '../repositories/attribute.repository';
+import { countAttributes } from '../repositories/propertyAttribute.repository';
 import { ICreateAttributeReq, IUpdateAttributeReq } from '../schemas/attribute.schema';
+import CustomError from '../utils/error.util';
 
 export const createAttributeService = async (attribute: ICreateAttributeReq) => {
     return createAttribute(attribute);
@@ -29,5 +31,9 @@ export const updateAttributeService = async (id: string, data: IUpdateAttributeR
 };
 
 export const deleteAttributeService = async (id: string) => {
+    const count = await countAttributes(id);
+
+    if (count > 0) throw new CustomError(400, 'Không thể xóa thuộc tính này vì có bất động sản đang sử dụng');
+
     return softDeleteAttribute(id);
 };

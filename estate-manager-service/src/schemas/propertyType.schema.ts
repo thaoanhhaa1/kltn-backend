@@ -2,6 +2,8 @@ import { PropertyType } from '@prisma/client';
 import { z } from 'zod';
 import { nameOfUserSchema } from './validation.schema';
 
+export type PropertyTypeId = Pick<PropertyType, 'id'>['id'];
+
 export const propertyTypeSchema = z.object({
     name: nameOfUserSchema,
 });

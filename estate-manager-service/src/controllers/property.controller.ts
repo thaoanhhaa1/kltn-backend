@@ -6,6 +6,7 @@ import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
 import { DEFAULT_PROPERTIES_SKIP, DEFAULT_PROPERTIES_TAKE } from '../constants/pagination';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
+import redis from '../constants/redis';
 import { IPaginationResponse } from '../interface/pagination';
 import { IOwnerFilterProperties, IResProperty } from '../interface/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
@@ -34,10 +35,7 @@ import CustomError, { EntryError } from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
 import { uploadFiles } from '../utils/uploadToFirebase.util';
 
-const REDIS_KEY = {
-    ALL_PROPERTIES: 'properties:all',
-    PROPERTY: 'properties:',
-};
+const REDIS_KEY = redis.PROPERTY;
 
 export const createProperty = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -542,7 +540,6 @@ export const searchProperties = async (req: AuthenticatedRequest, res: Response,
         }
 
         const data: any[] = await Promise.all(queries);
-        console.log('🚀 ~ searchProperties ~ data:', data[1]);
 
         const result: SearchResponse<any> = data[0];
         const interactions: UserPropertyInteraction[] = data[1];

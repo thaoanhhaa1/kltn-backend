@@ -10,6 +10,9 @@ export const createAttribute = async (attribute: ICreateAttributeReq) => {
 export const getAllAttributes = async () => {
     return prisma.attribute.findMany({
         where: { deleted: false },
+        orderBy: {
+            createdAt: 'desc',
+        },
     });
 };
 

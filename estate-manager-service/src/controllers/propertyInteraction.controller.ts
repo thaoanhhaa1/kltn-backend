@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import Redis from '../configs/redis.config';
+import redis from '../constants/redis';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
     createPropertyInteractionService,
@@ -16,9 +17,7 @@ import {
     getFavoritePropertyInteractionsService,
 } from './../services/propertyInteraction.service';
 
-const REDIS_KEY = {
-    PROPERTY: 'propertyInteractions:',
-};
+const REDIS_KEY = redis.PROPERTY_INTERACTION;
 
 export const createPropertyInteraction = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {

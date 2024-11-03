@@ -20,6 +20,7 @@ import {
     countNotDeletedPropertiesByOwnerId,
     createProperty,
     deletePropertyById,
+    findPropertiesByTypeId,
     getNotDeletedProperties,
     getNotDeletedPropertiesByOwnerId,
     getNotDeletedProperty,
@@ -29,10 +30,12 @@ import {
     updatePropertiesStatus,
     updateProperty,
     updatePropertyStatus,
+    updatePropertyType,
 } from '../repositories/property.repository';
 import { softDeleteByPropertyId, softDeleteByPropertyIds } from '../repositories/propertyInteraction.repository';
 import { addRejectReason } from '../repositories/rejectReason.repository';
 import { findUserById } from '../repositories/user.repository';
+import { PropertyTypeId } from '../schemas/propertyType.schema';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
@@ -193,4 +196,20 @@ export const getPropertyStatusService = () => {
     const res = PropertyStatus;
 
     return Object.keys(res);
+};
+
+export const getPropertyDetailsByIdsService = async (propertyIds: string[]) => {
+    const properties = await getPropertiesDetailByIds({ properties: propertyIds });
+
+    return properties.map(convertToDTO);
+};
+
+export const findPropertiesByTypeIdService = (typeId: string) => {
+    return findPropertiesByTypeId(typeId);
+};
+
+export const updatePropertyTypeInPropertiesService = async (typeId: PropertyTypeId, typeName: string) => {
+    const res = await updatePropertyType(typeId, typeName);
+
+    return res;
 };

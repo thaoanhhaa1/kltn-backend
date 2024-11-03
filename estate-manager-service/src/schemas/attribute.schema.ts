@@ -2,11 +2,11 @@ import { z } from 'zod';
 
 export const attributeSchema = z.object({
     type: z.enum(['Amenity', 'Highlight', 'Facility'], {
-        message: 'Attribute type must be one of Amenity, Highlight, Facility',
-        required_error: 'Attribute type is required',
+        message: "Loại thuộc tính phải là 'Tiện ích', 'Nổi bật' hoặc 'Tiện nghi'",
+        required_error: 'Loại thuộc tính là bắt buộc',
     }),
     name: z.string({
-        required_error: 'Attribute name is required',
+        required_error: 'Tên thuộc tính là bắt buộc',
     }),
 });
 
