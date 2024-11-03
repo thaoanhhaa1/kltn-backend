@@ -150,6 +150,7 @@ type PropertyTypeEmbed {
 model PropertyType {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   name      String
+  deleted   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

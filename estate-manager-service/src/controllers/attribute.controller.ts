@@ -3,6 +3,7 @@ import elasticClient from '../configs/elastic.config';
 import RabbitMQ from '../configs/rabbitmq.config';
 import Redis from '../configs/redis.config';
 import { PROPERTY_QUEUE } from '../constants/rabbitmq';
+import redis from '../constants/redis';
 import { attributeSchema } from '../schemas/attribute.schema';
 import {
     createAttributeService,
@@ -16,10 +17,7 @@ import { getPropertyDetailsByIdsService } from '../services/property.service';
 import { getPropertyIdByAttributeIdService } from '../services/propertyAttribute.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 
-const REDIS_KEY = {
-    ALL_PROPERTIES: 'properties:all',
-    PROPERTY: 'properties:',
-};
+const REDIS_KEY = redis.PROPERTY;
 
 export const createAttribute = async (req: Request, res: Response, next: NextFunction) => {
     try {

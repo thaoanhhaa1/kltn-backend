@@ -15,6 +15,7 @@ import {
 import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { ICreatePropertyReq } from '../schemas/property.schema';
+import { PropertyTypeId } from '../schemas/propertyType.schema';
 
 const propertyInclude = {
     attributes: {
@@ -495,6 +496,51 @@ export const countUnavailablePropertiesByUser = (userId: IUserId) => {
                 },
             },
             status: 'UNAVAILABLE',
+        },
+    });
+};
+
+export const findFirstPropertyByTypeId = (typeId: PropertyTypeId) => {
+    return prisma.property.findFirst({
+        where: {
+            type: {
+                is: {
+                    id: typeId,
+                },
+            },
+        },
+    });
+};
+
+export const findPropertiesByTypeId = (typeId: PropertyTypeId) => {
+    return prisma.property.findMany({
+        where: {
+            type: {
+                is: {
+                    id: typeId,
+                },
+            },
+        },
+        include: propertyInclude,
+    });
+};
+
+export const updatePropertyType = (typeId: PropertyTypeId, typeName: string) => {
+    return prisma.property.updateMany({
+        where: {
+            type: {
+                is: {
+                    id: typeId,
+                },
+            },
+        },
+        data: {
+            type: {
+                set: {
+                    name: typeName,
+                    id: typeId,
+                },
+            },
         },
     });
 };
