@@ -1,11 +1,16 @@
 import { ContractCancellationRequest } from '@prisma/client';
 import { CronJob } from 'cron';
+import { addDays, isSameDay } from 'date-fns';
 import { getContractForRentTransaction, getEndContract, startedContract } from '../repositories/contract.repository';
 import {
     getCancelRequestOverdue,
     getRequestsCancelContract,
 } from '../repositories/contractCancellationRequest.repository';
-import { createTransaction, getOverdueTransactions } from '../repositories/transaction.repository';
+import {
+    createTransaction,
+    getOverdueTransactions,
+    getTransactionsUnPaid,
+} from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
 import { getCoinPriceService } from './coingecko.service';
 import {
@@ -206,7 +211,7 @@ class TaskService {
     };
 
     private endContractTask = () => {
-        const job = new CronJob('0 33 23 * * *', async () => {
+        const job = new CronJob('0 0 0 * * *', async () => {
             console.log('task.service::End contract task executed');
 
             const contracts = await getEndContract();
@@ -223,6 +228,45 @@ class TaskService {
         job.start();
     };
 
+    private remindPaymentTask = () => {
+        const job = new CronJob('0 0 0 * * *', async () => {
+            console.log('task.service::Remind payment task executed');
+
+            const transactions = await getTransactionsUnPaid();
+            console.log('🚀 ~ TaskService ~ remindPaymentTask ~ transactions:', transactions);
+
+            transactions.forEach((transaction) => {
+                if (!transaction.fromId) return;
+
+                if (
+                    (transaction.type === 'DEPOSIT' && isSameDay(addDays(transaction.createdAt, 2), new Date())) ||
+                    (transaction.type === 'RENT' &&
+                        (isSameDay(addDays(transaction.createdAt, 10), new Date()) ||
+                            isSameDay(addDays(transaction.createdAt, 13), new Date())))
+                )
+                    createNotificationQueue({
+                        body:
+                            transaction.type === 'DEPOSIT'
+                                ? `Hạn thanh toán cọc cho hợp đồng **${transaction.contractId}** sắp đến`
+                                : `Hạn thanh toán tiền thuê cho hợp đồng **${transaction.contractId}** sắp đến`,
+                        title:
+                            transaction.type === 'DEPOSIT'
+                                ? 'Nhắc nhở thanh toán cọc'
+                                : 'Nhắc nhở thanh toán tiền thuê',
+                        type: 'RENTER_PAYMENT',
+                        docId: transaction.contractId,
+                        to: transaction.fromId,
+                    })
+                        .then(() => console.log('Notification sent to renter'))
+                        .catch((err) => console.log('Notification error', err));
+            });
+
+            console.log('task.service::Remind payment task finished');
+        });
+
+        job.start();
+    };
+
     public start = () => {
         this.createMonthlyRentTask();
         this.handleOverdueContractCancelRequestTask();
@@ -230,6 +274,7 @@ class TaskService {
         this.handleOverdueTransactionTask();
         this.startRentalTask();
         this.endContractTask();
+        this.remindPaymentTask();
     };
 }
 

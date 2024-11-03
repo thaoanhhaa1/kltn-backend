@@ -275,7 +275,7 @@ export const getTransactionsUnPaid = () => {
         where: {
             status: 'PENDING',
             endDate: {
-                lt: new Date(),
+                gt: new Date(),
             },
         },
     });
