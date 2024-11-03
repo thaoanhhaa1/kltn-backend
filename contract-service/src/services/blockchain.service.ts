@@ -2,7 +2,7 @@ import RentalContractABI from '../../contractRental/build/contracts/RentalContra
 import envConfig from '../configs/env.config';
 import Redis from '../configs/redis.config';
 import web3 from '../configs/web3.config';
-import { IContract } from '../interfaces/contract';
+import { IContract, IContractId } from '../interfaces/contract';
 import { getCompensationTransaction } from '../repositories/transaction.repository';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
 import CustomError from '../utils/error.util';
@@ -330,4 +330,31 @@ export const transferToSmartContractService = async ({
     });
 
     return receipt;
+};
+
+export const endSmartContractService = async ({
+    contractId,
+    depositAmount,
+    userAddress,
+}: {
+    contractId: IContractId;
+    userAddress: string;
+    depositAmount: number;
+}) => {
+    const depositAmountInWei = await convertVNDToWei(depositAmount);
+
+    const endContract = rentalContract.methods.endContract(contractId, depositAmountInWei);
+
+    const [gasEstimate, gasPrice] = await Promise.all([
+        endContract.estimateGas({
+            from: userAddress,
+        }),
+        getGasPriceInfuraService(),
+    ]);
+
+    return endContract.send({
+        from: userAddress,
+        gas: gasEstimate.toString(),
+        gasPrice: gasPrice.toString(),
+    });
 };

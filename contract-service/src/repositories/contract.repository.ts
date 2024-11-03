@@ -398,3 +398,15 @@ export const getTenantDistributionByAreaForOwner = (
         ORDER BY a.city, a.district;
     `;
 };
+
+export const getEndContract = () => {
+    return prisma.contract.findMany({
+        where: {
+            status: 'ONGOING',
+            deleted: false,
+            endDateActual: {
+                lte: new Date(),
+            },
+        },
+    });
+};

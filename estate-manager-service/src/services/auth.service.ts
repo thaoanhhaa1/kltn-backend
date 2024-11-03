@@ -21,7 +21,7 @@ const getTokens = (user: JWTInput) => {
 
 export const registerUser = async ({ email, name, password, userType }: Omit<RegisterInput, 'otp'>) => {
     const existingUser = await findUserByEmail(email);
-    if (existingUser) throw new CustomError(400, 'User already exists');
+    if (existingUser) throw new CustomError(400, 'Email đã được sử dụng');
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await createUser({
@@ -44,19 +44,21 @@ export const registerUser = async ({ email, name, password, userType }: Omit<Reg
 export const loginUser = async ({ email, password }: LoginInput) => {
     const user = await findUserByEmail(email);
     if (!user)
-        throw new EntryError(404, 'User not found', [
+        throw new EntryError(404, 'Không tìm thấy người dùng', [
             {
                 field: 'email',
-                error: 'User not found',
+                error: 'Không tìm thấy người dùng',
             },
         ]);
 
+    if (user.status === 'BLOCKED') throw new CustomError(403, 'Bạn đã bị khóa tài khoản');
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-        throw new EntryError(400, 'Invalid password', [
+        throw new EntryError(400, 'Mật khẩu không đúng', [
             {
                 field: 'password',
-                error: 'Invalid password',
+                error: 'Mật khẩu không đúng',
             },
         ]);
 

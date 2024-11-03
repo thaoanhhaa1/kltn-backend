@@ -1,6 +1,6 @@
 import { ContractCancellationRequest } from '@prisma/client';
 import { CronJob } from 'cron';
-import { getContractForRentTransaction, startedContract } from '../repositories/contract.repository';
+import { getContractForRentTransaction, getEndContract, startedContract } from '../repositories/contract.repository';
 import {
     getCancelRequestOverdue,
     getRequestsCancelContract,
@@ -12,6 +12,7 @@ import {
     cancelContractBeforeDepositService,
     endContractService,
     endContractWhenOverdueService,
+    finalizeContractService,
     startRentService,
 } from './contract.service';
 import { updateStatusRequestService } from './contractCancellationRequest.service';
@@ -204,7 +205,23 @@ class TaskService {
         job.start();
     };
 
-    // TODO: End contract
+    private endContractTask = () => {
+        const job = new CronJob('0 33 23 * * *', async () => {
+            console.log('task.service::End contract task executed');
+
+            const contracts = await getEndContract();
+            console.log('🚀 ~ TaskService ~ endContractTask ~ contracts:', contracts);
+
+            const queries = contracts.map(finalizeContractService);
+
+            const res = await Promise.allSettled(queries);
+            console.log('🚀 ~ job ~ res:', res);
+
+            console.log('task.service::End contract task finished');
+        });
+
+        job.start();
+    };
 
     public start = () => {
         this.createMonthlyRentTask();
@@ -212,6 +229,7 @@ class TaskService {
         this.handleEndContractByRequestTask();
         this.handleOverdueTransactionTask();
         this.startRentalTask();
+        this.endContractTask();
     };
 }
 
