@@ -194,3 +194,9 @@ export const getPropertyStatusService = () => {
 
     return Object.keys(res);
 };
+
+export const getPropertyDetailsByIdsService = async (propertyIds: string[]) => {
+    const properties = await getPropertiesDetailByIds({ properties: propertyIds });
+
+    return properties.map(convertToDTO);
+};

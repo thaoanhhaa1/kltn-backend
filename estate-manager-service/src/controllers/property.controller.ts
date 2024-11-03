@@ -542,7 +542,6 @@ export const searchProperties = async (req: AuthenticatedRequest, res: Response,
         }
 
         const data: any[] = await Promise.all(queries);
-        console.log('🚀 ~ searchProperties ~ data:', data[1]);
 
         const result: SearchResponse<any> = data[0];
         const interactions: UserPropertyInteraction[] = data[1];

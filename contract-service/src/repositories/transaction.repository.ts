@@ -234,7 +234,7 @@ export const getIncomeTransactionsByMonth = async (userId: IUserId, year: number
     const result = await prisma.$queryRaw`
         SELECT 
             EXTRACT(MONTH FROM "updated_at") AS month, 
-            SUM(amount + COALESCE(fee, 0)) AS income 
+            SUM(amount) AS income 
         FROM 
             "\`transaction\`" 
         WHERE

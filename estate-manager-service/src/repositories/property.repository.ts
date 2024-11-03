@@ -242,6 +242,17 @@ export const getPropertyById = async (propertyId: string) => {
     });
 };
 
+export const getPropertyDetailsByIds = (properties: string[]) => {
+    return prisma.property.findMany({
+        where: {
+            propertyId: {
+                in: properties,
+            },
+        },
+        include: propertyInclude,
+    });
+};
+
 export const deletePropertyById = ({ ownerId, propertyId }: IDeleteProperty) => {
     return prisma.property.update({
         where: {

@@ -1,4 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
+import elasticClient from '../configs/elastic.config';
+import RabbitMQ from '../configs/rabbitmq.config';
+import Redis from '../configs/redis.config';
+import { PROPERTY_QUEUE } from '../constants/rabbitmq';
+import { attributeSchema } from '../schemas/attribute.schema';
 import {
     createAttributeService,
     deleteAttributeService,
@@ -7,8 +12,14 @@ import {
     getAttributeByIdService,
     updateAttributeService,
 } from '../services/attribute.service';
-import { attributeSchema } from '../schemas/attribute.schema';
+import { getPropertyDetailsByIdsService } from '../services/property.service';
+import { getPropertyIdByAttributeIdService } from '../services/propertyAttribute.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
+
+const REDIS_KEY = {
+    ALL_PROPERTIES: 'properties:all',
+    PROPERTY: 'properties:',
+};
 
 export const createAttribute = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -44,20 +55,20 @@ export const getAllAttributesCbb = async (_req: Request, res: Response, next: Ne
     }
 };
 
-export const getAttributeById = async (req: Request, res: Response) => {
+export const getAttributeById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const attribute = await getAttributeByIdService(req.params.id);
         if (attribute) {
             res.json(attribute);
         } else {
-            res.status(404).json({ error: 'Attribute not found' });
+            res.status(404).json({ error: 'Không tìm thấy tiện ích' });
         }
     } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve attribute' });
+        next(error);
     }
 };
 
-export const updateAttribute = async (req: Request, res: Response) => {
+export const updateAttribute = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const safeParse = attributeSchema.safeParse(req.body);
 
@@ -68,20 +79,67 @@ export const updateAttribute = async (req: Request, res: Response) => {
 
         const attribute = await updateAttributeService(req.params.id, req.body);
         if (attribute) {
+            getPropertyIdByAttributeIdService(attribute.id)
+                .then((data) => {
+                    const propertyIds = data.map((item: any) => item.propertyId);
+
+                    return getPropertyDetailsByIdsService(propertyIds);
+                })
+                .then((properties) => {
+                    Redis.getInstance().getClient().del(REDIS_KEY.ALL_PROPERTIES);
+
+                    properties.forEach((property) => {
+                        Redis.getInstance().getClient().del(`${REDIS_KEY.PROPERTY}${property.slug}`);
+
+                        elasticClient
+                            .updateByQuery({
+                                index: 'properties',
+                                body: {
+                                    script: {
+                                        source: `
+                                            ctx._source.attributes = params.attributes;
+                                            ctx._source.updatedAt = params.updatedAt;
+                                        `,
+                                        params: {
+                                            attributes: property.attributes,
+                                            updatedAt: new Date().toISOString(),
+                                        },
+                                    },
+                                    query: {
+                                        term: {
+                                            _id: property.propertyId,
+                                        },
+                                    },
+                                },
+                            })
+                            .then(console.log, console.error)
+                            .catch(console.error);
+
+                        RabbitMQ.getInstance().publishInQueue({
+                            exchange: PROPERTY_QUEUE.exchange,
+                            name: PROPERTY_QUEUE.name,
+                            message: {
+                                type: PROPERTY_QUEUE.type.UPDATED,
+                                data: property,
+                            },
+                        });
+                    });
+                });
+
             res.json(attribute);
         } else {
-            res.status(404).json({ error: 'Attribute not found' });
+            res.status(404).json({ error: 'Không tìm thấy tiện ích' });
         }
     } catch (error) {
-        res.status(500).json({ error: 'Failed to update attribute' });
+        next(error);
     }
 };
 
-export const deleteAttribute = async (req: Request, res: Response) => {
+export const deleteAttribute = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await deleteAttributeService(req.params.id);
-        res.status(204).end();
+        const result = await deleteAttributeService(req.params.id);
+        res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to delete attribute' });
+        next(error);
     }
 };
