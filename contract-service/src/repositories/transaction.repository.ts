@@ -269,3 +269,26 @@ export const getExpenditureTransactionsByMonth = async (userId: IUserId, year: n
 
     return result as Array<IGetExpenditureTransactionsByMonth>;
 };
+
+export const getTransactionsUnPaid = () => {
+    return prisma.transaction.findMany({
+        where: {
+            status: 'PENDING',
+            endDate: {
+                gt: new Date(),
+            },
+        },
+    });
+};
+
+export const cancelTransactionsWhenEndContract = (contractId: IContractId) => {
+    return prisma.transaction.updateMany({
+        where: {
+            contractId,
+            status: 'PENDING',
+        },
+        data: {
+            status: 'CANCELLED',
+        },
+    });
+};

@@ -274,8 +274,7 @@ export const deletePropertyById = ({ ownerId, propertyId }: IDeleteProperty) => 
 };
 
 export const updateProperty = async (propertyId: IPropertyId, property: IUpdateProperty) => {
-    const { city, district, ward, street, price, startDate, attributeIds, conditions, images, ownerId, ...rest } =
-        property;
+    const { city, district, ward, street, startDate, attributeIds, conditions, ownerId, ...rest } = property;
 
     return prisma.property.update({
         where: {
@@ -298,6 +297,15 @@ export const updateProperty = async (propertyId: IPropertyId, property: IUpdateP
                 street,
             },
             status: 'PENDING',
+            rentalConditions: conditions,
+            attributes: {
+                deleteMany: {},
+                createMany: {
+                    data: attributeIds.map((attributeId) => ({
+                        attributeId,
+                    })),
+                },
+            },
         },
         include: propertyInclude,
     });

@@ -1,6 +1,6 @@
 // contract.service.ts
 
-import { Contract as PrismaContract, PropertyStatus } from '@prisma/client';
+import { Contract, Contract as PrismaContract, PropertyStatus } from '@prisma/client';
 import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -38,10 +38,12 @@ import {
     cancelRequestWhenEndContract,
     getCancelRequestById,
 } from '../repositories/contractCancellationRequest.repository';
+import { cancelExtensionRequestWhenEndContract } from '../repositories/contractExtensionRequest.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
 import { ownerUpdateRentalRequestStatus } from '../repositories/rentalRequest.repository';
 import {
     cancelTransactions,
+    cancelTransactionsWhenEndContract,
     createTransaction,
     getTransactionById,
     paymentTransaction,
@@ -60,6 +62,7 @@ import {
     convertGasToEthService,
     createSmartContractService,
     depositSmartContractService,
+    endSmartContractService,
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
@@ -739,4 +742,75 @@ export const startRentService = async (contractId: IContractId) => {
         },
         type: CONTRACT_QUEUE.type.UPDATE_STATUS,
     });
+};
+
+export const finalizeContractService = async (contract: Contract) => {
+    const owner = await findUserById(contract.ownerId);
+
+    if (!owner) throw new CustomError(404, 'Không tìm thấy chủ nhà');
+    if (!owner.walletAddress) throw new CustomError(400, 'Chủ nhà chưa có địa chỉ ví');
+
+    const receipt = await endSmartContractService({
+        contractId: contract.contractId,
+        userAddress: owner.walletAddress,
+        depositAmount: contract.depositAmount,
+    });
+
+    const ethVnd = await getCoinPriceService();
+    const eth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
+    const fee = eth * ethVnd;
+
+    await prisma.$transaction([
+        cancelRequestWhenEndContract(contract.contractId),
+        cancelExtensionRequestWhenEndContract(contract.contractId),
+        updateStatusContract(contract.contractId, 'ENDED'),
+        updatePropertyStatus(contract.propertyId, 'ACTIVE'),
+        cancelTransactionsWhenEndContract(contract.contractId),
+        createTransaction({
+            title: 'Hoàn trả tiền đặt cọc',
+            description: `Hoàn trả tiền đặt cọc cho hợp đồng **${contract.contractId}** vì hợp đồng đã kết thúc`,
+            amount: contract.depositAmount,
+            contractId: contract.contractId,
+            status: 'COMPLETED',
+            type: 'REFUND',
+            toId: contract.renterId,
+            amountEth: contract.depositAmount / ethVnd,
+            transactionHash: receipt.transactionHash,
+        }),
+        createTransaction({
+            title: 'Phí kết thúc hợp đồng',
+            description: `Thanh toán phí kết thúc hợp đồng **${contract.contractId}**`,
+            amount: fee,
+            contractId: contract.contractId,
+            status: 'COMPLETED',
+            type: 'END_CONTRACT',
+            amountEth: eth,
+            fromId: contract.ownerId,
+            transactionHash: receipt.transactionHash,
+        }),
+    ]);
+
+    RabbitMQ.getInstance().sendToQueue(CONTRACT_QUEUE.name, {
+        data: {
+            propertyId: contract.propertyId,
+            status: PropertyStatus.ACTIVE,
+        },
+        type: CONTRACT_QUEUE.type.UPDATE_STATUS,
+    });
+
+    createNotificationQueue({
+        title: 'Hợp đồng đã kết thúc',
+        body: `Hợp đồng **${contract.contractId}** đã kết thúc`,
+        type: 'OWNER_CONTRACT',
+        docId: contract.contractId,
+        to: contract.ownerId,
+    }).catch((error) => console.error('Error sending notification:', error));
+
+    createNotificationQueue({
+        title: 'Hợp đồng đã kết thúc',
+        body: `Hợp đồng **${contract.contractId}** đã kết thúc`,
+        type: 'RENTER_CONTRACT',
+        docId: contract.contractId,
+        to: contract.renterId,
+    }).catch((error) => console.error('Error sending notification:', error));
 };

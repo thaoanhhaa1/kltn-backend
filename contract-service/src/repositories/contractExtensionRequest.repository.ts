@@ -72,3 +72,15 @@ export const countExtensionRequestByUserId = (userId: string) => {
         },
     });
 };
+
+export const cancelExtensionRequestWhenEndContract = (contractId: string) => {
+    return prisma.contractExtensionRequest.updateMany({
+        where: {
+            contractId,
+            status: 'PENDING',
+        },
+        data: {
+            status: 'CANCELLED',
+        },
+    });
+};

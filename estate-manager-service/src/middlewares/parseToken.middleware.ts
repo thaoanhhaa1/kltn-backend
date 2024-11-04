@@ -16,18 +16,22 @@ export interface AuthenticatedRequest extends Request {
 }
 
 const parseTokenMiddleware = (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
+    try {
+        const authHeader = req.headers.authorization;
 
-    if (!authHeader) return next();
+        if (!authHeader) return next();
 
-    const token = authHeader.split(' ')[1];
+        const token = authHeader.split(' ')[1];
 
-    const decoded = verifyToken(token);
+        const decoded = verifyToken(token);
 
-    if (typeof decoded === 'string') return next();
+        if (typeof decoded === 'string') return next();
 
-    req.user = decoded as JWTInput;
-    next();
+        req.user = decoded as JWTInput;
+        next();
+    } catch (error) {
+        return next();
+    }
 };
 
 export default parseTokenMiddleware;

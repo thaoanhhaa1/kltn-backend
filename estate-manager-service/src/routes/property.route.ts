@@ -32,7 +32,7 @@ router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedPropert
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
 router.get('/status', getPropertyStatus);
 router.get('/count', countNotPendingProperties);
-router.get('/:propertyId', authMiddleware, roleMiddleware('admin'), getNotDeletedProperty);
+router.get('/:propertyId', authMiddleware, hasAnyRoleMiddleware(['admin', 'owner']), getNotDeletedProperty);
 router.get('/', getNotPendingProperties);
 
 router.post('/approval', authMiddleware, roleMiddleware('admin'), updatePropertiesStatus);
