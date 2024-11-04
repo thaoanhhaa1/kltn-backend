@@ -116,7 +116,7 @@ export const getNotDeletedPropertyService = async (property_id: IPropertyId) => 
 
     if (property) return convertToDTO(property);
 
-    throw new CustomError(404, 'Property not found');
+    throw new CustomError(404, 'Không tìm thấy bất động sản');
 };
 
 export const getPropertyBySlugService = async (slug: string) => {
@@ -124,7 +124,7 @@ export const getPropertyBySlugService = async (slug: string) => {
 
     if (property) return convertToDTO(property);
 
-    throw new CustomError(404, 'Property not found');
+    throw new CustomError(404, 'Không tìm thấy bất động sản');
 };
 
 export const deletePropertyService = async (deleteProperty: IDeleteProperty) => {
@@ -133,24 +133,26 @@ export const deletePropertyService = async (deleteProperty: IDeleteProperty) => 
     if (res) {
         const response: ResponseError = {
             status: 200,
-            message: `Property with id ${deleteProperty.propertyId} has been deleted`,
+            message: `Bất động sản ${deleteProperty.propertyId} đã bị xóa`,
             success: true,
         };
 
-        softDeleteByPropertyId(deleteProperty.propertyId).then(() => console.log('Soft delete property interactions'));
+        softDeleteByPropertyId(deleteProperty.propertyId).then(() =>
+            console.log('Đã xóa các tương tác của bất động sản'),
+        );
 
         return response;
     }
 
-    throw new CustomError(404, 'Property not found');
+    throw new CustomError(404, 'Không tìm thấy bất động sản');
 };
 
 export const updatePropertyService = async (propertyId: string, property: IUpdateProperty) => {
     const res = await updateProperty(propertyId, property);
 
-    if (!res) throw new CustomError(404, 'Property not found');
+    if (!res) throw new CustomError(404, 'Không tìm thấy bất động sản hoặc bất động sản đang cho thuê');
 
-    softDeleteByPropertyId(propertyId).then(() => console.log('Soft delete property interactions'));
+    softDeleteByPropertyId(propertyId).then(() => console.log('Đã xóa các tương tác của bất động sản'));
 
     return convertToDTO(res);
 };
@@ -160,7 +162,7 @@ export const updatePropertyStatusService = async (params: IUpdatePropertyStatus)
 
     if (res) return convertToDTO(res);
 
-    throw new CustomError(404, 'Property not found');
+    throw new CustomError(404, 'Không tìm thấy bất động sản');
 };
 
 export const updatePropertiesStatusService = async (params: IUpdatePropertiesStatus) => {
@@ -178,7 +180,7 @@ export const updatePropertiesStatusService = async (params: IUpdatePropertiesSta
         const [res] = await prisma.$transaction(queries);
 
         if (['INACTIVE', 'REJECTED'].includes(params.status))
-            softDeleteByPropertyIds(params.properties).then(() => console.log('Soft delete property interactions'));
+            softDeleteByPropertyIds(params.properties).then(() => console.log('Đã xóa các tương tác của bất động sản'));
 
         if (res.count) {
             const properties = await getPropertiesDetailByIds(params);
@@ -186,7 +188,7 @@ export const updatePropertiesStatusService = async (params: IUpdatePropertiesSta
             return properties.map(convertToDTO);
         }
 
-        throw new CustomError(404, 'Properties not found');
+        throw new CustomError(404, 'Không tìm thấy bất động sản');
     } catch (error) {
         throw new CustomError(400, (error as any).message);
     }

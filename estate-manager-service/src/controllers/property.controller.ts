@@ -103,7 +103,10 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
 export const updateProperty = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const files = req.files as Express.Multer.File[] | undefined;
-        const imageUrls: Array<string> = req.body.imageUrls || [];
+        const imageInitials = Array.isArray(req.body.imageUrls)
+            ? req.body.imageUrls
+            : (req.body.imageUrls && JSON.parse(req.body.imageUrls)) || [];
+        const imageUrls: Array<string> = [...imageInitials];
         const propertyId = req.params.propertyId;
 
         if (files) imageUrls.push(...files.map((file) => file.originalname));
@@ -125,7 +128,7 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
 
             imageUrls.length = 0;
 
-            imageUrls.push(...images);
+            imageUrls.push(...imageInitials, ...images);
         }
 
         const property = await updatePropertyService(propertyId, {
