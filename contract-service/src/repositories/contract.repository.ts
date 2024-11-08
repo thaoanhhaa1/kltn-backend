@@ -410,3 +410,12 @@ export const getEndContract = () => {
         },
     });
 };
+
+export const countContractByStatus = () => {
+    return prisma.contract.groupBy({
+        by: ['status'],
+        _count: {
+            status: true,
+        },
+    });
+};

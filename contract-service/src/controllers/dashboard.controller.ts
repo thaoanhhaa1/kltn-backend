@@ -1,8 +1,12 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
+    countRentalRequestByDayService,
+    countRentalRequestByMonthService,
+    countRentalRequestByWeekService,
     getContractCancellationRateByMonthForOwnerService,
     getIncomeExpenditureByMonthService,
+    getOverviewByAdminService,
     getOverviewByOwnerService,
     getRentalRequestRatingService,
     getTenantDistributionByAreaForOwnerService,
@@ -14,6 +18,16 @@ export const getOverviewByOwner = async (req: AuthenticatedRequest, res: Respons
         console.log('🚀 ~ getOverviewByOwner ~ userId:', userId);
 
         const result = await getOverviewByOwnerService(userId);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getOverviewByAdmin = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await getOverviewByAdminService();
 
         res.status(200).json(result);
     } catch (error) {
@@ -70,6 +84,36 @@ export const getRentalRequestRating = async (req: AuthenticatedRequest, res: Res
         const userId = req.user!.id;
 
         const result = await getRentalRequestRatingService(userId);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countRentalRequestByDay = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await countRentalRequestByDayService();
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countRentalRequestByWeek = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await countRentalRequestByWeekService();
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countRentalRequestByMonth = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await countRentalRequestByMonthService();
 
         res.status(200).json(result);
     } catch (error) {

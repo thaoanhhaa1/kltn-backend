@@ -177,3 +177,87 @@ export const getUserBaseEmbedById = (userId: IUserId) => {
         },
     });
 };
+
+export const countUsersByType = () => {
+    return prisma.user.aggregateRaw({
+        pipeline: [
+            {
+                $match: {
+                    userTypes: { $ne: 'admin' },
+                    status: { $ne: 'DELETED' },
+                },
+            },
+            { $unwind: '$userTypes' },
+            {
+                $group: {
+                    _id: '$userTypes',
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userType: '$_id',
+                    count: 1,
+                },
+            },
+            { $sort: { userType: 1 } },
+        ],
+    });
+};
+
+export const countNewUsersByMonth = (month: number, year: number) => {
+    return prisma.user.aggregate({
+        where: {
+            status: {
+                not: 'DELETED',
+            },
+            createdAt: {
+                gte: new Date(year, month - 1, 1),
+                lt: new Date(year, month, 1),
+            },
+        },
+        _count: true,
+    });
+};
+
+export const countNewUsersByTypeAndMonth = (year: number) => {
+    return prisma.user.aggregateRaw({
+        pipeline: [
+            {
+                $match: {
+                    status: { $ne: 'DELETED' },
+                    createdAt: {
+                        $gte: {
+                            $date: new Date(year, 0, 1).toISOString(),
+                        },
+                        $lt: {
+                            $date: new Date(year + 1, 0, 1).toISOString(),
+                        },
+                    },
+                },
+            },
+            { $unwind: '$userTypes' },
+            {
+                $match: {
+                    userTypes: { $ne: 'admin' },
+                },
+            },
+            {
+                $group: {
+                    _id: { userType: '$userTypes', month: { $month: '$createdAt' } },
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userType: '$_id.userType',
+                    month: '$_id.month',
+                    count: 1,
+                },
+            },
+            { $sort: { month: 1 } },
+        ],
+    });
+};
