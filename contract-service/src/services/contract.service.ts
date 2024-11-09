@@ -45,6 +45,7 @@ import {
     cancelTransactions,
     cancelTransactionsWhenEndContract,
     createTransaction,
+    findDepositedTransaction,
     getTransactionById,
     paymentTransaction,
 } from '../repositories/transaction.repository';
@@ -528,10 +529,15 @@ export const cancelContractBeforeDepositService = async ({
 
 export const endContractService = async ({ contractId, id: requestId }: IEndContract) => {
     try {
-        const [contract, request] = await Promise.all([findContractById(contractId), getCancelRequestById(requestId)]);
+        const [contract, request, transaction] = await Promise.all([
+            findContractById(contractId),
+            getCancelRequestById(requestId),
+            findDepositedTransaction(contractId),
+        ]);
 
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
         if (!request) throw new CustomError(404, 'Không tìm thấy yêu cầu hủy hợp đồng');
+        if (!transaction) throw new CustomError(404, 'Không tìm thấy giao dịch đặt cọc');
 
         const [user, renter] = await Promise.all([findUserById(request.requestedBy), findUserById(contract.renterId)]);
 
@@ -549,11 +555,13 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                   userAddress: user.walletAddress,
                   notifyBefore30Days,
                   renterAddress: renter?.walletAddress!,
+                  depositAmountEth: transaction.amountEth || 0,
               })
             : cancelSmartContractByRenterService({
                   contractId,
                   userAddress: user.walletAddress,
                   notifyBefore30Days,
+                  depositAmountEth: transaction.amountEth || 0,
               }));
 
         const [ethVnd, feeEth, feeIndemnity] = await Promise.all([
@@ -578,7 +586,7 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                     : `Thanh toán tiền đặt cọc cho hợp đồng **${contract.contractId}**`,
                 toId: isRefund ? contract.renterId : contract.ownerId,
                 type: isRefund ? 'REFUND' : 'DEPOSIT',
-                amountEth: contract.depositAmount / ethVnd,
+                amountEth: transaction.amountEth || 0,
                 transactionHash: receipt.transactionHash,
                 fee: Number(fee),
                 feeEth: Number(feeEth),
@@ -645,16 +653,21 @@ export const getContractByIdService = (params: { contractId: string; userId: str
 
 export const endContractWhenOverdueService = async (contractId: string) => {
     try {
-        const contract = await getContractById({ contractId });
+        const [contract, transaction] = await Promise.all([
+            getContractById({ contractId }),
+            findDepositedTransaction(contractId),
+        ]);
 
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
         if (!contract.renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+        if (!transaction) throw new CustomError(404, 'Không tìm thấy giao dịch đặt cọc');
 
         const [{ receipt }, ethVnd] = await Promise.all([
             cancelSmartContractByRenterService({
                 contractId,
                 userAddress: contract.renter.walletAddress,
                 notifyBefore30Days: false,
+                depositAmountEth: transaction.amountEth || 0,
             }),
             getCoinPriceService(),
         ]);
@@ -673,7 +686,7 @@ export const endContractWhenOverdueService = async (contractId: string) => {
                 description: `Bồi thường tiền huỷ hợp đồng **${contract.contractId}**`,
                 toId: contract.ownerId,
                 type: 'COMPENSATION',
-                amountEth: contract.depositAmount / ethVnd,
+                amountEth: transaction.amountEth || 0,
                 transactionHash: receipt.transactionHash,
                 fee,
                 feeEth,
@@ -745,15 +758,19 @@ export const startRentService = async (contractId: IContractId) => {
 };
 
 export const finalizeContractService = async (contract: Contract) => {
-    const owner = await findUserById(contract.ownerId);
+    const [owner, transaction] = await Promise.all([
+        findUserById(contract.ownerId),
+        findDepositedTransaction(contract.contractId),
+    ]);
 
     if (!owner) throw new CustomError(404, 'Không tìm thấy chủ nhà');
     if (!owner.walletAddress) throw new CustomError(400, 'Chủ nhà chưa có địa chỉ ví');
+    if (!transaction) throw new CustomError(404, 'Không tìm thấy giao dịch đặt cọc');
 
     const receipt = await endSmartContractService({
         contractId: contract.contractId,
         userAddress: owner.walletAddress,
-        depositAmount: contract.depositAmount,
+        depositAmountEth: transaction.amountEth || 0,
     });
 
     const ethVnd = await getCoinPriceService();
@@ -774,7 +791,7 @@ export const finalizeContractService = async (contract: Contract) => {
             status: 'COMPLETED',
             type: 'REFUND',
             toId: contract.renterId,
-            amountEth: contract.depositAmount / ethVnd,
+            amountEth: transaction.amountEth || 0,
             transactionHash: receipt.transactionHash,
         }),
         createTransaction({

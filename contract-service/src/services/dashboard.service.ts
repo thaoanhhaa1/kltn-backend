@@ -100,10 +100,6 @@ export const getOverviewByAdminService = async () => {
     };
 };
 
-getOverviewByAdminService()
-    .then((res) => console.log(res))
-    .catch((err) => console.error(err));
-
 export const getIncomeExpenditureByMonthService = async (userId: IUserId) => {
     const year = new Date().getFullYear();
 

@@ -409,3 +409,13 @@ export const countTransactionsByStatus = async () => {
             status;
     `;
 };
+
+export const findDepositedTransaction = (contractId: IContractId) => {
+    return prisma.transaction.findFirst({
+        where: {
+            contractId,
+            type: 'DEPOSIT',
+            status: 'COMPLETED',
+        },
+    });
+};

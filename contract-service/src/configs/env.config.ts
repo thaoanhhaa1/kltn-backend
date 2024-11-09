@@ -20,6 +20,13 @@ const EnvSchema = z.object({
     BIT_KAN_API: z.string(),
     INFURA_API_KEY: z.string(),
     CHAIN_ID: z.string(),
+    FIREBASE_API_KEY: z.string(),
+    FIREBASE_AUTH_DOMAIN: z.string(),
+    FIREBASE_AUTH_PROJECT_ID: z.string(),
+    FIREBASE_STORAGE_BUCKET: z.string(),
+    FIREBASE_MESSAGING_SENDER_ID: z.string(),
+    FIREBASE_APP_ID: z.string(),
+    FIREBASE_MEASUREMENT_ID: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -27,8 +34,9 @@ export type Env = z.infer<typeof EnvSchema>;
 const env = EnvSchema.safeParse(process.env);
 
 if (!env.success) {
+    console.log('Invalid environment variables: ');
     console.error(env.error.errors);
     process.exit(1);
 }
 
-export default env.data;
+export default env.data!;

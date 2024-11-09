@@ -82,6 +82,7 @@ enum NotificationType {
   CONTRACT_DETAIL
   RENTER_PAYMENT
   ADMIN_PROPERTY
+  REPORT
 }
 
 model Notification {

@@ -158,10 +158,12 @@ export const cancelSmartContractByRenterService = async ({
     contractId,
     userAddress,
     notifyBefore30Days,
+    depositAmountEth,
 }: {
     contractId: string;
     userAddress: string;
     notifyBefore30Days: boolean;
+    depositAmountEth: number;
 }) => {
     const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
         from: userAddress,
@@ -173,7 +175,7 @@ export const cancelSmartContractByRenterService = async ({
 
     if (rentalStatus === 3) throw new CustomError(400, 'Hợp đồng đã kết thúc.');
 
-    const depositAmountInWei = await convertVNDToWei(Number(rental.depositAmount));
+    const depositAmountInWei = web3.utils.toWei(depositAmountEth.toString(), 'ether');
 
     const cancelContract = rentalContract.methods.cancelContractByRenter(
         contractId,
@@ -207,11 +209,13 @@ export const cancelSmartContractByOwnerService = async ({
     contractId,
     userAddress,
     notifyBefore30Days,
+    depositAmountEth,
 }: {
     renterAddress: string;
     contractId: string;
     userAddress: string;
     notifyBefore30Days: boolean;
+    depositAmountEth: number;
 }) => {
     const rental: any = await rentalContract.methods.getContractDetails(contractId).call({
         from: userAddress,
@@ -223,10 +227,7 @@ export const cancelSmartContractByOwnerService = async ({
 
     if (rentalStatus === 3) throw new CustomError(400, 'Hợp đồng đã kết thúc.');
 
-    const [depositAmountInWei, value] = await Promise.all([
-        convertVNDToWei(Number(rental.depositAmount)),
-        convertVNDToWei(Number(rental.depositAmount) + Number(notifyBefore30Days ? 0 : rental.monthlyRent)),
-    ]);
+    const depositAmountInWei = web3.utils.toWei(depositAmountEth.toString(), 'ether');
 
     const transaction = await getCompensationTransaction(contractId);
     const monthlyRentInWei = transaction?.amountEth ? web3.utils.toWei(transaction.amountEth.toString(), 'ether') : 0;
@@ -334,14 +335,14 @@ export const transferToSmartContractService = async ({
 
 export const endSmartContractService = async ({
     contractId,
-    depositAmount,
+    depositAmountEth,
     userAddress,
 }: {
     contractId: IContractId;
     userAddress: string;
-    depositAmount: number;
+    depositAmountEth: number;
 }) => {
-    const depositAmountInWei = await convertVNDToWei(depositAmount);
+    const depositAmountInWei = web3.utils.toWei(depositAmountEth.toString(), 'ether');
 
     const endContract = rentalContract.methods.endContract(contractId, depositAmountInWei);
 
@@ -354,6 +355,39 @@ export const endSmartContractService = async ({
 
     return endContract.send({
         from: userAddress,
+        gas: gasEstimate.toString(),
+        gasPrice: gasPrice.toString(),
+    });
+};
+
+export const transferAddressToAddressService = async ({
+    amount,
+    contractId,
+    description,
+    receiverAddress,
+    senderAddress,
+}: {
+    contractId: string;
+    senderAddress: string;
+    receiverAddress: string;
+    amount: number;
+    description: string;
+}) => {
+    const amountInWei = await convertVNDToWei(amount);
+
+    const transferMethod = rentalContract.methods.transferAddressToAddress(contractId, receiverAddress, description);
+
+    const [gasEstimate, gasPrice] = await Promise.all([
+        transferMethod.estimateGas({
+            from: senderAddress,
+            value: amountInWei,
+        }),
+        getGasPriceInfuraService(),
+    ]);
+
+    return transferMethod.send({
+        from: senderAddress,
+        value: amountInWei,
         gas: gasEstimate.toString(),
         gasPrice: gasPrice.toString(),
     });
