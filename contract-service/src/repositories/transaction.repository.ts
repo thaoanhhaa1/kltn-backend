@@ -419,3 +419,19 @@ export const findDepositedTransaction = (contractId: IContractId) => {
         },
     });
 };
+
+export const getTransactionsByContractId = (contractId: IContractId, userId: IUserId) => {
+    return prisma.transaction.findMany({
+        where: {
+            contractId,
+            OR: [
+                {
+                    fromId: userId,
+                },
+                {
+                    toId: userId,
+                },
+            ],
+        },
+    });
+};
