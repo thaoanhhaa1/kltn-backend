@@ -4,6 +4,7 @@ import { IUserId } from '../interfaces/user';
 import {
     countTransactionsByUser,
     createTransaction,
+    getTransactionsByContractId,
     getTransactionsByRenter,
     getTransactionsByUser,
 } from '../repositories/transaction.repository';
@@ -29,4 +30,8 @@ export const getTransactionsByUserIdService = async (params: IGetTransactionsByU
     };
 
     return paginationResult;
+};
+
+export const getTransactionsByContractIdService = async (contractId: string, userId: IUserId) => {
+    return getTransactionsByContractId(contractId, userId);
 };

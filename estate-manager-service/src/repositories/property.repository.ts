@@ -559,6 +559,9 @@ export const countPropertiesByStatus = () => {
         where: {
             deleted: false,
         },
+        orderBy: {
+            status: 'asc',
+        },
         by: ['status'],
         _count: {
             status: true,
