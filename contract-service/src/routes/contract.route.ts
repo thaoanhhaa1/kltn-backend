@@ -26,6 +26,6 @@ router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndAppro
 
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenter);
-router.get('/:contractId', authMiddleware, hasAnyRoleMiddleware(['owner', 'renter']), getContractDetail);
+router.get('/:contractId', authMiddleware, getContractDetail);
 
 export default router;

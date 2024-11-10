@@ -12,7 +12,7 @@ import {
     getTransactionsUnPaid,
 } from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
-import { getCoinPriceService } from './coingecko.service';
+import { getCoinPriceService, getGasPriceInfuraService } from './coingecko.service';
 import {
     cancelContractBeforeDepositService,
     endContractService,
@@ -61,7 +61,8 @@ class TaskService {
                 }
             });
 
-            await getCoinPriceService();
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
+
             const res = await Promise.allSettled(queries);
             console.log('🚀 ~ TaskService ~ job ~ res:', res);
 
@@ -103,6 +104,7 @@ class TaskService {
                 return updateStatusRequestService({ requestId: request.id, status: 'CONTINUE' });
             });
 
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
             const result = await Promise.allSettled(queries);
 
             result.forEach((res) => {
@@ -134,8 +136,8 @@ class TaskService {
             console.log('task.service::End contract by request task executed');
 
             const requests = await getRequestsCancelContract();
-            await getCoinPriceService();
 
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
             const result = await Promise.allSettled(requests.map(endContractService));
             console.log('🚀 ~ job ~ requests:', requests);
             console.log('🚀 ~ job ~ result:', result);
@@ -183,6 +185,7 @@ class TaskService {
                 return endContractWhenOverdueService(transaction.contractId);
             });
 
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
             const res = await Promise.allSettled(queries);
 
             console.log('handleOverdueTransactionTask::res', JSON.stringify(res));
@@ -201,6 +204,7 @@ class TaskService {
 
             const queries = contracts.map((contract) => startRentService(contract.contractId));
 
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
             const res = await Promise.allSettled(queries);
             console.log('🚀 ~ job ~ res:', res);
 
@@ -219,6 +223,7 @@ class TaskService {
 
             const queries = contracts.map(finalizeContractService);
 
+            await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);
             const res = await Promise.allSettled(queries);
             console.log('🚀 ~ job ~ res:', res);
 

@@ -1,4 +1,5 @@
 import { IContractId } from '../interfaces/contract';
+import { ITransactionStats } from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
 import {
     ICalcAvgRevenueByMonth,
@@ -289,6 +290,132 @@ export const cancelTransactionsWhenEndContract = (contractId: IContractId) => {
         },
         data: {
             status: 'CANCELLED',
+        },
+    });
+};
+
+export const getTransactionStats = async (): Promise<Array<ITransactionStats>> => {
+    return prisma.$queryRaw`
+        SELECT 
+            COUNT(id) AS total_transactions, 
+            SUM(CASE 
+                WHEN type = 'RENT' THEN amount
+                ELSE 0
+            END) AS total_revenue,
+            SUM(CASE 
+                WHEN type in ('DEPOSIT', 'COMPENSATION', 'RENT', 'REFUND') THEN fee
+                WHEN type in ('CREATE_CONTRACT', 'CANCEL_CONTRACT', 'END_CONTRACT') THEN amount
+                ELSE 0
+            END) AS total_fee
+        FROM
+            "\`transaction\`"
+        WHERE
+            status = 'COMPLETED';
+    `;
+};
+
+export const countTransactionsByMonth = async (year: number) => {
+    return prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            COUNT(id) AS total_transactions 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            status = 'COMPLETED'
+            and type in ('RENT', 'DEPOSIT', 'REFUND', 'COMPENSATION')
+            and EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month 
+        ORDER BY 
+            month;
+    `;
+};
+
+// tính doanh thu theo tháng
+export const getAllRevenueByMonth = async (year: number) => {
+    return prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            SUM(amount) AS revenue 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            status = 'COMPLETED'
+            and type = 'RENT'
+            and EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month 
+        ORDER BY 
+            month;
+    `;
+};
+
+// đếm số lượng giao dịch theo từng tháng và từng trạng thái
+export const countTransactionsByMonthAndStatus = async (year: number) => {
+    return prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            status, 
+            COUNT(id) AS total_transactions 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            type in ('RENT', 'DEPOSIT', 'REFUND', 'COMPENSATION')
+            and EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month, status 
+        ORDER BY 
+            month;
+    `;
+};
+
+export const getRevenueAndFeeByMonth = async (year: number) => {
+    return prisma.$queryRaw`
+        SELECT 
+            EXTRACT(MONTH FROM "updated_at") AS month, 
+            SUM(CASE 
+                WHEN type = 'RENT' THEN amount
+                ELSE 0
+            END) AS revenue, 
+            SUM(CASE 
+                WHEN type in ('DEPOSIT', 'COMPENSATION', 'RENT', 'REFUND') THEN fee
+                WHEN type in ('CREATE_CONTRACT', 'CANCEL_CONTRACT', 'END_CONTRACT') THEN amount
+                ELSE 0
+            END) AS fee 
+        FROM 
+            "\`transaction\`" 
+        WHERE
+            status = 'COMPLETED'
+            and EXTRACT(YEAR FROM "updated_at") = ${year}
+        GROUP BY 
+            month 
+        ORDER BY 
+            month;
+    `;
+};
+
+// đếm số lượng giao dịch theo trạng thái
+export const countTransactionsByStatus = async () => {
+    return prisma.$queryRaw`
+        SELECT 
+            status, 
+            COUNT(id) AS total_transactions 
+        FROM 
+            "\`transaction\`"
+        WHERE
+            type in ('RENT', 'DEPOSIT', 'REFUND', 'COMPENSATION')
+        GROUP BY 
+            status;
+    `;
+};
+
+export const findDepositedTransaction = (contractId: IContractId) => {
+    return prisma.transaction.findFirst({
+        where: {
+            contractId,
+            type: 'DEPOSIT',
+            status: 'COMPLETED',
         },
     });
 };

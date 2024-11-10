@@ -1,21 +1,17 @@
 import { NextFunction, Request, Response } from 'express';
+import { IUserId, UserType } from '../interfaces/user';
 import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import { verifyToken } from '../utils/jwt.util';
-import { IUserId } from '../interfaces/user';
 
 export interface JWTInput {
     id: IUserId;
     email: string;
-    userTypes: string[];
+    userTypes: UserType[];
 }
 
 export interface AuthenticatedRequest extends Request {
-    user?: {
-        id: IUserId;
-        email: string;
-        userTypes: string[];
-    };
+    user?: JWTInput;
 }
 
 const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

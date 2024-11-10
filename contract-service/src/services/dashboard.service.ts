@@ -1,16 +1,25 @@
+import { Status } from '@prisma/client';
 import { IGetRentalRequestRating, IGetRentalRequestRatingRes } from '../interfaces/dashboard';
 import { IUserId } from '../interfaces/user';
-import { getTenantDistributionByAreaForOwner } from '../repositories/contract.repository';
+import { countContractByStatus, getTenantDistributionByAreaForOwner } from '../repositories/contract.repository';
 import {
     countCancelRequestByUserId,
     getContractCancellationRateByMonthForOwner,
 } from '../repositories/contractCancellationRequest.repository';
 import { countExtensionRequestByUserId } from '../repositories/contractExtensionRequest.repository';
-import { countRentalRequestByUserId, getRentalRequestRating } from '../repositories/rentalRequest.repository';
+import {
+    countRentalRequestByDay,
+    countRentalRequestByMonth,
+    countRentalRequestByStatus,
+    countRentalRequestByUserId,
+    countRentalRequestByWeek,
+    getRentalRequestRating,
+} from '../repositories/rentalRequest.repository';
 import {
     calcAvgRevenueByMonth,
     getExpenditureTransactionsByMonth,
     getIncomeTransactionsByMonth,
+    getTransactionStats,
 } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import CustomError from '../utils/error.util';
@@ -35,6 +44,58 @@ export const getOverviewByOwnerService = async (ownerId: IUserId) => {
         avgRevenue: {
             VND: avgRevenue._avg.amount ?? 0,
             ETH: avgRevenue._avg.amountEth ?? 0,
+        },
+    };
+};
+
+export const getOverviewByAdminService = async () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const [rentalRequestByStatus, contractByStatus, transactionsStats] = await Promise.all([
+        countRentalRequestByStatus(year, month),
+        countContractByStatus(),
+        getTransactionStats(),
+    ]);
+
+    const getContractStatus = (status: Status): Status => {
+        switch (status) {
+            case 'WAITING':
+                return 'WAITING';
+            case 'DEPOSITED':
+            case 'ONGOING':
+            case 'PENDING_CANCELLATION':
+            case 'UNILATERAL_CANCELLATION':
+            case 'APPROVED_CANCELLATION':
+            case 'REJECTED_CANCELLATION':
+                return 'ONGOING';
+            default:
+                return 'ENDED';
+        }
+    };
+
+    const transactionStats = transactionsStats[0];
+
+    return {
+        rentalRequestByStatus: rentalRequestByStatus.reduce(
+            (acc, { status, count }) => ({
+                ...acc,
+                [status]: Number(count),
+            }),
+            {},
+        ),
+        contractByStatus: contractByStatus.reduce((acc, { status, _count }) => {
+            const contractStatus = getContractStatus(status);
+            return {
+                ...acc,
+                [contractStatus]: (acc[contractStatus] || 0) + Number(_count.status),
+            };
+        }, {} as Record<Status, number>),
+        transactionStats: {
+            count: Number(transactionStats.total_transactions),
+            revenue: Number(transactionStats.total_revenue),
+            fee: Number(transactionStats.total_fee),
         },
     };
 };
@@ -136,4 +197,39 @@ export const getRentalRequestRatingService = async (ownerId: IUserId) => {
         },
         [] as Array<IGetRentalRequestRatingRes>,
     );
+};
+
+export const countRentalRequestByDayService = async () => {
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
+
+    const result = await countRentalRequestByDay(year, month);
+
+    return result.map((item) => ({
+        day: Number(item.day),
+        count: Number(item.count),
+    }));
+};
+
+export const countRentalRequestByWeekService = async () => {
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
+
+    const result = await countRentalRequestByWeek(year, month);
+
+    return result.map((item) => ({
+        week: Number(item.week),
+        count: Number(item.count),
+    }));
+};
+
+export const countRentalRequestByMonthService = async () => {
+    const year = new Date().getFullYear();
+
+    const result = await countRentalRequestByMonth(year);
+
+    return result.map((item) => ({
+        month: Number(item.month),
+        count: Number(item.count),
+    }));
 };

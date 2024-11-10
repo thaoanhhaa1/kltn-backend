@@ -199,6 +199,37 @@ contract RentalContract {
         );
     }
 
+    // chuyển tiền từ địa chỉ này sang địa chỉ khác
+    function transferAddressToAddress(
+        string memory _contractID,
+        address payable recipient,
+        string memory description
+    ) public payable {
+        Contract storage contractInfo = contracts[_contractID];
+
+        require(
+            msg.sender == contractInfo.owner || msg.sender == contractInfo.renter,
+            unicode'Chỉ chủ hợp đồng mới có thể chuyển tiền'
+        );
+        require(
+            recipient == contractInfo.owner || recipient == contractInfo.renter,
+            unicode'Địa chỉ nhận không hợp lệ'
+        );
+
+        require(
+            contractInfo.status == RentalStatus.Deposited || contractInfo.status == RentalStatus.Ongoing,
+            unicode'Trạng thái hợp đồng không hợp lệ để chuyển tiền'
+        );
+        require(address(msg.sender).balance >= msg.value, unicode'Số dư không đủ để chuyển tiền');
+
+        (bool success, ) = recipient.call{ value: msg.value }('');
+        require(success, unicode'Chuyển tiền thất bại');
+
+        _recordTransaction(_contractID, msg.sender, contractInfo.owner, msg.value, description);
+
+        emit TransactionRecorded(_contractID, msg.sender, contractInfo.owner, msg.value, block.timestamp, description);
+    }
+
     // function contractualIndemnity(string memory _contractID) public payable onlyOwner(_contractID) {
     //     Contract storage contractInfo = contracts[_contractID];
 

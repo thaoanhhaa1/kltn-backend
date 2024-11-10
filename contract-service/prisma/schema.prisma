@@ -33,6 +33,8 @@ model User {
   renterRentalRequests RentalRequest[]               @relation("RenterRentalRequest")
   ownerRentalRequests  RentalRequest[]               @relation("OwnerRentalRequest")
   cancellationRequests ContractCancellationRequest[]
+  ownedReports         Report[]                      @relation("OwnerReport")
+  rentedReports        Report[]                      @relation("RenterReport")
 
   @@map("`user`")
 }
@@ -127,6 +129,7 @@ enum TransactionType {
   CANCEL_CONTRACT
   END_CONTRACT
   COMPENSATION
+  REPORT
 }
 
 model Transaction {
@@ -147,6 +150,7 @@ model Transaction {
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   contract        Contract          @relation("ContractTransactions", fields: [contractId], references: [contractId])
+  reports         ReportChild[]
 
   @@map("`transaction`")
 }
@@ -228,4 +232,78 @@ model ContractExtensionRequest {
   contract      Contract                       @relation(fields: [contractId], references: [contractId])
 
   @@map("`contract_extension_requests`")
+}
+
+enum ReportType {
+  incident
+  violation
+}
+
+enum ReportPriority {
+  low
+  medium
+  high
+}
+
+model Report {
+  id          Int             @id @default(autoincrement())
+  propertyId  String          @map("property_id")
+  contractId  String          @map("contract_id")
+  ownerId     String          @map("owner_id")
+  renterId    String          @map("renter_id")
+  type        ReportType
+  priority    ReportPriority
+  title       String
+  description String
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  reportChild ReportChild[]
+  owner       User            @relation(fields: [ownerId], references: [userId], "OwnerReport")
+  renter      User            @relation(fields: [renterId], references: [userId], "RenterReport")
+  history     ReportHistory[]
+
+  @@map("`report`")
+}
+
+enum ReportStatus {
+  pending_owner
+  pending_renter
+  owner_proposed
+  owner_accepted //
+  renter_accepted //
+  renter_rejected
+  admin_processing
+  admin_resolved //
+  in_progress
+  owner_completed
+  renter_completed
+  owner_not_resolved
+  cancelled
+}
+
+model ReportChild {
+  id            Int          @id @default(autoincrement())
+  reportId      Int          @map("report_id")
+  proposed      String
+  compensation  Int?
+  evidences     String[]     @default([])
+  resolvedAt    DateTime     @map("resolved_at")
+  transactionId Int?         @map("transaction_id")
+  status        ReportStatus
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  report        Report       @relation(fields: [reportId], references: [id])
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@map("`report_child`")
+}
+
+model ReportHistory {
+  id        Int          @id @default(autoincrement())
+  reportId  Int          @map("report_id")
+  status    ReportStatus
+  createdAt DateTime     @default(now()) @map("created_at")
+  Report    Report       @relation(fields: [reportId], references: [id])
+
+  @@map("`report_history`")
 }

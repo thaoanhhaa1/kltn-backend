@@ -10,7 +10,8 @@ export type NotificationType =
     | 'OWNER_CONTRACT'
     | 'RENTER_CONTRACT'
     | 'CONTRACT_DETAIL'
-    | 'RENTER_PAYMENT';
+    | 'RENTER_PAYMENT'
+    | 'REPORT';
 
 export interface ICreateNotification {
     title: string;

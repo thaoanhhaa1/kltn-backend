@@ -552,3 +552,67 @@ export const updatePropertyType = (typeId: PropertyTypeId, typeName: string) => 
         },
     });
 };
+
+// count properties by status
+export const countPropertiesByStatus = () => {
+    return prisma.property.groupBy({
+        where: {
+            deleted: false,
+        },
+        by: ['status'],
+        _count: {
+            status: true,
+        },
+        _avg: {
+            price: true,
+        },
+    });
+};
+
+// count properites by type
+export const countPropertiesByType = () => {
+    return prisma.property.aggregateRaw({
+        pipeline: [
+            {
+                $match: {
+                    deleted: false,
+                },
+            },
+            {
+                $group: {
+                    _id: '$type',
+                    count: { $sum: 1 },
+                    avgPrice: { $avg: '$price' },
+                },
+            },
+        ],
+    });
+};
+
+// count properties by city and district
+export const countPropertiesByCityAndDistrict = () => {
+    return prisma.property.aggregateRaw({
+        pipeline: [
+            {
+                $match: {
+                    deleted: false,
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        city: '$address.city',
+                        district: '$address.district',
+                    },
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $sort: {
+                    '_id.city': 1,
+                    '_id.district': 1,
+                },
+            },
+        ],
+    });
+};
