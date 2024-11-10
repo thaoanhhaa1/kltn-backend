@@ -1,6 +1,16 @@
+import { ReportStatus } from '@prisma/client';
 import { isAfter } from 'date-fns';
 import { IContractId } from '../interfaces/contract';
-import { ReportChildId, ReportId } from '../interfaces/report';
+import {
+    IGetReportByAdminReq,
+    IGetReportByOwnerReq,
+    IGetReportByRenterReq,
+    IReportDTO,
+    ReportChildId,
+    ReportFilterStatus,
+    ReportId,
+    ReportSort,
+} from '../interfaces/report';
 import { IUserId } from '../interfaces/user';
 import { JWTInput } from '../middlewares/auth.middleware';
 import prisma from '../prisma/prismaClient';
@@ -9,6 +19,9 @@ import {
     createReportForRenter,
     findReportByIdAndOwnerId,
     findReportsAndLastChild,
+    getReportByAdmin,
+    getReportByOwner,
+    getReportByRenter,
     getReportDetailById,
 } from '../repositories/report.repository';
 import {
@@ -36,6 +49,51 @@ import CustomError from '../utils/error.util';
 import { convertGasToEthService, transferAddressToAddressService } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
 import { createNotificationQueue } from './rabbitmq.service';
+
+const getReportDTO = (report: any): IReportDTO => {
+    const { reportChild, ...r } = report;
+
+    return {
+        ...r,
+        status: reportChild[0].status,
+        resolvedAt: reportChild[0].resolvedAt,
+        compensation: reportChild[0].compensation,
+        proposed: reportChild[0].proposed,
+        reportChildId: reportChild[0].id,
+    };
+};
+
+const sortQuery = (sort: ReportSort) => {
+    switch (sort) {
+        case 'newest':
+            return { createdAt: 'desc' };
+        case 'priority_asc':
+            return { priority: 'asc' };
+        case 'priority_desc':
+            return { priority: 'desc' };
+        default:
+            return {};
+    }
+};
+
+const filterStatusQuery = (status: ReportFilterStatus): ReportStatus[] => {
+    switch (status) {
+        case 'pending':
+        case 'urgent':
+            return [
+                'admin_processing',
+                'renter_rejected',
+                'pending_renter',
+                'pending_owner',
+                'owner_proposed',
+                'owner_not_resolved',
+            ];
+        case 'resolved':
+            return ['admin_resolved', 'owner_accepted', 'owner_completed', 'renter_accepted', 'renter_completed'];
+        default:
+            return [];
+    }
+};
 
 export const createReportForRenterService = async (data: CreateReportForRenterRequest) => {
     const contract = await findContractById(data.contractId);
@@ -454,14 +512,7 @@ export const findReportsAndLastChildService = async (contractId: IContractId, us
         userId: user.id,
     });
 
-    return report.map(({ reportChild, ...r }) => ({
-        ...r,
-        status: reportChild[0].status,
-        resolvedAt: reportChild[0].resolvedAt,
-        compensation: reportChild[0].compensation,
-        proposed: reportChild[0].proposed,
-        reportChildId: reportChild[0].id,
-    }));
+    return report.map(getReportDTO);
 };
 
 export const getReportDetailByIdService = async (data: { id: ReportId; isAdmin: boolean; userId: IUserId }) => {
@@ -507,4 +558,61 @@ export const ownerNoResolveReportService = async (reportId: ReportId, userId: IU
     ]);
 
     return reportChild;
+};
+
+export const getReportByRenterService = async (data: IGetReportByRenterReq) => {
+    // const [result, count] = await Promise.all([getReportByRenter(data), countReportByRenter(data)]);
+
+    // const response: IPaginationResponse<IReportDTO> = {
+    //     data: result.map(getReportDTO),
+    //     pageInfo: getPageInfo({
+    //         skip: data.skip,
+    //         take: data.take,
+    //         count,
+    //     }),
+    // };
+
+    // return response;
+
+    const result = await getReportByRenter(data);
+
+    return result.map(getReportDTO);
+};
+
+export const getReportByOwnerService = async ({ sort, status, ...data }: IGetReportByOwnerReq) => {
+    const orderBy = sortQuery(sort);
+    const result = await getReportByOwner({
+        ...data,
+        sort: orderBy,
+    });
+    console.log('🚀 ~ getReportByOwnerService ~ result:', result);
+
+    const statuses = filterStatusQuery(status);
+
+    return result
+        .filter((item) => {
+            if (!statuses.length) return true;
+
+            if (status === 'urgent')
+                return item.priority === 'high' && statuses.includes(item.reportChild.at(-1)!.status);
+
+            return statuses.includes(item.reportChild.at(-1)!.status);
+        })
+        .map(getReportDTO);
+};
+
+export const getReportByAdminService = async ({ status, ...data }: IGetReportByAdminReq) => {
+    const result = await getReportByAdmin(data);
+
+    const statuses = filterStatusQuery(status);
+    return result
+        .filter((item) => {
+            if (!statuses.length) return true;
+
+            if (status === 'urgent')
+                return item.priority === 'high' && statuses.includes(item.reportChild.at(-1)!.status);
+
+            return statuses.includes(item.reportChild.at(-1)!.status);
+        })
+        .map(getReportDTO);
 };

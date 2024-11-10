@@ -1,4 +1,6 @@
+import { ReportType } from '@prisma/client';
 import { NextFunction, Response } from 'express';
+import { ReportFilterStatus, ReportSort } from '../interfaces/report';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
     acceptReportByOwnerSchema,
@@ -14,6 +16,9 @@ import {
     completeReportByRenterService,
     createReportForRenterService,
     findReportsAndLastChildService,
+    getReportByAdminService,
+    getReportByOwnerService,
+    getReportByRenterService,
     getReportDetailByIdService,
     inProgressReportService,
     ownerNoResolveReportService,
@@ -275,6 +280,66 @@ export const ownerNoResolveReport = async (req: AuthenticatedRequest, res: Respo
         const reportId = Number(req.body.reportId);
 
         const result = await ownerNoResolveReportService(reportId, userId);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getReportByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const skip = Number(req.query.skip) || 0;
+        const take = Number(req.query.take) || 10;
+
+        const result = await getReportByRenterService({
+            renterId: userId,
+            skip,
+            take,
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getReportByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const skip = Number(req.query.skip) || 0;
+        const take = Number(req.query.take) || 10;
+        const status = req.query.status as ReportFilterStatus;
+        const sort = req.query.sort as ReportSort;
+
+        const result = await getReportByOwnerService({
+            ownerId: userId,
+            skip,
+            take,
+            sort,
+            status,
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getReportByAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const skip = Number(req.query.skip) || 0;
+        const take = Number(req.query.take) || 10;
+        const status = req.query.status as ReportFilterStatus;
+        const type = req.query.type as ReportType;
+
+        const result = await getReportByAdminService({
+            skip,
+            take,
+            status,
+            type,
+        });
 
         res.status(200).json(result);
     } catch (error) {
