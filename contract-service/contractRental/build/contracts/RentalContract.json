@@ -41556,12 +41556,12 @@
     "1729443828874": {
       "events": {},
       "links": {},
-      "address": "0x63A57fBb98C5F8833cA0A48484ada0a3703823A4",
-      "transactionHash": "0x0a071c5da579ea8a200de10e141d6cd2e52f5c0fcef51c07379fe86bcead375a"
+      "address": "0x06A28f1BC5afDa8D9Af05c948886Bc0a0d2312d5",
+      "transactionHash": "0x2a32114e887325a79d0f85c9428f489d61c5e7d587ff19aef5628352c8552e67"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-11-08T15:59:54.265Z",
+  "updatedAt": "2024-11-10T10:57:18.892Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
