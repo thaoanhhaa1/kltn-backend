@@ -34,6 +34,25 @@ export const createReportChild = (
 export const findReportChildById = (id: ReportChildId) => {
     return prisma.reportChild.findFirst({
         where: {
+            reportId: id,
+        },
+        include: {
+            report: {
+                select: {
+                    ownerId: true,
+                    renterId: true,
+                    title: true,
+                    contractId: true,
+                },
+            },
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+};
+
+export const findReportChildByChildId = (id: ReportChildId) => {
+    return prisma.reportChild.findFirst({
+        where: {
             id,
         },
         include: {

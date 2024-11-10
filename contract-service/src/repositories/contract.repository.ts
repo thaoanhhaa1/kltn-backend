@@ -90,18 +90,20 @@ export const payMonthlyRent = (contractId: string) => {
 };
 
 // Hàm lấy chi tiết hợp đồng từ cơ sở dữ liệu
-export const getContractDetail = async ({ contractId, userId }: IGetContractDetail): Promise<any> => {
+export const getContractDetail = async ({ contractId, userId, isAdmin }: IGetContractDetail): Promise<any> => {
     return prisma.contract.findUnique({
         where: {
             contractId,
-            OR: [
-                {
-                    ownerId: userId,
-                },
-                {
-                    renterId: userId,
-                },
-            ],
+            ...(!isAdmin && {
+                OR: [
+                    {
+                        ownerId: userId,
+                    },
+                    {
+                        renterId: userId,
+                    },
+                ],
+            }),
         },
         include: {
             owner: {

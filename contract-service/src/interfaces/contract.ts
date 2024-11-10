@@ -63,6 +63,7 @@ export interface IEndContract {
 export interface IGetContractDetail {
     contractId: IContractId;
     userId: IUserId;
+    isAdmin: boolean;
 }
 
 export interface ICreateContract extends IContract {

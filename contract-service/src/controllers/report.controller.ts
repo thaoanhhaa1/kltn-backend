@@ -13,6 +13,10 @@ import {
     completeReportByOwnerService,
     completeReportByRenterService,
     createReportForRenterService,
+    findReportsAndLastChildService,
+    getReportDetailByIdService,
+    inProgressReportService,
+    ownerNoResolveReportService,
     proposedReportChildByOwnerService,
     rejectReportByRenterService,
     resolveReportByAdminService,
@@ -84,9 +88,9 @@ export const acceptReportByOwner = async (req: AuthenticatedRequest, res: Respon
 export const cancelReportChild = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const reportChildId = Number(req.params.id);
+        const reportId = Number(req.params.id);
 
-        const result = await cancelReportChildService({ reportChildId, userId });
+        const result = await cancelReportChildService({ reportId, userId });
 
         res.status(200).json(result);
     } catch (error) {
@@ -97,10 +101,16 @@ export const cancelReportChild = async (req: AuthenticatedRequest, res: Response
 export const proposedReportChildByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        const imageUrls: Array<string> = [];
+
+        if (files) imageUrls.push(...files.map((file) => file.originalname));
 
         const safeParse = proposedReportChildByOwnerSchema.safeParse({
             ...req.body,
             ownerId: userId,
+            evidences: imageUrls,
         });
 
         if (!safeParse.success)
@@ -108,7 +118,18 @@ export const proposedReportChildByOwner = async (req: AuthenticatedRequest, res:
                 issue: safeParse.error.issues,
             });
 
-        const result = await proposedReportChildByOwnerService(safeParse.data);
+        if (files) {
+            const images = await uploadFiles({ files, folder: 'reports' });
+
+            imageUrls.length = 0;
+
+            imageUrls.push(...images);
+        }
+
+        const result = await proposedReportChildByOwnerService({
+            ...safeParse.data,
+            evidences: imageUrls,
+        });
 
         res.status(200).json(result);
     } catch (error) {
@@ -144,14 +165,34 @@ export const rejectReportByRenter = async (req: AuthenticatedRequest, res: Respo
 
 export const resolveReportByAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const safeParse = resolveReportByAdminSchema.safeParse(req.body);
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        const imageUrls: Array<string> = [];
+
+        if (files) imageUrls.push(...files.map((file) => file.originalname));
+
+        const safeParse = resolveReportByAdminSchema.safeParse({
+            ...req.body,
+            evidences: imageUrls,
+        });
 
         if (!safeParse.success)
             throw convertZodIssueToEntryErrors({
                 issue: safeParse.error.issues,
             });
 
-        const result = await resolveReportByAdminService(safeParse.data);
+        if (files) {
+            const images = await uploadFiles({ files, folder: 'reports' });
+
+            imageUrls.length = 0;
+
+            imageUrls.push(...images);
+        }
+
+        const result = await resolveReportByAdminService({
+            ...safeParse.data,
+            evidences: imageUrls,
+        });
 
         res.status(200).json(result);
     } catch (error) {
@@ -162,9 +203,9 @@ export const resolveReportByAdmin = async (req: AuthenticatedRequest, res: Respo
 export const completeReportByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const reportChildId = Number(req.body.reportChildId);
+        const reportId = Number(req.body.reportId);
 
-        const result = await completeReportByOwnerService(reportChildId, userId);
+        const result = await completeReportByOwnerService(reportId, userId);
 
         res.status(200).json(result);
     } catch (error) {
@@ -175,9 +216,65 @@ export const completeReportByOwner = async (req: AuthenticatedRequest, res: Resp
 export const completeReportByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const reportChildId = Number(req.body.reportChildId);
+        const reportId = Number(req.body.reportId);
 
-        const result = await completeReportByRenterService(reportChildId, userId);
+        const result = await completeReportByRenterService(reportId, userId);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const findReportsAndLastChild = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const contractId = req.params.contractId;
+
+        const result = await findReportsAndLastChildService(contractId, req.user!);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getReportDetailById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const reportId = Number(req.params.id);
+        const isAdmin = req.user!.userTypes.includes('admin');
+        const userId = req.user!.id;
+
+        const result = await getReportDetailByIdService({
+            id: reportId,
+            isAdmin,
+            userId,
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const inProgressReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const reportId = Number(req.body.reportId);
+
+        const result = await inProgressReportService(reportId, userId);
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const ownerNoResolveReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const reportId = Number(req.body.reportId);
+
+        const result = await ownerNoResolveReportService(reportId, userId);
 
         res.status(200).json(result);
     } catch (error) {

@@ -51,7 +51,7 @@ export const acceptReportByOwnerSchema = z.object({
 export type AcceptReportByOwnerRequest = z.infer<typeof acceptReportByOwnerSchema>;
 
 export const proposedReportChildByOwnerSchema = z.object({
-    reportChildId: reportChildIdValidation,
+    reportId: reportIdValidation,
     ownerId: ownerIdValidation,
     proposed: proposedValidation,
     compensation: compensationOptional,

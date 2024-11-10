@@ -170,6 +170,7 @@ export const getContractDetail = async (req: AuthenticatedRequest, res: Response
     try {
         const { contractId } = req.params;
         const userId = req.user!.id;
+        const isAdmin = req.user!.userTypes.includes('admin');
 
         if (!contractId) return res.status(400).json({ message: 'Mã hợp đồng không được để trống' });
 
@@ -177,6 +178,7 @@ export const getContractDetail = async (req: AuthenticatedRequest, res: Response
         const contractDetail = await getContractDetailService({
             contractId,
             userId,
+            isAdmin,
         });
 
         if (!contractDetail) return res.status(404).json({ message: 'Không tìm thấy hợp đồng' });

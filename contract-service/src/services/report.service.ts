@@ -1,10 +1,19 @@
+import { isAfter } from 'date-fns';
+import { IContractId } from '../interfaces/contract';
 import { ReportChildId, ReportId } from '../interfaces/report';
 import { IUserId } from '../interfaces/user';
+import { JWTInput } from '../middlewares/auth.middleware';
 import prisma from '../prisma/prismaClient';
 import { findContractById } from '../repositories/contract.repository';
-import { createReportForRenter, findReportByIdAndOwnerId } from '../repositories/report.repository';
+import {
+    createReportForRenter,
+    findReportByIdAndOwnerId,
+    findReportsAndLastChild,
+    getReportDetailById,
+} from '../repositories/report.repository';
 import {
     createReportChild,
+    findReportChildByChildId,
     findReportChildById,
     getLastReportChildByReportId,
     getLastReportChildByReportIdAndOwnerProposed,
@@ -12,6 +21,7 @@ import {
     updateReportChildStatus,
     updateReportChildWhenOwnerComplete,
 } from '../repositories/reportChild.repository';
+import { createReportHistory } from '../repositories/reportHistory.repository';
 import { createTransaction } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
 import {
@@ -53,7 +63,16 @@ export const createReportForRenterService = async (data: CreateReportForRenterRe
         .then(() => console.log('Notification created'))
         .catch((err) => console.log(err));
 
-    return report;
+    const { reportChild, ...r } = report;
+
+    return {
+        ...r,
+        status: reportChild[0].status,
+        resolvedAt: reportChild[0].resolvedAt,
+        compensation: reportChild[0].compensation,
+        proposed: reportChild[0].proposed,
+        reportChildId: reportChild[0].id,
+    };
 };
 
 export const acceptReportByOwnerService = async ({ reportId, reportChildId, userId }: AcceptReportByOwnerRequest) => {
@@ -67,13 +86,16 @@ export const acceptReportByOwnerService = async ({ reportId, reportChildId, user
     if (lastReportChild.id !== reportChildId) throw new CustomError(400, 'Báo cáo con không hợp lệ');
     if (lastReportChild.status !== 'pending_owner') throw new CustomError(400, 'Báo cáo đã được xử lý');
 
-    const childReport = await updateReportChildStatus(reportChildId, 'owner_accepted');
+    const [childReport] = await prisma.$transaction([
+        updateReportChildStatus(reportChildId, 'owner_accepted'),
+        createReportHistory(reportId, 'owner_accepted'),
+    ]);
 
     createNotificationQueue({
         title: `Báo cáo về **${report.title}**`,
         body: `Chủ nhà đã chấp nhận báo cáo về **${report.title}** đối với hợp đồng **${report.contractId}**`,
         type: 'REPORT',
-        docId: String(report.id),
+        docId: String(reportId),
         from: userId,
         to: report.renterId,
     })
@@ -84,13 +106,16 @@ export const acceptReportByOwnerService = async ({ reportId, reportChildId, user
 };
 
 export const acceptReportByRenterService = async (reportChildId: ReportChildId, userId: IUserId) => {
-    const reportChild = await findReportChildById(reportChildId);
+    const reportChild = await findReportChildByChildId(reportChildId);
 
     if (!reportChild) throw new CustomError(404, 'Không tìm thấy báo cáo con');
     if (reportChild.status !== 'pending_renter') throw new CustomError(400, 'Báo cáo không hợp lệ');
     if (reportChild.report.renterId !== userId) throw new CustomError(403, 'Không có quyền xác nhận báo cáo');
 
-    const childReport = await updateReportChildStatus(reportChildId, 'renter_accepted');
+    const [childReport] = await prisma.$transaction([
+        updateReportChildStatus(reportChildId, 'renter_accepted'),
+        createReportHistory(reportChild.reportId, 'renter_accepted'),
+    ]);
 
     createNotificationQueue({
         title: `Báo cáo về **${reportChild.report.title}**`,
@@ -107,13 +132,16 @@ export const acceptReportByRenterService = async (reportChildId: ReportChildId, 
 };
 
 export const rejectReportByRenterService = async (reportChildId: ReportChildId, userId: IUserId) => {
-    const reportChild = await findReportChildById(reportChildId);
+    const reportChild = await findReportChildByChildId(reportChildId);
 
     if (!reportChild) throw new CustomError(404, 'Không tìm thấy báo cáo con');
     if (reportChild.status !== 'pending_renter') throw new CustomError(400, 'Báo cáo không hợp lệ');
     if (reportChild.report.renterId !== userId) throw new CustomError(403, 'Không có quyền xác nhận báo cáo');
 
-    const childReport = await updateReportChildStatus(reportChildId, 'renter_rejected');
+    const [childReport] = await prisma.$transaction([
+        updateReportChildStatus(reportChildId, 'renter_rejected'),
+        createReportHistory(reportChild.reportId, 'renter_rejected'),
+    ]);
 
     createNotificationQueue({
         title: `Báo cáo về **${reportChild.report.title}**`,
@@ -127,7 +155,7 @@ export const rejectReportByRenterService = async (reportChildId: ReportChildId, 
         .catch((err) => console.log(err));
     createNotificationQueue({
         title: `Báo cáo về **${reportChild.report.title}**`,
-        body: `Báo cáo **${reportChild.report.title}** của hợp đồng **${reportChild.report.contractId}** cân được giải quyết`,
+        body: `Báo cáo **${reportChild.report.title}** của hợp đồng **${reportChild.report.contractId}** cần được giải quyết`,
         type: 'REPORT',
         docId: String(reportChild.reportId),
         toRole: 'admin',
@@ -150,6 +178,7 @@ export const rejectReportByOwnerService = async (data: CreateReportChildRequest)
             resolvedAt: convertDateToDB(data.resolvedAt),
         }),
         updateReportChildStatus(reportChild.id, 'owner_proposed'),
+        createReportHistory(reportChild.reportId, 'owner_proposed'),
     ]);
 
     createNotificationQueue({
@@ -166,30 +195,30 @@ export const rejectReportByOwnerService = async (data: CreateReportChildRequest)
     return reportChildRes;
 };
 
-export const cancelReportChildService = async ({
-    reportChildId,
-    userId,
-}: {
-    reportChildId: ReportChildId;
-    userId: IUserId;
-}) => {
-    const reportChild = await findReportChildById(reportChildId);
+export const cancelReportChildService = async ({ reportId, userId }: { reportId: ReportChildId; userId: IUserId }) => {
+    const reportChild = await findReportChildById(reportId);
 
-    if (!reportChild) throw new CustomError(404, 'Không tìm thấy báo cáo con');
+    if (!reportChild) throw new CustomError(404, 'Không tìm thấy báo cáo');
     if (reportChild.report.ownerId !== userId && reportChild.report.renterId !== userId)
         throw new CustomError(403, 'Không có quyền hủy báo cáo');
-    if (reportChild.report.renterId === userId && reportChild.status === 'pending_owner')
-        return updateReportChildStatus(reportChildId, 'cancelled');
+    if (reportChild.report.renterId === userId && reportChild.status === 'pending_owner') {
+        const [reportChildRes] = await prisma.$transaction([
+            updateReportChildStatus(reportChild.id, 'cancelled'),
+            createReportHistory(reportChild.reportId, 'cancelled'),
+        ]);
+
+        return reportChildRes;
+    }
 
     throw new CustomError(400, 'Báo cáo đã được xử lý');
 };
 
 export const proposedReportChildByOwnerService = async ({
-    reportChildId,
+    reportId,
     ownerId,
     ...data
 }: ProposedReportChildByOwnerRequest) => {
-    const reportChild = await findReportChildById(reportChildId);
+    const reportChild = await findReportChildById(reportId);
 
     if (!reportChild) throw new CustomError(404, 'Không tìm thấy báo cáo con');
     if (reportChild.status !== 'pending_owner') throw new CustomError(400, 'Báo cáo không hợp lệ');
@@ -201,7 +230,8 @@ export const proposedReportChildByOwnerService = async ({
             resolvedAt: convertDateToDB(data.resolvedAt),
             reportId: reportChild.reportId,
         }),
-        updateReportChildStatus(reportChildId, 'owner_proposed'),
+        updateReportChildStatus(reportChild.id, 'owner_proposed'),
+        createReportHistory(reportChild.reportId, 'owner_proposed'),
     ]);
 
     createNotificationQueue({
@@ -228,16 +258,19 @@ export const resolveReportByAdminService = async ({ choose, reportId, ...data }:
         if (!data.proposed) throw new CustomError(400, 'Đề xuất là bắt buộc');
         if (!data.resolvedAt) throw new CustomError(400, 'Ngày giải quyết là bắt buộc');
 
-        const reportChildRes = await createReportChild(
-            {
-                evidences: data.evidences,
-                reportId,
-                resolvedAt: convertDateToDB(data.resolvedAt),
-                compensation: data.compensation,
-                proposed: data.proposed,
-            },
-            'admin_resolved',
-        );
+        const [reportChildRes] = await prisma.$transaction([
+            createReportChild(
+                {
+                    evidences: data.evidences,
+                    reportId,
+                    resolvedAt: convertDateToDB(data.resolvedAt),
+                    compensation: data.compensation,
+                    proposed: data.proposed,
+                },
+                'admin_resolved',
+            ),
+            createReportHistory(reportId, 'admin_resolved'),
+        ]);
 
         createNotificationQueue({
             title: `Báo cáo về **${reportChild.report.title}**`,
@@ -267,16 +300,19 @@ export const resolveReportByAdminService = async ({ choose, reportId, ...data }:
 
     if (!reportChildOfUser) throw new CustomError(404, 'Không tìm thấy báo cáo con');
 
-    const reportChildRes = await createReportChild(
-        {
-            evidences: reportChildOfUser.evidences,
-            reportId,
-            resolvedAt: convertDateToDB(reportChildOfUser.resolvedAt),
-            compensation: reportChildOfUser.compensation || 0,
-            proposed: reportChildOfUser.proposed,
-        },
-        `admin_resolved`,
-    );
+    const [reportChildRes] = await prisma.$transaction([
+        createReportChild(
+            {
+                evidences: reportChildOfUser.evidences,
+                reportId,
+                resolvedAt: convertDateToDB(reportChildOfUser.resolvedAt),
+                compensation: reportChildOfUser.compensation || 0,
+                proposed: reportChildOfUser.proposed,
+            },
+            `admin_resolved`,
+        ),
+        createReportHistory(reportId, 'admin_resolved'),
+    ]);
 
     createNotificationQueue({
         title: `Báo cáo về **${reportChild.report.title}**`,
@@ -304,8 +340,11 @@ export const completeReportByOwnerService = async (reportId: ReportId, userId: I
     const report = await findReportChildById(reportId);
 
     if (!report) throw new CustomError(404, 'Không tìm thấy báo cáo');
-    if (report.status !== 'admin_resolved') throw new CustomError(400, 'Báo cáo không hợp lệ');
     if (report.report.ownerId !== userId) throw new CustomError(403, 'Không có quyền xử lý báo cáo');
+
+    const validStatus = ['owner_accepted', 'renter_accepted', 'admin_resolved', 'in_progress'];
+
+    if (!validStatus.includes(report.status)) throw new CustomError(400, 'Báo cáo không hợp lệ');
 
     if (report.compensation && report.compensation > 0) {
         const [renter, owner] = await Promise.all([
@@ -347,13 +386,16 @@ export const completeReportByOwnerService = async (reportId: ReportId, userId: I
             transactionHash: receipt.transactionHash,
         });
 
-        const reportChild = await updateReportChildWhenOwnerComplete(report.id, transaction.id);
+        const [reportChild] = await prisma.$transaction([
+            updateReportChildWhenOwnerComplete(report.id, transaction.id),
+            createReportHistory(reportId, 'owner_completed'),
+        ]);
 
         createNotificationQueue({
             title: `Báo cáo về **${report.report.title}**`,
             body: `Chủ nhà đã giải quyết báo cáo về **${report.report.title}** đối với hợp đồng **${report.report.contractId}**`,
             type: 'REPORT',
-            docId: String(report.id),
+            docId: String(reportId),
             from: userId,
             to: report.report.renterId,
         })
@@ -363,7 +405,12 @@ export const completeReportByOwnerService = async (reportId: ReportId, userId: I
         return reportChild;
     }
 
-    return updateReportChildStatus(report.id, 'owner_completed');
+    const [reportChild] = await prisma.$transaction([
+        updateReportChildStatus(report.id, 'owner_completed'),
+        createReportHistory(reportId, 'owner_completed'),
+    ]);
+
+    return reportChild;
 };
 
 export const completeReportByRenterService = async (reportId: ReportId, userId: IUserId) => {
@@ -377,18 +424,87 @@ export const completeReportByRenterService = async (reportId: ReportId, userId: 
     if (report.compensation && report.compensation > 0 && !report.transactionId)
         throw new CustomError(400, 'Chưa có giao dịch bồi thường');
 
-    const reportChild = await updateReportChildStatus(report.id, 'renter_completed');
+    const validStatus = ['owner_accepted', 'renter_accepted', 'admin_resolved', 'in_progress', 'owner_completed'];
+
+    if (!validStatus.includes(report.status)) throw new CustomError(400, 'Báo cáo không hợp lệ');
+
+    const [reportChild] = await prisma.$transaction([
+        updateReportChildStatus(report.id, 'renter_completed'),
+        createReportHistory(reportId, 'renter_completed'),
+    ]);
 
     createNotificationQueue({
         title: `Báo cáo về **${report.report.title}**`,
         body: `Người thuê đã xác nhận báo cáo về **${report.report.title}** đối với hợp đồng **${report.report.contractId}** đã được giải quyết`,
         type: 'REPORT',
-        docId: String(report.id),
+        docId: String(reportId),
         from: userId,
         to: report.report.ownerId,
     })
         .then(() => console.log('Notification created'))
         .catch((err) => console.log(err));
+
+    return reportChild;
+};
+
+export const findReportsAndLastChildService = async (contractId: IContractId, user: JWTInput) => {
+    const report = await findReportsAndLastChild({
+        contractId,
+        isAdmin: user.userTypes.includes('admin'),
+        userId: user.id,
+    });
+
+    return report.map(({ reportChild, ...r }) => ({
+        ...r,
+        status: reportChild[0].status,
+        resolvedAt: reportChild[0].resolvedAt,
+        compensation: reportChild[0].compensation,
+        proposed: reportChild[0].proposed,
+        reportChildId: reportChild[0].id,
+    }));
+};
+
+export const getReportDetailByIdService = async (data: { id: ReportId; isAdmin: boolean; userId: IUserId }) => {
+    const report = await getReportDetailById(data);
+
+    if (!report) throw new CustomError(404, 'Không tìm thấy báo cáo');
+
+    return report;
+};
+
+export const inProgressReportService = async (reportId: ReportId, userId: IUserId) => {
+    const report = await findReportChildById(reportId);
+
+    if (!report) throw new CustomError(404, 'Không tìm thấy báo cáo');
+
+    if (report.report.ownerId !== userId) throw new CustomError(403, 'Không có quyền xử lý báo cáo');
+
+    if (!['owner_accepted', 'renter_accepted', 'admin_resolved'].includes(report.status))
+        throw new CustomError(400, 'Báo cáo không hợp lệ');
+
+    const [reportChild] = await prisma.$transaction([
+        updateReportChildStatus(report.id, 'in_progress'),
+        createReportHistory(report.reportId, 'in_progress'),
+    ]);
+
+    return reportChild;
+};
+
+export const ownerNoResolveReportService = async (reportId: ReportId, userId: IUserId) => {
+    const report = await findReportChildById(reportId);
+
+    if (!report) throw new CustomError(404, 'Không tìm thấy báo cáo');
+
+    if (report.report.renterId !== userId) throw new CustomError(403, 'Không có quyền phản hồi báo cáo');
+
+    if (!['owner_accepted', 'renter_accepted', 'admin_resolved', 'in_progress'].includes(report.status))
+        throw new CustomError(400, 'Báo cáo không hợp lệ');
+    if (!isAfter(new Date(report.resolvedAt), new Date())) throw new CustomError(400, 'Chưa đến thời gian phản hồi');
+
+    const [reportChild] = await prisma.$transaction([
+        updateReportChildStatus(report.id, 'owner_not_resolved'),
+        createReportHistory(report.reportId, 'owner_not_resolved'),
+    ]);
 
     return reportChild;
 };
