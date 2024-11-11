@@ -1,5 +1,9 @@
 import { IContractId } from '../interfaces/contract';
-import { ITransactionStats } from '../interfaces/dashboard';
+import {
+    ICountTransactionsByMonthAndStatus,
+    ICountTransactionsByStatus,
+    ITransactionStats,
+} from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
 import {
     ICalcAvgRevenueByMonth,
@@ -332,27 +336,10 @@ export const countTransactionsByMonth = async (year: number) => {
     `;
 };
 
-// tính doanh thu theo tháng
-export const getAllRevenueByMonth = async (year: number) => {
-    return prisma.$queryRaw`
-        SELECT 
-            EXTRACT(MONTH FROM "updated_at") AS month, 
-            SUM(amount) AS revenue 
-        FROM 
-            "\`transaction\`" 
-        WHERE
-            status = 'COMPLETED'
-            and type = 'RENT'
-            and EXTRACT(YEAR FROM "updated_at") = ${year}
-        GROUP BY 
-            month 
-        ORDER BY 
-            month;
-    `;
-};
-
 // đếm số lượng giao dịch theo từng tháng và từng trạng thái
-export const countTransactionsByMonthAndStatus = async (year: number) => {
+export const countTransactionsByMonthAndStatus = async (
+    year: number,
+): Promise<Array<ICountTransactionsByMonthAndStatus>> => {
     return prisma.$queryRaw`
         SELECT 
             EXTRACT(MONTH FROM "updated_at") AS month, 
@@ -396,7 +383,7 @@ export const getRevenueAndFeeByMonth = async (year: number) => {
 };
 
 // đếm số lượng giao dịch theo trạng thái
-export const countTransactionsByStatus = async () => {
+export const countTransactionsByStatus = async (): Promise<Array<ICountTransactionsByStatus>> => {
     return prisma.$queryRaw`
         SELECT 
             status, 

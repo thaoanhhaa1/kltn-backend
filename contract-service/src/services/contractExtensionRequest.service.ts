@@ -44,7 +44,7 @@ export const createContractExtensionRequestService = async ({ userId, ...rest }:
     if (extensionRequest)
         return updateContractExtensionRequest(extensionRequest.id, {
             ...rest,
-            extensionDate: convertDateToDB(rest.extensionDate),
+            extensionDate: convertDateToDB(rest.extensionDate.split('-').reverse().join('/')),
             date: transaction?.endDate || contract.endDate,
         });
 

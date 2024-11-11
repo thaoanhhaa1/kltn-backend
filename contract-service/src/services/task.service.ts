@@ -1,11 +1,21 @@
 import { ContractCancellationRequest } from '@prisma/client';
-import { CronJob } from 'cron';
-import { addDays, isSameDay } from 'date-fns';
-import { getContractForRentTransaction, getEndContract, startedContract } from '../repositories/contract.repository';
+import { addDays, differenceInDays, isSameDay } from 'date-fns';
+import createCronJobs from '../configs/cron.config';
+import {
+    getContractForRentTransaction,
+    getEndContract,
+    getRemindEndContracts,
+    startedContract,
+} from '../repositories/contract.repository';
 import {
     getCancelRequestOverdue,
     getRequestsCancelContract,
 } from '../repositories/contractCancellationRequest.repository';
+import {
+    cancelExtensionRequest,
+    getOverdueExtensionRequest,
+    getRemindExtensionRequest,
+} from '../repositories/contractExtensionRequest.repository';
 import {
     createTransaction,
     getOverdueTransactions,
@@ -25,7 +35,7 @@ import { createNotificationQueue } from './rabbitmq.service';
 
 class TaskService {
     private createMonthlyRentTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 0 0 * * *', async () => {
             console.log('task.service::Monthly rent task executed');
 
             const contracts = await getContractForRentTransaction();
@@ -91,7 +101,7 @@ class TaskService {
     };
 
     private handleOverdueContractCancelRequestTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 15 0 * * *', async () => {
             // Chạy vào 00:00:00 mỗi ngày
             console.log('task.service::Reject contract cancel request task executed');
 
@@ -131,7 +141,7 @@ class TaskService {
     };
 
     private handleEndContractByRequestTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 10 0 * * *', async () => {
             // Chạy vào 00:00:00 mỗi ngày
             console.log('task.service::End contract by request task executed');
 
@@ -168,7 +178,7 @@ class TaskService {
     };
 
     private handleOverdueTransactionTask = () => {
-        const job = new CronJob('0 5 0 * * *', async () => {
+        const job = createCronJobs('0 0 0 * * *', async () => {
             console.log('task.service::Overdue transaction task executed');
 
             const transactions = await getOverdueTransactions();
@@ -197,7 +207,7 @@ class TaskService {
     };
 
     private startRentalTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 5 0 * * *', async () => {
             console.log('task.service::Start rental task executed');
 
             const contracts = await startedContract();
@@ -215,7 +225,7 @@ class TaskService {
     };
 
     private endContractTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 0 0 * * *', async () => {
             console.log('task.service::End contract task executed');
 
             const contracts = await getEndContract();
@@ -234,7 +244,7 @@ class TaskService {
     };
 
     private remindPaymentTask = () => {
-        const job = new CronJob('0 0 0 * * *', async () => {
+        const job = createCronJobs('0 20 0 * * *', async () => {
             console.log('task.service::Remind payment task executed');
 
             const transactions = await getTransactionsUnPaid();
@@ -272,14 +282,99 @@ class TaskService {
         job.start();
     };
 
+    private remindEndContractTask = () => {
+        const job = createCronJobs('0 25 0 * * *', async () => {
+            console.log('task.service::Remind end contract task executed');
+
+            const contracts = await getRemindEndContracts();
+            console.log('🚀 ~ TaskService ~ remindEndContractTask ~ contracts:', contracts);
+
+            contracts.forEach((contract) => {
+                const endDate = contract.endDateActual.toISOString().substring(0, 10).split('-').reverse().join('/');
+                const dayDiff = differenceInDays(contract.endDateActual, new Date()) + 1;
+
+                createNotificationQueue({
+                    title: `Hợp đồng ${contract.contractId} sắp kết thúc`,
+                    body: `Hợp đồng **${contract.contractId}** sẽ kết thúc vào ngày **${endDate}**, sau **${dayDiff}** ngày`,
+                    type: 'CONTRACT_DETAIL',
+                    docId: contract.contractId,
+                    to: contract.renterId,
+                });
+            });
+
+            console.log('task.service::Remind end contract task finished');
+        });
+
+        job.start();
+    };
+
+    private remindExtensionRequest = () => {
+        const job = createCronJobs('0 30 0 * * *', async () => {
+            console.log('task.service::Remind extension request task executed');
+
+            const extensions = await getRemindExtensionRequest();
+            console.log('🚀 ~ TaskService ~ remindExtensionRequest ~ extensions:', extensions);
+
+            extensions.forEach((contract) => {
+                createNotificationQueue({
+                    title: `Nhắc nhở gia hạn hợp đồng`,
+                    body: `Hợp đồng **${contract.contractId}** có yêu cầu gia hạn chờ duyệt`,
+                    type: 'CONTRACT_DETAIL',
+                    docId: contract.contractId,
+                    to: contract.contract.ownerId,
+                });
+            });
+
+            console.log('task.service::Remind extension request task finished');
+        });
+
+        job.start();
+    };
+
+    private handleOverdueExtensionRequest = () => {
+        const job = createCronJobs('0 35 0 * * *', async () => {
+            console.log('task.service::Handle overdue extension request task executed');
+
+            const request = await getOverdueExtensionRequest();
+
+            const ids = request.map((r) => r.id);
+
+            await cancelExtensionRequest(ids);
+
+            request.forEach((r) => {
+                createNotificationQueue({
+                    title: `Yêu cầu gia hạn hợp đồng đã bị hủy`,
+                    body: `Yêu cầu gia hạn hợp đồng **${r.contractId}** đã bị hủy do quá hạn`,
+                    type: 'CONTRACT_DETAIL',
+                    docId: r.contractId,
+                    to: r.contract.ownerId,
+                });
+                createNotificationQueue({
+                    title: `Yêu cầu gia hạn hợp đồng đã bị hủy`,
+                    body: `Yêu cầu gia hạn hợp đồng **${r.contractId}** đã bị hủy do quá hạn`,
+                    type: 'CONTRACT_DETAIL',
+                    docId: r.contractId,
+                    to: r.contract.renterId,
+                });
+            });
+
+            console.log('task.service::Handle overdue extension request task finished');
+        });
+
+        job.start();
+    };
+
     public start = () => {
-        this.createMonthlyRentTask();
-        this.handleOverdueContractCancelRequestTask();
-        this.handleEndContractByRequestTask();
-        this.handleOverdueTransactionTask();
-        this.startRentalTask();
-        this.endContractTask();
-        this.remindPaymentTask();
+        this.createMonthlyRentTask(); // 0:0:0
+        this.handleOverdueContractCancelRequestTask(); // 3
+        this.handleEndContractByRequestTask(); // 2
+        this.handleOverdueTransactionTask(); // 0:0:0
+        this.startRentalTask(); // 1
+        this.endContractTask(); // 0:0:0
+        this.remindPaymentTask(); // 4
+        this.remindEndContractTask(); // 5
+        this.remindExtensionRequest(); // 6
+        this.handleOverdueExtensionRequest(); // 7
     };
 }
 

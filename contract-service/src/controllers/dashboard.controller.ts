@@ -4,11 +4,14 @@ import {
     countRentalRequestByDayService,
     countRentalRequestByMonthService,
     countRentalRequestByWeekService,
+    countTransactionsByMonthAndStatusService,
+    countTransactionsByStatusService,
     getContractCancellationRateByMonthForOwnerService,
     getIncomeExpenditureByMonthService,
     getOverviewByAdminService,
     getOverviewByOwnerService,
     getRentalRequestRatingService,
+    getRevenueAndFeeByMonthService,
     getTenantDistributionByAreaForOwnerService,
 } from '../services/dashboard.service';
 
@@ -114,6 +117,40 @@ export const countRentalRequestByWeek = async (_req: AuthenticatedRequest, res: 
 export const countRentalRequestByMonth = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const result = await countRentalRequestByMonthService();
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countTransactionsByStatus = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await countTransactionsByStatusService();
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getRevenueAndFeeByMonth = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const result = await getRevenueAndFeeByMonthService();
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const countTransactionsByMonthAndStatus = async (
+    _req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const result = await countTransactionsByMonthAndStatusService();
 
         res.status(200).json(result);
     } catch (error) {

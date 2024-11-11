@@ -17,8 +17,11 @@ import {
 } from '../repositories/rentalRequest.repository';
 import {
     calcAvgRevenueByMonth,
+    countTransactionsByMonthAndStatus,
+    countTransactionsByStatus,
     getExpenditureTransactionsByMonth,
     getIncomeTransactionsByMonth,
+    getRevenueAndFeeByMonth,
     getTransactionStats,
 } from '../repositories/transaction.repository';
 import { findUserById } from '../repositories/user.repository';
@@ -232,4 +235,48 @@ export const countRentalRequestByMonthService = async () => {
         month: Number(item.month),
         count: Number(item.count),
     }));
+};
+
+export const countTransactionsByStatusService = async () => {
+    const result = await countTransactionsByStatus();
+
+    return result.map(({ total_transactions, ...item }) => ({
+        ...item,
+        totalTransactions: Number(total_transactions),
+    }));
+};
+
+export const getRevenueAndFeeByMonthService = async () => {
+    const year = new Date().getFullYear();
+
+    const result = await getRevenueAndFeeByMonth(year);
+
+    return result;
+};
+
+export const countTransactionsByMonthAndStatusService = async () => {
+    const year = new Date().getFullYear();
+
+    const result = await countTransactionsByMonthAndStatus(year);
+
+    return result.reduce((pre, cur) => {
+        const last = pre.at(-1);
+
+        if (!last || last.month !== Number(cur.month))
+            return [
+                ...pre,
+                {
+                    month: Number(cur.month),
+                    [cur.status]: Number(cur.total_transactions),
+                },
+            ];
+
+        return [
+            ...pre.slice(0, -1),
+            {
+                ...last,
+                [cur.status]: Number(cur.total_transactions),
+            },
+        ];
+    }, [] as any);
 };
