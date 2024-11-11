@@ -11,6 +11,7 @@ import { IGetTenantDistributionByAreaForOwner } from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
+import getDateAfter from '../utils/getDateAfter';
 
 export const createContract = (contract: ICreateContract) => {
     return prisma.contract.create({
@@ -418,6 +419,36 @@ export const countContractByStatus = () => {
         by: ['status'],
         _count: {
             status: true,
+        },
+    });
+};
+
+export const getRemindEndContracts = () => {
+    const now = new Date();
+    const after15Days = getDateAfter(now, 15);
+    const after30Days = getDateAfter(now, 30);
+    const after45Days = getDateAfter(now, 45);
+
+    return prisma.contract.findMany({
+        where: {
+            status: {
+                in: [
+                    'APPROVED_CANCELLATION',
+                    'ONGOING',
+                    'PENDING_CANCELLATION',
+                    'REJECTED_CANCELLATION',
+                    'UNILATERAL_CANCELLATION',
+                ],
+            },
+            deleted: false,
+            endDateActual: {
+                in: [after15Days, after30Days, after45Days],
+            },
+        },
+        select: {
+            contractId: true,
+            endDateActual: true,
+            renterId: true,
         },
     });
 };

@@ -71,7 +71,7 @@ export const createCancellationRequestService = async (params: CreateContractCan
     const [cancelRequest, contractNew] = await prisma.$transaction([
         createCancellationRequest({
             ...params,
-            cancelDate: convertDateToDB(params.cancelDate),
+            cancelDate: convertDateToDB(params.cancelDate.split('-').reverse().join('/')),
         }),
         updateStatusContract(
             params.contractId,
