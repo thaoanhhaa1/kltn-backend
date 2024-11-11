@@ -619,3 +619,24 @@ export const countPropertiesByCityAndDistrict = () => {
         ],
     });
 };
+
+export const getPropertiesCbb = (userId: IUserId) => {
+    return prisma.property.findMany({
+        where: {
+            owner: {
+                is: {
+                    userId,
+                },
+            },
+            deleted: false,
+        },
+        select: {
+            propertyId: true,
+            title: true,
+            slug: true,
+            price: true,
+            deposit: true,
+            minDuration: true,
+        },
+    });
+};

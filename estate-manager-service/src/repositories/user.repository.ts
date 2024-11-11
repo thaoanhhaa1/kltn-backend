@@ -1,8 +1,8 @@
+import { UserStatus } from '@prisma/client';
 import { IPagination } from '../interface/pagination';
+import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyUser } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { RegisterInput } from '../schemas/auth.schema';
-import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyUser } from '../interface/user';
-import { UserStatus } from '@prisma/client';
 
 const userDTOSelect = {
     userId: true,
@@ -259,5 +259,20 @@ export const countNewUsersByTypeAndMonth = (year: number) => {
             },
             { $sort: { month: 1 } },
         ],
+    });
+};
+
+export const getRenterCbb = () => {
+    return prisma.user.findMany({
+        where: {
+            userTypes: {
+                has: 'renter',
+            },
+        },
+        select: {
+            userId: true,
+            name: true,
+            email: true,
+        },
     });
 };

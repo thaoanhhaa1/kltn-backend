@@ -20,6 +20,7 @@ import {
     getNotDeletedPropertiesService,
     getNotDeletedPropertyService,
     getNotPendingPropertiesService,
+    getPropertiesCbbService,
     getPropertyBySlugService,
     getPropertyStatusService,
     updatePropertiesStatusService,
@@ -793,6 +794,18 @@ export const updateVisiblePropertiesStatus = async (req: AuthenticatedRequest, r
 export const getPropertyStatus = (_req: Request, res: Response, next: NextFunction) => {
     try {
         res.json(getPropertyStatusService());
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertiesCbb = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const properties = await getPropertiesCbbService(userId);
+
+        res.status(200).json(properties);
     } catch (error) {
         next(error);
     }

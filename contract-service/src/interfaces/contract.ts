@@ -69,3 +69,13 @@ export interface IGetContractDetail {
 export interface ICreateContract extends IContract {
     transactionHash: string;
 }
+
+export interface IGenerateContract {
+    ownerId: IUserId;
+    propertyId: string;
+    renterId: IUserId;
+    rentalStartDate: string;
+    rentalEndDate: string;
+    rentalDeposit: number;
+    rentalPrice: number;
+}
