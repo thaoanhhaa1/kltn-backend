@@ -8,6 +8,9 @@ import {
     completeReportByRenter,
     createReportForRenter,
     findReportsAndLastChild,
+    getReportByAdmin,
+    getReportByOwner,
+    getReportByRenter,
     getReportDetailById,
     inProgressReport,
     ownerNoResolveReport,
@@ -45,6 +48,9 @@ router.post(
 router.post('/:id/cancel', authMiddleware, roleMiddleware('renter'), cancelReportChild);
 
 router.get('/contracts/:contractId', authMiddleware, findReportsAndLastChild);
+router.get('/renter', authMiddleware, roleMiddleware('renter'), getReportByRenter);
+router.get('/owner', authMiddleware, roleMiddleware('owner'), getReportByOwner);
+router.get('/admin', authMiddleware, roleMiddleware('admin'), getReportByAdmin);
 router.get('/:id', authMiddleware, getReportDetailById);
 
 export default router;

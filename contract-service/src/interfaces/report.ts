@@ -1,6 +1,7 @@
-import { Report, ReportChild, ReportPriority } from '@prisma/client';
+import { Report, ReportChild, ReportPriority, ReportStatus, ReportType } from '@prisma/client';
 import { CreateReportForRenterRequest } from '../schemas/report.schema';
 import { IContractId } from './contract';
+import { IPagination } from './pagination';
 import { IUserId } from './user';
 
 export type ReportId = Report['id'];
@@ -30,3 +31,42 @@ export type IFindReportsAndLastChild = {
     isAdmin?: boolean;
     contractId?: IContractId;
 };
+
+export type IGetReportByRenterId = IPagination & {
+    renterId: string;
+    type?: ReportType;
+    priority?: ReportPriority;
+    status?: ReportStatus;
+    fromDate?: string;
+    toDate?: string;
+};
+
+export type IGetReportByRenterReq = IGetReportByRenterId;
+
+export type IGetReportByOwnerId = IPagination & {
+    ownerId: string;
+    statuses?: ReportStatus[];
+    sort?: Object;
+};
+
+export type IGetReportByOwnerReq = Omit<IGetReportByOwnerId, 'sort' | 'statuses'> & {
+    status: ReportFilterStatus;
+    sort: ReportSort;
+};
+
+export type IGetReportByAdmin = IPagination & {
+    statuses?: ReportStatus[];
+    type?: ReportType;
+};
+
+export type IGetReportByAdminReq = Omit<IGetReportByAdmin, 'statuses'> & {
+    status: ReportFilterStatus;
+};
+
+export type ReportFilterStatus = 'pending' | 'resolved' | 'urgent' | 'all';
+export type ReportSort = 'newest' | 'priority_asc' | 'priority_desc' | 'all';
+
+export type IReportDTO = Report &
+    ReportChild & {
+        reportChildId: ReportChildId;
+    };

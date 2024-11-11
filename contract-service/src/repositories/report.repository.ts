@@ -1,6 +1,37 @@
-import { ICreateReportForRenterRequest, IFindReportsAndLastChild, ReportId } from '../interfaces/report';
+import {
+    ICreateReportForRenterRequest,
+    IFindReportsAndLastChild,
+    IGetReportByOwnerId,
+    IGetReportByRenterId,
+    ReportId,
+} from '../interfaces/report';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
+import { IGetReportByAdmin } from './../interfaces/report';
+
+const reportsSelect = {
+    id: true,
+    title: true,
+    priority: true,
+    type: true,
+    createdAt: true,
+    ownerId: true,
+    renterId: true,
+    contractId: true,
+    reportChild: {
+        select: {
+            id: true,
+            status: true,
+            proposed: true,
+            compensation: true,
+            resolvedAt: true,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+        take: 1,
+    },
+} as const;
 
 export const createReportForRenter = ({
     contractId,
@@ -85,29 +116,7 @@ export const findReportsAndLastChild = ({ isAdmin, userId, contractId }: IFindRe
             }),
             ...(contractId && { contractId }),
         },
-        select: {
-            id: true,
-            title: true,
-            priority: true,
-            type: true,
-            createdAt: true,
-            ownerId: true,
-            renterId: true,
-            contractId: true,
-            reportChild: {
-                select: {
-                    id: true,
-                    status: true,
-                    proposed: true,
-                    compensation: true,
-                    resolvedAt: true,
-                },
-                orderBy: {
-                    createdAt: 'desc',
-                },
-                take: 1,
-            },
-        },
+        select: reportsSelect,
         orderBy: {
             createdAt: 'desc',
         },
@@ -152,6 +161,89 @@ export const getReportDetailById = ({ id, isAdmin, userId }: { id: ReportId; isA
                     createdAt: 'desc',
                 },
             },
+        },
+    });
+};
+
+export const getReportByRenter = ({ renterId, priority, type }: IGetReportByRenterId) => {
+    return prisma.report.findMany({
+        where: {
+            renterId,
+            ...(priority && { priority }),
+            ...(type && { type }),
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+        select: reportsSelect,
+    });
+};
+
+export const countReportByRenter = ({ renterId }: IGetReportByRenterId) => {
+    return prisma.report.count({
+        where: {
+            renterId,
+        },
+    });
+};
+
+export const getReportByOwner = ({
+    ownerId,
+    sort = {
+        createdAt: 'desc',
+    },
+}: IGetReportByOwnerId) => {
+    return prisma.report.findMany({
+        where: {
+            ownerId,
+        },
+        orderBy: sort,
+        select: reportsSelect,
+    });
+};
+
+export const countReportByOwner = ({ ownerId }: IGetReportByOwnerId) => {
+    return prisma.report.count({
+        where: {
+            ownerId,
+        },
+    });
+};
+
+export const getReportByAdmin = ({ statuses, type }: IGetReportByAdmin) => {
+    return prisma.report.findMany({
+        where: {
+            ...(statuses && {
+                reportChild: {
+                    some: {
+                        status: {
+                            in: statuses,
+                        },
+                    },
+                },
+            }),
+            ...(type && { type }),
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+        select: reportsSelect,
+    });
+};
+
+export const countReportByAdmin = ({ statuses, type }: IGetReportByAdmin) => {
+    return prisma.report.count({
+        where: {
+            ...(statuses && {
+                reportChild: {
+                    some: {
+                        status: {
+                            in: statuses,
+                        },
+                    },
+                },
+            }),
+            ...(type && { type }),
         },
     });
 };

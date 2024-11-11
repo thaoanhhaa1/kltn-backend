@@ -8,6 +8,7 @@ import {
     getContractsByRenter,
     payMonthlyRent,
 } from '../controllers/contract.controller';
+import { getTransactionsByContractId } from '../controllers/transaction.controller';
 import authMiddleware from '../middlewares/auth.middleware';
 import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
 import roleMiddleware from '../middlewares/role.middleware';
@@ -26,6 +27,12 @@ router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndAppro
 
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenter);
+router.get(
+    '/:contractId/transactions',
+    authMiddleware,
+    hasAnyRoleMiddleware(['owner', 'renter']),
+    getTransactionsByContractId,
+);
 router.get('/:contractId', authMiddleware, getContractDetail);
 
 export default router;
