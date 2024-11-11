@@ -319,6 +319,7 @@ export const searchProperties = async (req: AuthenticatedRequest, res: Response,
             district,
             ward,
             sort,
+            type,
         } = req.query;
 
         const filter: QueryDslQueryContainer[] = [];
@@ -474,6 +475,17 @@ export const searchProperties = async (req: AuthenticatedRequest, res: Response,
             filter.push({
                 bool: {
                     must: mustAddress,
+                },
+            });
+        }
+
+        if (type) {
+            filter.push({
+                match: {
+                    'type.name': {
+                        query: type as string,
+                        operator: 'and',
+                    },
                 },
             });
         }
