@@ -1,4 +1,4 @@
-import { RentalRequestStatus } from '@prisma/client';
+import { RentalRequestStatus, TransactionStatus } from '@prisma/client';
 
 export interface IGetContractCancellationRateByMonthForOwner {
     month: number;
@@ -51,4 +51,15 @@ export interface ICountRentalRequestByWeek {
 export interface ICountRentalRequestByMonth {
     month: number;
     count: number;
+}
+
+export interface ICountTransactionsByStatus {
+    status: TransactionStatus;
+    total_transactions: number;
+}
+
+export interface ICountTransactionsByMonthAndStatus {
+    month: number;
+    status: TransactionStatus;
+    total_transactions: number;
 }

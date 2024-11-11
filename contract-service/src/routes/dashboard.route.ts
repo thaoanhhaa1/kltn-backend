@@ -3,11 +3,14 @@ import {
     countRentalRequestByDay,
     countRentalRequestByMonth,
     countRentalRequestByWeek,
+    countTransactionsByMonthAndStatus,
+    countTransactionsByStatus,
     getContractCancellationRateByMonthForOwner,
     getIncomeExpenditureByMonth,
     getOverviewByAdmin,
     getOverviewByOwner,
     getRentalRequestRating,
+    getRevenueAndFeeByMonth,
     getTenantDistributionByAreaForOwner,
 } from '../controllers/dashboard.controller';
 import authMiddleware from '../middlewares/auth.middleware';
@@ -29,5 +32,16 @@ router.get('/owner/tenant-distribution', authMiddleware, roleMiddleware('owner')
 router.get('/admin/rental-request-by-day', authMiddleware, roleMiddleware('admin'), countRentalRequestByDay);
 router.get('/admin/rental-request-by-week', authMiddleware, roleMiddleware('admin'), countRentalRequestByWeek);
 router.get('/admin/rental-request-by-month', authMiddleware, roleMiddleware('admin'), countRentalRequestByMonth);
+// countTransactionsByStatus
+router.get('/admin/transactions-by-status', authMiddleware, roleMiddleware('admin'), countTransactionsByStatus);
+// getRevenueAndFeeByMonth
+router.get('/admin/revenue-and-fee', authMiddleware, roleMiddleware('admin'), getRevenueAndFeeByMonth);
+// countTransactionsByMonthAndStatus
+router.get(
+    '/admin/transactions-by-month-and-status',
+    authMiddleware,
+    roleMiddleware('admin'),
+    countTransactionsByMonthAndStatus,
+);
 
 export default router;
