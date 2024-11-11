@@ -14,6 +14,7 @@ import {
     findUserDTOByEmail,
     forgotPassword,
     getAllOwnersCbb,
+    getRenterCbb,
     getUsers,
     updatePassword,
     updateStatus,
@@ -140,4 +141,10 @@ export const verifyUserService = async (userId: IUserId, { name, ...rest }: IVer
 
 export const blockUserService = (userId: IUserId) => {
     return updateStatus(userId, 'BLOCKED');
+};
+
+export const getRenterCbbService = async () => {
+    const users = await getRenterCbb();
+
+    return users;
 };

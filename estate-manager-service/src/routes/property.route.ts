@@ -8,6 +8,7 @@ import {
     getNotDeletedPropertiesByOwnerId,
     getNotDeletedProperty,
     getNotPendingProperties,
+    getPropertiesCbb,
     getPropertyBySlug,
     getPropertyStatus,
     searchProperties,
@@ -17,8 +18,8 @@ import {
 } from '../controllers/property.controller';
 import authMiddleware from '../middlewares/auth.middleware';
 import hasAnyRoleMiddleware from '../middlewares/hasAnyRole.middleware';
-import roleMiddleware from '../middlewares/role.middleware';
 import parseTokenMiddleware from '../middlewares/parseToken.middleware';
+import roleMiddleware from '../middlewares/role.middleware';
 
 const router = express.Router();
 
@@ -29,6 +30,7 @@ router.put('/:propertyId', authMiddleware, roleMiddleware('owner'), upload.array
 router.get('/search', parseTokenMiddleware, searchProperties);
 router.get('/slug/:slug', parseTokenMiddleware, getPropertyBySlug);
 router.get('/all', authMiddleware, roleMiddleware('admin'), getNotDeletedProperties);
+router.get('/owner/cbb', authMiddleware, roleMiddleware('owner'), getPropertiesCbb);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
 router.get('/status', getPropertyStatus);
 router.get('/count', countNotPendingProperties);

@@ -1,6 +1,6 @@
 // contract.service.ts
 
-import { Contract, Contract as PrismaContract, PropertyStatus } from '@prisma/client';
+import { Contract, Contract as PrismaContract, PropertyStatus, RentalRequest } from '@prisma/client';
 import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
@@ -10,6 +10,7 @@ import {
     IContractId,
     IDeposit,
     IEndContract,
+    IGenerateContract,
     IGetContractDetail,
     IGetContractInRange,
 } from '../interfaces/contract';
@@ -52,6 +53,8 @@ import {
 import { findUserById } from '../repositories/user.repository';
 import { CreateContractReq } from '../schemas/contract.schema';
 import { convertDateToDB } from '../utils/convertDate';
+import convertDateToString from '../utils/convertDateToString.util';
+import { createContract } from '../utils/createContract.util';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
@@ -67,11 +70,13 @@ import {
     payMonthlyRentSmartContractService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
+import { getPropertyByIdService } from './property.service';
 import { createNotificationQueue } from './rabbitmq.service';
+import { findUserDetailByUserIdService } from './user.service';
 
 export const createContractAndApprovalRequestService = async (
     contract: CreateContractReq,
-    updatedRequest: IOwnerUpdateRentalRequestStatus,
+    updatedRequest?: IOwnerUpdateRentalRequestStatus,
 ) => {
     try {
         const [owner, renter] = await Promise.all([findUserById(contract.ownerId), findUserById(contract.renterId)]);
@@ -92,6 +97,7 @@ export const createContractAndApprovalRequestService = async (
                 contractId: contractId,
                 ownerWalletAddress: owner.walletAddress,
                 renterWalletAddress: renter.walletAddress,
+                contractTerms: contract.contractTerms.replaceAll(' class="mceEditable"', ''),
             }),
             getCoinPriceService(),
         ]);
@@ -99,16 +105,26 @@ export const createContractAndApprovalRequestService = async (
         const eth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
         const fee = eth * ethPrice;
 
-        const [result] = await prisma.$transaction([
-            createContractInRepo({
-                ...contract,
-                ownerWalletAddress: owner.walletAddress,
-                renterWalletAddress: renter.walletAddress,
-                contractId: contractId,
-                transactionHash: receipt.transactionHash,
-            }),
-            ownerUpdateRentalRequestStatus(updatedRequest),
-        ]);
+        const [result] = await (updatedRequest?.requestId
+            ? prisma.$transaction([
+                  createContractInRepo({
+                      ...contract,
+                      ownerWalletAddress: owner.walletAddress,
+                      renterWalletAddress: renter.walletAddress,
+                      contractId: contractId,
+                      transactionHash: receipt.transactionHash,
+                  }),
+                  ownerUpdateRentalRequestStatus(updatedRequest),
+              ])
+            : Promise.all([
+                  createContractInRepo({
+                      ...contract,
+                      ownerWalletAddress: owner.walletAddress,
+                      renterWalletAddress: renter.walletAddress,
+                      contractId: contractId,
+                      transactionHash: receipt.transactionHash,
+                  }),
+              ]));
 
         createTransaction({
             fromId: owner.userId,
@@ -830,4 +846,76 @@ export const finalizeContractService = async (contract: Contract) => {
         docId: contract.contractId,
         to: contract.renterId,
     }).catch((error) => console.error('Error sending notification:', error));
+};
+
+export const generateContractService = async ({ ownerId, propertyId, renterId, ...rest }: IGenerateContract) => {
+    try {
+        const [owner, ownerDetail, renter, renterDetail, property, contract] = await Promise.all([
+            findUserById(ownerId),
+            findUserDetailByUserIdService(ownerId),
+            findUserById(renterId),
+            findUserDetailByUserIdService(renterId),
+            getPropertyByIdService(propertyId),
+            getContractInRange({
+                propertyId: propertyId,
+                rentalEndDate: convertDateToDB(rest.rentalEndDate),
+                rentalStartDate: convertDateToDB(rest.rentalStartDate),
+            }),
+        ]);
+
+        if (!owner) throw new CustomError(404, 'Chủ nhà không tồn tại');
+        if (!renter) throw new CustomError(404, 'Người thuê không tồn tại');
+        if (!ownerDetail) throw new CustomError(404, 'Chủ nhà chưa xác thực thông tin');
+        if (!renterDetail) throw new CustomError(404, 'Người thuê chưa xác thực thông tin');
+        if (!property) throw new CustomError(404, 'Bất động sản không tồn tại');
+        if (!owner.walletAddress) throw new CustomError(400, 'Chủ nhà chưa có địa chỉ ví');
+        if (!renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
+
+        if (contract)
+            throw new CustomError(
+                400,
+                `Bất động sản đã có hợp đồng trong thời gian ${convertDateToString(
+                    new Date(contract.startDate),
+                )} - ${convertDateToString(new Date(contract.endDateActual))}`,
+            );
+
+        const date = new Date();
+
+        const rentalRequest: RentalRequest = {
+            ...rest,
+            createdAt: new Date(),
+            ownerId,
+            propertyId,
+            renterId,
+            requestId: 1,
+            status: 'APPROVED',
+            updatedAt: new Date(),
+            rentalEndDate: new Date(rest.rentalEndDate),
+            rentalStartDate: new Date(rest.rentalStartDate),
+        };
+
+        return {
+            contractContent: createContract({
+                city: property.address.city,
+                date,
+                owner,
+                ownerDetail,
+                renter,
+                renterDetail,
+                property,
+                rentalRequest,
+            }),
+            ownerId,
+            renterId,
+            propertyId,
+            startDate: rentalRequest.rentalStartDate,
+            endDate: rentalRequest.rentalEndDate,
+            monthlyRent: rentalRequest.rentalPrice,
+            depositAmount: rentalRequest.rentalDeposit,
+        };
+    } catch (error) {
+        console.log("Here's the error:", error);
+
+        throw error;
+    }
 };

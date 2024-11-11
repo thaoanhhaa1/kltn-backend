@@ -14,6 +14,7 @@ import {
     IUpdateProperty,
     IUpdatePropertyStatus,
 } from '../interface/property';
+import { IUserId } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import {
     countNotDeletedProperties,
@@ -25,6 +26,7 @@ import {
     getNotDeletedPropertiesByOwnerId,
     getNotDeletedProperty,
     getNotPendingProperties,
+    getPropertiesCbb,
     getPropertiesDetailByIds,
     getPropertyBySlug,
     updatePropertiesStatus,
@@ -214,4 +216,8 @@ export const updatePropertyTypeInPropertiesService = async (typeId: PropertyType
     const res = await updatePropertyType(typeId, typeName);
 
     return res;
+};
+
+export const getPropertiesCbbService = (userId: IUserId) => {
+    return getPropertiesCbb(userId);
 };

@@ -5,6 +5,7 @@ import {
     forgotPassword,
     getAllOwnersCbb,
     getMyInfo,
+    getRenterCbb,
     getUsers,
     otpToUser,
     updatePassword,
@@ -45,6 +46,7 @@ router.post('/block', authMiddleware, roleMiddleware('admin'), blockUser);
 
 router.get('/me', authMiddleware, getMyInfo);
 router.get('/owners/cbb', authMiddleware, roleMiddleware('admin'), getAllOwnersCbb);
+router.get('/renters/cbb', authMiddleware, roleMiddleware('owner'), getRenterCbb);
 router.get('/', authMiddleware, roleMiddleware('admin'), getUsers);
 
 export default router;

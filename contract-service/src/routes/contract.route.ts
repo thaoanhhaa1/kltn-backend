@@ -3,6 +3,7 @@ import {
     cancelContractBeforeDeposit,
     createContractAndApprovalRequest,
     deposit,
+    generateContract,
     getContractDetail,
     getContractsByOwner,
     getContractsByRenter,
@@ -23,6 +24,7 @@ router.post(
     cancelContractBeforeDeposit,
 );
 router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);
+router.post('/generate', authMiddleware, roleMiddleware('owner'), generateContract);
 router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndApprovalRequest);
 
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);

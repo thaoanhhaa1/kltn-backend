@@ -15,6 +15,7 @@ import {
     forgotPasswordService,
     getAllOwnersCbbService,
     getMyInfoService,
+    getRenterCbbService,
     getUsersService,
     isExistingUser,
     updatePasswordService,
@@ -333,6 +334,16 @@ export const blockUser = async (req: AuthenticatedRequest, res: Response, next: 
         });
 
         res.json(user);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getRenterCbb = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const users = await getRenterCbbService();
+
+        res.json(users);
     } catch (error) {
         next(error);
     }

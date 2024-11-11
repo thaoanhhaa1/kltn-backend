@@ -1,6 +1,7 @@
 import { ContractCancellationRequest } from '@prisma/client';
 import { addDays, differenceInDays, isSameDay } from 'date-fns';
 import createCronJobs from '../configs/cron.config';
+import { deleteAddressByIds, getAddressIdsNotUse } from '../repositories/address.reppository';
 import {
     getContractForRentTransaction,
     getEndContract,
@@ -364,6 +365,22 @@ class TaskService {
         job.start();
     };
 
+    private deleteAddressNotUseTask = () => {
+        const job = createCronJobs('0 0 0 1 * *', async () => {
+            console.log('task.service::Delete address not use task executed');
+
+            const addresses = await getAddressIdsNotUse();
+
+            const addressIds = addresses.map((address) => address.address_id);
+
+            await deleteAddressByIds(addressIds);
+
+            console.log('task.service::Delete address not use task finished');
+        });
+
+        job.start();
+    };
+
     public start = () => {
         this.createMonthlyRentTask(); // 0:0:0
         this.handleOverdueContractCancelRequestTask(); // 3
@@ -375,6 +392,7 @@ class TaskService {
         this.remindEndContractTask(); // 5
         this.remindExtensionRequest(); // 6
         this.handleOverdueExtensionRequest(); // 7
+        this.deleteAddressNotUseTask(); // 8
     };
 }
 

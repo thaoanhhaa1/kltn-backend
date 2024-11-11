@@ -1,12 +1,13 @@
 import { NextFunction, Response } from 'express';
 import { ICreateNotification } from '../interfaces/notification';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { createContractReq } from '../schemas/contract.schema';
+import { createContractReq, generateContractSchema } from '../schemas/contract.schema';
 import {
     cancelContractBeforeDepositService,
     createContractAndApprovalRequestService,
     createContractService,
     depositService,
+    generateContractService,
     getContractByIdService,
     getContractDetailService,
     getContractsByOwnerService,
@@ -24,7 +25,12 @@ export const createContractAndApprovalRequest = async (
     next: NextFunction,
 ) => {
     try {
-        const safeParse = createContractReq.safeParse(req.body);
+        const userId = req.user!.id;
+
+        const safeParse = createContractReq.safeParse({
+            ...req.body,
+            ownerId: userId,
+        });
 
         if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
 
@@ -41,7 +47,9 @@ export const createContractAndApprovalRequest = async (
         findUserByIdService(req.user!.id)
             .then((owner) =>
                 createNotificationQueue({
-                    body: `**${owner?.name}** đã tạo hợp đồng cho bạn với mã hợp đồng **${result.contractId}** dựa trên yêu cầu thuê nhà của bạn`,
+                    body: requestId
+                        ? `**${owner?.name}** đã tạo hợp đồng cho bạn với mã hợp đồng **${result.contractId}** dựa trên yêu cầu thuê nhà của bạn`
+                        : `**${owner?.name}** đã tạo hợp đồng cho bạn với mã hợp đồng **${result.contractId}**`,
                     title: 'Hợp đồng thuê nhà',
                     type: 'RENTER_CONTRACT',
                     docId: result.contractId,
@@ -257,6 +265,25 @@ export const cancelContractBeforeDeposit = async (req: AuthenticatedRequest, res
             .catch((error) => console.log('Error sending notification', error));
 
         res.status(200).json(updatedContract);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const generateContract = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const safeParse = generateContractSchema.safeParse({
+            ...req.body,
+            ownerId: userId,
+        });
+
+        if (!safeParse.success) throw convertZodIssueToEntryErrors({ issue: safeParse.error.issues });
+
+        const result = await generateContractService(safeParse.data);
+
+        res.status(201).json(result);
     } catch (error) {
         next(error);
     }
