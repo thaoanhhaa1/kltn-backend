@@ -90,6 +90,7 @@ export const createContractAndApprovalRequestService = async (
         }
 
         const contractId = v4();
+        const contractTerms = contract.contractTerms.replaceAll(' class="mceEditable"', '');
 
         const [receipt, ethPrice] = await Promise.all([
             createSmartContractService({
@@ -97,7 +98,7 @@ export const createContractAndApprovalRequestService = async (
                 contractId: contractId,
                 ownerWalletAddress: owner.walletAddress,
                 renterWalletAddress: renter.walletAddress,
-                contractTerms: contract.contractTerms.replaceAll(' class="mceEditable"', ''),
+                contractTerms,
             }),
             getCoinPriceService(),
         ]);
@@ -113,6 +114,7 @@ export const createContractAndApprovalRequestService = async (
                       renterWalletAddress: renter.walletAddress,
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
+                      contractTerms,
                   }),
                   ownerUpdateRentalRequestStatus(updatedRequest),
               ])
@@ -123,6 +125,7 @@ export const createContractAndApprovalRequestService = async (
                       renterWalletAddress: renter.walletAddress,
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
+                      contractTerms,
                   }),
               ]));
 
@@ -183,6 +186,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
         }
 
         const contractId = v4();
+        const contractTerms = contract.contractTerms.replaceAll(' class="mceEditable"', '');
 
         const [receipt, ethPrice] = await Promise.all([
             createSmartContractService({
@@ -190,6 +194,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
                 contractId: contractId,
                 ownerWalletAddress: owner.walletAddress,
                 renterWalletAddress: renter.walletAddress,
+                contractTerms,
             }),
             getCoinPriceService(),
         ]);
@@ -203,6 +208,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             renterWalletAddress: renter.walletAddress,
             contractId: contractId,
             transactionHash: receipt.transactionHash,
+            contractTerms,
         });
 
         createTransaction({
