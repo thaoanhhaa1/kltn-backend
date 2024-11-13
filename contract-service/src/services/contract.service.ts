@@ -256,7 +256,12 @@ export const createContractService = async (contract: CreateContractReq): Promis
     }
 };
 
-export const depositService = async ({ contractId, renterId, transactionId }: IDeposit): Promise<PrismaContract> => {
+export const depositService = async ({
+    contractId,
+    renterId,
+    transactionId,
+    signature,
+}: IDeposit): Promise<PrismaContract> => {
     try {
         const [contract, renter, transaction] = await Promise.all([
             findContractById(contractId),
@@ -279,6 +284,12 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         });
 
         if (contractInRange) throw new CustomError(400, 'Căn hộ đã được thuê trong khoảng thời gian này');
+
+        verifyMessageSignedService({
+            address: renter.walletAddress,
+            message: transaction.description || '',
+            signature,
+        });
 
         const [receipt, ethVnd] = await Promise.all([
             depositSmartContractService({
@@ -364,7 +375,7 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
 };
 
 // Hàm để thanh toán tiền thuê hàng tháng
-export const payMonthlyRentService = async ({ contractId, renterId, transactionId }: IDeposit) => {
+export const payMonthlyRentService = async ({ contractId, renterId, transactionId, signature }: IDeposit) => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const [contract, renter, transaction] = await Promise.all([
@@ -379,6 +390,12 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
         if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
         if (!renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
         if (contract.renterId !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+
+        verifyMessageSignedService({
+            address: renter.walletAddress,
+            message: transaction.description || '',
+            signature,
+        });
 
         const [receipt, ethVnd] = await Promise.all([
             payMonthlyRentSmartContractService({

@@ -25,6 +25,7 @@ export interface IDeposit {
     contractId: Contract['contractId'];
     renterId: IUserId;
     transactionId: Transaction['id'];
+    signature: string;
 }
 
 export interface IGetContractInRange {
