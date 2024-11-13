@@ -57,6 +57,7 @@ import convertDateToString from '../utils/convertDateToString.util';
 import { createContract } from '../utils/createContract.util';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
+import { getOwnerCreateContractMessage } from '../utils/getMessage';
 import getPageInfo from '../utils/getPageInfo';
 import { isDateDifferenceMoreThan30Days } from '../utils/isNotificationBefore30Days.util';
 import {
@@ -68,6 +69,7 @@ import {
     depositSmartContractService,
     endSmartContractService,
     payMonthlyRentSmartContractService,
+    verifyMessageSignedService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
 import { getPropertyByIdService } from './property.service';
@@ -75,7 +77,7 @@ import { createNotificationQueue } from './rabbitmq.service';
 import { findUserDetailByUserIdService } from './user.service';
 
 export const createContractAndApprovalRequestService = async (
-    contract: CreateContractReq,
+    { signature, ...contract }: CreateContractReq,
     updatedRequest?: IOwnerUpdateRentalRequestStatus,
 ) => {
     try {
@@ -88,6 +90,15 @@ export const createContractAndApprovalRequestService = async (
         if (!renter || !renter.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
         }
+
+        verifyMessageSignedService({
+            address: owner.walletAddress,
+            message: getOwnerCreateContractMessage({
+                ...contract,
+                signature: '',
+            }),
+            signature,
+        });
 
         const contractId = v4();
         const contractTerms = contract.contractTerms.replaceAll(' class="mceEditable"', '');
@@ -245,7 +256,12 @@ export const createContractService = async (contract: CreateContractReq): Promis
     }
 };
 
-export const depositService = async ({ contractId, renterId, transactionId }: IDeposit): Promise<PrismaContract> => {
+export const depositService = async ({
+    contractId,
+    renterId,
+    transactionId,
+    signature,
+}: IDeposit): Promise<PrismaContract> => {
     try {
         const [contract, renter, transaction] = await Promise.all([
             findContractById(contractId),
@@ -268,6 +284,12 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
         });
 
         if (contractInRange) throw new CustomError(400, 'Căn hộ đã được thuê trong khoảng thời gian này');
+
+        verifyMessageSignedService({
+            address: renter.walletAddress,
+            message: transaction.description || '',
+            signature,
+        });
 
         const [receipt, ethVnd] = await Promise.all([
             depositSmartContractService({
@@ -353,7 +375,7 @@ export const depositService = async ({ contractId, renterId, transactionId }: ID
 };
 
 // Hàm để thanh toán tiền thuê hàng tháng
-export const payMonthlyRentService = async ({ contractId, renterId, transactionId }: IDeposit) => {
+export const payMonthlyRentService = async ({ contractId, renterId, transactionId, signature }: IDeposit) => {
     try {
         // Lấy thông tin hợp đồng từ cơ sở dữ liệu
         const [contract, renter, transaction] = await Promise.all([
@@ -368,6 +390,12 @@ export const payMonthlyRentService = async ({ contractId, renterId, transactionI
         if (!renter) throw new CustomError(404, 'Không tìm thấy người thuê');
         if (!renter.walletAddress) throw new CustomError(400, 'Người thuê chưa có địa chỉ ví');
         if (contract.renterId !== renterId) throw new CustomError(403, 'Không có quyền thực hiện hành động này');
+
+        verifyMessageSignedService({
+            address: renter.walletAddress,
+            message: transaction.description || '',
+            signature,
+        });
 
         const [receipt, ethVnd] = await Promise.all([
             payMonthlyRentSmartContractService({

@@ -1,6 +1,5 @@
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
-import Redis from '../configs/redis.config';
 import web3 from '../configs/web3.config';
 import { IContract, IContractId } from '../interfaces/contract';
 import { getCompensationTransaction } from '../repositories/transaction.repository';
@@ -12,23 +11,22 @@ const contractAddress = envConfig.RENTAL_CONTRACT_ADDRESS;
 
 const rentalContract = new web3.eth.Contract(RentalContractABI.abi as any, contractAddress);
 
-const getGasPriceService = async () => {
-    const gasPriceInRedis = await Redis.getInstance().getClient().get('gasPrice');
+export const verifyMessageSignedService = ({
+    address,
+    message,
+    signature,
+}: {
+    message: string;
+    signature: string;
+    address: string;
+}) => {
+    console.log('🚀 ~ address:', address);
+    const recoveredAddress = web3.eth.accounts.recover(message, signature);
+    console.log('🚀 ~ message:', message);
+    console.log('🚀 ~ recoveredAddress:', recoveredAddress);
 
-    if (gasPriceInRedis) return gasPriceInRedis;
-
-    const gasPrice = Number(await web3.eth.getGasPrice());
-
-    Redis.getInstance()
-        .getClient()
-        .set('gasPrice', gasPrice, {
-            ex: 15, // 10 seconds
-            type: 'number',
-        })
-        .then(() => console.log('Gas price has been saved to Redis.'))
-        .catch((err: any) => console.error('Failed to save gas price to Redis.', err));
-
-    return gasPrice;
+    if (recoveredAddress.toLowerCase() !== address.toLowerCase())
+        throw new CustomError(400, 'Xác thực chữ ký không thành công.');
 };
 
 export const convertGasToEthService = async (gas: number) => {

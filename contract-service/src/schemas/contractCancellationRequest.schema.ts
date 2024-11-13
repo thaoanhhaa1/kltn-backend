@@ -10,6 +10,9 @@ export const createContractCancellationRequestSchema = z.object({
     }),
     cancelDate: dateValidation,
     reason: z.string().optional(),
+    signature: z.string({
+        required_error: 'Chữ ký không được để trống',
+    }),
 });
 
 export type CreateContractCancellationRequest = z.infer<typeof createContractCancellationRequestSchema>;

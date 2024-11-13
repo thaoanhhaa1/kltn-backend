@@ -107,15 +107,17 @@ export const createContract = async (req: AuthenticatedRequest, res: Response, n
 export const deposit = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const { transactionId, contractId } = req.body;
+        const { transactionId, contractId, signature } = req.body;
 
         if (!transactionId) throw new CustomError(400, 'Mã giao dịch không được để trống');
         if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
+        if (!signature) throw new CustomError(400, 'Chữ ký không được để trống');
 
         const result = await depositService({
             contractId,
             renterId: userId,
             transactionId,
+            signature,
         });
 
         findUserByIdService(userId)
@@ -140,10 +142,11 @@ export const deposit = async (req: AuthenticatedRequest, res: Response, next: Ne
 
 export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const { contractId, transactionId } = req.body;
+        const { contractId, transactionId, signature } = req.body;
 
         if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
         if (!transactionId) throw new CustomError(400, 'Mã giao dịch không được để trống');
+        if (!signature) throw new CustomError(400, 'Chữ ký không được để trống');
 
         const userId = req.user!.id;
 
@@ -151,6 +154,7 @@ export const payMonthlyRent = async (req: AuthenticatedRequest, res: Response, n
             contractId,
             renterId: userId,
             transactionId,
+            signature,
         });
 
         findUserByIdService(userId)

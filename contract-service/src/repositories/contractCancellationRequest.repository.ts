@@ -6,7 +6,7 @@ import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
 
-export const createCancellationRequest = (data: CreateContractCancellationRequest) => {
+export const createCancellationRequest = (data: Omit<CreateContractCancellationRequest, 'signature'>) => {
     return prisma.contractCancellationRequest.create({
         data,
     });

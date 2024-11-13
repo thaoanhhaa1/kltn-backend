@@ -19,7 +19,11 @@ import { CreateContractCancellationRequest } from '../schemas/contractCancellati
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
 import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
-import { convertGasToEthService, transferToSmartContractService } from './blockchain.service';
+import {
+    convertGasToEthService,
+    transferToSmartContractService,
+    verifyMessageSignedService,
+} from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
 import { endContractService } from './contract.service';
 import { createTransactionService } from './transaction.service';
@@ -39,15 +43,18 @@ const getTextByStatus = (status: ContractCancellationRequestStatus) => {
     }
 };
 
-export const createCancellationRequestService = async (params: CreateContractCancellationRequest) => {
-    const [contract, request] = await Promise.all([
+export const createCancellationRequestService = async ({ signature, ...params }: CreateContractCancellationRequest) => {
+    const [contract, request, user] = await Promise.all([
         findContractByIdAndUser({
             contractId: params.contractId,
             userId: params.requestedBy,
         }),
         getCancelRequestByContractId(params.contractId),
+        findUserById(params.requestedBy),
     ]);
 
+    if (!user) throw new CustomError(404, 'Không tìm thấy người dùng');
+    if (!user.walletAddress) throw new CustomError(400, 'Người dùng chưa kết nối ví');
     if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
 
     if (request) {
@@ -67,6 +74,13 @@ export const createCancellationRequestService = async (params: CreateContractCan
     if (contract.status === 'CANCELLED') throw new CustomError(400, 'Hợp đồng đã bị hủy');
     if (contract.status === 'UNILATERAL_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã bị hủy một phía');
     if (contract.status === 'APPROVED_CANCELLATION') throw new CustomError(400, 'Hợp đồng đã được hủy');
+
+    // `Hủy hợp đồng ${contract?.contractId} vào lúc ${dayjs().format('YYYY-MM-DD')}`
+    verifyMessageSignedService({
+        address: user.walletAddress,
+        message: `Hủy hợp đồng ${contract?.contractId} vào lúc ${params.cancelDate.substring(0, 10)}`,
+        signature,
+    });
 
     const [cancelRequest, contractNew] = await prisma.$transaction([
         createCancellationRequest({
