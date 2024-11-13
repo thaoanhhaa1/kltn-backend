@@ -57,6 +57,7 @@ import convertDateToString from '../utils/convertDateToString.util';
 import { createContract } from '../utils/createContract.util';
 import { dateAfter } from '../utils/dateAfter';
 import CustomError from '../utils/error.util';
+import { getOwnerCreateContractMessage } from '../utils/getMessage';
 import getPageInfo from '../utils/getPageInfo';
 import { isDateDifferenceMoreThan30Days } from '../utils/isNotificationBefore30Days.util';
 import {
@@ -68,6 +69,7 @@ import {
     depositSmartContractService,
     endSmartContractService,
     payMonthlyRentSmartContractService,
+    verifyMessageSignedService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
 import { getPropertyByIdService } from './property.service';
@@ -75,7 +77,7 @@ import { createNotificationQueue } from './rabbitmq.service';
 import { findUserDetailByUserIdService } from './user.service';
 
 export const createContractAndApprovalRequestService = async (
-    contract: CreateContractReq,
+    { signature, ...contract }: CreateContractReq,
     updatedRequest?: IOwnerUpdateRentalRequestStatus,
 ) => {
     try {
@@ -88,6 +90,15 @@ export const createContractAndApprovalRequestService = async (
         if (!renter || !renter.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
         }
+
+        verifyMessageSignedService({
+            address: owner.walletAddress,
+            message: getOwnerCreateContractMessage({
+                ...contract,
+                signature: '',
+            }),
+            signature,
+        });
 
         const contractId = v4();
         const contractTerms = contract.contractTerms.replaceAll(' class="mceEditable"', '');

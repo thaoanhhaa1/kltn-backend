@@ -31,6 +31,9 @@ export const createContractReq = z
         contractTerms: z.string({
             required_error: 'Contract terms are required',
         }),
+        signature: z.string({
+            required_error: 'Signature is required',
+        }),
     })
     .refine((data) => data.endDate > data.startDate, {
         message: 'End date must be after start date',
