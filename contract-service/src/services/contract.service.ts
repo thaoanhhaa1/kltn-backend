@@ -179,7 +179,7 @@ export const createContractAndApprovalRequestService = async (
         return result;
     } catch (error) {
         console.error('Error creating contract:', error);
-        throw new Error('Could not create contract');
+        throw new Error('Dã xảy ra lỗi khi tạo hợp đồng');
     }
 };
 
@@ -252,7 +252,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
         return result;
     } catch (error) {
         console.error('Error creating contract:', error);
-        throw new Error('Could not create contract');
+        throw new Error('Dã xảy ra lỗi khi tạo hợp đồng');
     }
 };
 

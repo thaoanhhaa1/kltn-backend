@@ -411,6 +411,7 @@ export const getTransactionsByContractId = (contractId: IContractId, userId: IUs
     return prisma.transaction.findMany({
         where: {
             contractId,
+            status: 'COMPLETED',
             OR: [
                 {
                     fromId: userId,
@@ -419,6 +420,15 @@ export const getTransactionsByContractId = (contractId: IContractId, userId: IUs
                     toId: userId,
                 },
             ],
+        },
+    });
+};
+
+export const getTransactionByContractIdAndTitle = (contractId: IContractId, title: string) => {
+    return prisma.transaction.findFirst({
+        where: {
+            contractId,
+            title,
         },
     });
 };

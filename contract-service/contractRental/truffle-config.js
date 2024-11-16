@@ -41,10 +41,10 @@
  * https://trufflesuite.com/docs/truffle/getting-started/using-the-truffle-dashboard/
  */
 
-// require('dotenv').config();
-// const { MNEMONIC, PROJECT_ID } = process.env;
+require('dotenv').config();
+const { MNEMONIC, INFURA_RPC } = process.env;
 
-// const HDWalletProvider = require('@truffle/hdwallet-provider');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 module.exports = {
     /**
@@ -76,6 +76,16 @@ module.exports = {
             network_id: '*',
             // Custom out directory
             outDir: './build/contracts/staging',
+        },
+        holesky: {
+            provider: () =>
+                new HDWalletProvider({
+                    mnemonic: {
+                        phrase: MNEMONIC,
+                    },
+                    providerOrUrl: INFURA_RPC,
+                }),
+            network_id: '17000',
         },
         //
         // An additional network, but with some advanced options…

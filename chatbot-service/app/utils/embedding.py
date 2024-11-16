@@ -4,8 +4,8 @@ import dotenv
 
 dotenv.load_dotenv()
 
-def from_document(doc, field_names):
-    return from_documents([doc], field_names)[0]
+def from_document(doc):
+    return from_documents([doc])[0]
 
 def from_documents(docs):
     embeddingsModel = GoogleGenerativeAIEmbeddings(

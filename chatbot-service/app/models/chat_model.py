@@ -8,5 +8,6 @@ class Chat(BaseModel):
     request: str
     response: str
     source_documents: List
+    page_contents: List
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

@@ -2,7 +2,9 @@ import RentalContractABI from '../../contractRental/build/contracts/RentalContra
 import envConfig from '../configs/env.config';
 import web3 from '../configs/web3.config';
 import { IContract, IContractId } from '../interfaces/contract';
+import { IUserId } from '../interfaces/user';
 import { getCompensationTransaction } from '../repositories/transaction.repository';
+import { findUserById } from '../repositories/user.repository';
 import convertVNDToWei from '../utils/convertVNDToWei.util';
 import CustomError from '../utils/error.util';
 import { getGasPriceInfuraService } from './coingecko.service';
@@ -389,4 +391,16 @@ export const transferAddressToAddressService = async ({
         gas: gasEstimate.toString(),
         gasPrice: gasPrice.toString(),
     });
+};
+
+export const getBalanceService = async (userId: IUserId) => {
+    const user = await findUserById(userId);
+
+    if (!user?.walletAddress) throw new CustomError(400, 'Không tìm thấy địa chỉ ví của người dùng.');
+
+    const balanceInWei = await web3.eth.getBalance(user.walletAddress);
+
+    const balance = web3.utils.fromWei(String(Number(balanceInWei)), 'ether');
+
+    return balance;
 };

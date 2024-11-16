@@ -128,6 +128,20 @@ rabbitMQ.connect().then(() => {
             }
         },
     });
+
+    // getAllService().then((properties) => {
+    //     console.log('🚀 ~ getAllService ~ properties:', properties);
+    //     properties.forEach((property) => {
+    //         RabbitMQ.getInstance().publishInQueue({
+    //             exchange: PROPERTY_QUEUE.exchange,
+    //             name: PROPERTY_QUEUE.name,
+    //             message: {
+    //                 type: PROPERTY_QUEUE.type.UPDATED,
+    //                 data: property,
+    //             },
+    //         });
+    //     });
+    // });
 });
 
 app.use(express.json());
