@@ -11,6 +11,13 @@ from app.utils.product_info import document_to_product_info, format_product_info
 import os
 import dotenv
 import re
+from langchain.chains import create_history_aware_retriever
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain.schema.retriever import BaseRetriever
 
 # TODO: Chính tả, emoji, lịch sử trò chuyện
 
@@ -49,31 +56,27 @@ CONTEXT sẽ bao gồm hai phần:
 
 Nhiệm vụ chính của bạn là:
 
-* **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê... Hãy sử dụng thông tin trong phần "Thông tin bất động sản" để tìm kiếm.
+* **Tìm kiếm nhà:** Giúp người dùng tìm kiếm nhà cho thuê phù hợp dựa trên các tiêu chí như vị trí, giá cả, tiện ích, điều kiện thuê...
 * **Đưa ra thông tin chi tiết:** Cung cấp thông tin chi tiết về các bất động sản (tiêu đề, mô tả, giá, địa chỉ, tiện ích...), các điều khoản trong hợp đồng thuê, lợi ích của việc sử dụng hợp đồng thông minh và công nghệ blockchain. **Nếu câu trả lời liên quan đến một bất động sản cụ thể, hãy đảm bảo đưa slug của bất động sản đó vào cuối câu trả lời, đặt trong dấu ngoặc đơn. Ví dụ: (Slug: can-ho-cao-cap-quan-1)**
 * **Hỗ trợ chung:** Giải đáp các thắc mắc khác liên quan đến quy trình thuê nhà, hợp đồng thông minh, thanh toán bằng tiền điện tử, công nghệ blockchain,...
-* **Trả lời câu hỏi về lịch sử trò chuyện:** Nếu người dùng hỏi về lịch sử trò chuyện hoặc các bất động sản đã được đề cập trước đó, hãy làm theo các bước sau:
-    1. **Kiểm tra câu trả lời trước:** Xem xét kỹ các câu trả lời trước đó của bạn trong phần "Lịch sử trò chuyện" để tìm thông tin liên quan đến câu hỏi hiện tại.
-    2. **Tìm kiếm slug:** Nếu tìm thấy bất kỳ slug nào trong các câu trả lời trước đó, hãy sử dụng chúng để tìm kiếm thông tin chi tiết về các bất động sản tương ứng trong phần "Thông tin bất động sản". 
-    3. **Ưu tiên dữ liệu từ câu trả lời trước:** Nếu câu hỏi hiện tại có liên quan đến câu trả lời trước đó và yêu cầu dữ liệu về bất động sản, hãy **chỉ sử dụng dữ liệu của các bất động sản được đề cập trong câu trả lời trước đó**.
-    4. **Sử dụng thông tin để trả lời:** Kết hợp thông tin từ lịch sử trò chuyện và thông tin bất động sản (nếu có) để đưa ra câu trả lời chính xác và đầy đủ nhất cho người dùng.
-    5. **Nếu không tìm thấy thông tin:** Nếu không tìm thấy thông tin liên quan trong lịch sử trò chuyện hoặc thông tin bất động sản, hãy trả lời "Tôi không tìm thấy thông tin liên quan trong lịch sử trò chuyện."
-* **Gợi ý câu hỏi:** Khi không có đủ thông tin để trả lời hoặc câu hỏi không liên quan đến CONTEXT, hãy ưu tiên xem xét lịch sử trò chuyện để đưa ra câu trả lời phù hợp. Nếu vẫn không thể trả lời, hãy gợi ý một vài câu hỏi khác liên quan đến các dịch vụ của Gigalogy để hỗ trợ người dùng tốt hơn. Ví dụ:
-    * "Bạn có muốn tìm hiểu thêm về cách công nghệ blockchain đảm bảo tính minh bạch và bảo mật cho các giao dịch trên hệ thống của chúng tôi không?"
-    * "Bạn có quan tâm đến việc tìm hiểu về các lợi ích của việc thanh toán tiền thuê nhà bằng tiền điện tử không?"
-    * "Tôi có thể cung cấp cho bạn thông tin về các dự án bất động sản khác trong khu vực không?"
 
 **Hãy luôn xem xét lịch sử trò chuyện để hiểu ngữ cảnh của câu hỏi hiện tại và đưa ra câu trả lời hoặc gợi ý phù hợp hơn.** 
 
-**Ví dụ về các câu hỏi bạn có thể nhận được:**
-
-* "Tôi muốn tìm căn hộ 2 phòng ngủ ở Quận 1, giá dưới 10 triệu."
-* "Các bước để ký hợp đồng thuê nhà thông minh là gì?"
-* "Hợp đồng thông minh có những lợi ích gì?" 
-* "Tôi có thể thanh toán tiền thuê nhà bằng loại tiền điện tử nào?"
-* "Bạn có thể nhắc lại thông tin về căn hộ mà tôi đã hỏi trước đó không?"
-* "Câu hỏi trước đó của tôi là gì?"
+{context}
 """
+
+qa_system_prompt = """Bạn là một trợ lý đắc lực, chuyên cung cấp thông tin và hỗ trợ về ứng dụng công nghệ blockchain trong phát triển hệ thống cho thuê nhà và hợp đồng thông minh của SmartRent. \
+Sử dụng các phần ngữ cảnh sau đây để trả lời câu hỏi. \
+Nếu bạn không biết câu trả lời, chỉ cần nói rằng bạn không biết. \
+Sử dụng tối đa ba câu và giữ cho câu trả lời ngắn gọn.\
+
+Nhiệm vụ chính của bạn là:
+
+* **Tìm nhà:** Giúp người dùng tìm đúng nhà dựa trên các tiêu chí như vị trí, giá cả, tiện nghi, điều khoản tài chính, v.v.
+* **Cung cấp thông tin chi tiết:** Cung cấp thông tin chi tiết về bất động sản (tiêu đề, mô tả, giá cả, địa chỉ, tiện nghi, v.v.), các điều khoản đồng thiết kế, lợi ích của việc sử dụng hợp đồng thông minh và công nghệ blockchain. **Nếu câu trả lời liên quan đến bất kỳ sản phẩm nào, hãy đảm bảo đưa slug của bất kỳ bất động sản nào vào câu trả lời cuối cùng, được đặt trong dấu ngoặc đơn. Ví dụ: (Slug: high-end-apartment-in-quan-1)**. Slug lấy từ field "slug" của bất động sản.
+* **Hỗ trợ chung:** Trả lời các câu hỏi khác liên quan đến quy trình cho thuê, hợp đồng thông minh, thanh toán bằng tiền điện tử, công nghệ blockchain, v.v.
+
+{context}"""
 
 sys_prompt_question_classification = """
 **Phân loại câu hỏi người dùng**
@@ -109,6 +112,19 @@ instruction = """CONTEXT:\n\n {context}\n\nQuery: {question}\n"""
 prompt_template = sys_prompt + instruction
 
 QA_prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+
+### Contextualize question ###
+contextualize_q_system_prompt = """Given a chat history and the latest user question \
+which might reference context in the chat history, formulate a standalone question \
+which can be understood without the chat history. Do NOT answer the question, \
+just reformulate it if needed and otherwise return it as is."""
+contextualize_q_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", contextualize_q_system_prompt),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
 
 class RagService:
     def __init__(self, qdrant_repo: QdrantRepository, collection_names):
@@ -173,79 +189,93 @@ class RagService:
             "k": 5, 
             "filter": qdrant_models.Filter(must=must_filter)
         })
-        docs = retriever.invoke(query)
 
-        product_info = []
-        unique_product_ids = []
+        history_docs = []
+        for chat in chat_history:
+            if 'source_documents' in chat:
+                for doc in chat['source_documents']:
+                    if doc not in history_docs:
+                        history_docs.append(doc)
+        
+        history_aware_retriever = create_history_aware_retriever(
+            llm, retriever, contextualize_q_prompt
+        )
+
+        context = '\n'
 
         for chat in chat_history:
-            for doc in chat['source_documents']:
-                if doc.get('id', '') not in unique_product_ids:
-                    product_info.append(document_to_product_info(doc))
-                    unique_product_ids.append(doc.get('id', ''))
+            for page_content in chat['page_contents']:
+                context += page_content + '\n'
 
-        for doc in docs:
-            product = doc.metadata
+        prompt = qa_system_prompt + context
 
-            if product and product.get('id', '') not in unique_product_ids:
-                product_info.append(document_to_product_info(product))
-                unique_product_ids.append(product.get('id', ''))
-
-        formatted_product_info = format_product_infos(product_info)
-
-        # Sửa lỗi định dạng lịch sử trò chuyện
-        formatted_chat_history = "\n--\n".join(
-            f"Người dùng: {chat['human']}\nTrợ lý: {chat['ai']}"
-            for chat in chat_history
+        qa_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ]
         )
 
-        # Đưa lịch sử trò chuyện và thông tin sản phẩm vào context với tiêu đề rõ ràng
-        context = (
-            "## Lịch sử trò chuyện:\n" 
-            f"{formatted_chat_history}\n\n"
-            "## Thông tin bất động sản:\n" # Sửa tiêu đề phần thông tin sản
-            f"{formatted_product_info}"
+        question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+        rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+
+        chat_history_item = ChatMessageHistory()
+
+        for chat in chat_history:
+            chat_history_item.add_message({
+                "role": "human",
+                "content": chat['human'],
+            })
+            chat_history_item.add_message({
+                "role": "ai",
+                "content": chat['ai'],
+            })
+
+        def get_session_history():
+            return chat_history_item
+
+        conversational_rag_chain = RunnableWithMessageHistory(
+            rag_chain,
+            get_session_history,
+            input_messages_key="input",
+            history_messages_key="chat_history",
+            output_messages_key="answer",
         )
 
-        # In context ra file để kiểm tra, nếu file đã tồn tại thì ghi vào cuối file
-        with open("context.txt", "a", encoding="utf-8") as f:
-            f.write("=========== CONTEXT ===========\n")
-            f.write(context + "\n\n")
+        result = conversational_rag_chain.invoke(
+            {"input": query},
+            config={"configurable": {"session_id": "1"}}
+        )
 
-        messages = [SystemMessage(content=sys_prompt + "\n\nCONTEXT:\n\n" + context)]
-        messages.append(HumanMessage(content=query))
+        properties = []
+        slugs = []
+        page_contents = []
 
-        llm_res = llm.invoke(messages) 
+        for item in result['context']:
+            property = item.metadata
 
-        slugs = [product['slug'] for product in product_info]
-
-        if llm_res:
-            mentioned_slugs = [slug for slug in slugs if slug in llm_res.content]
-            mentioned_slugs = list(set(mentioned_slugs))
-
-            filtered_source_documents = [doc for doc in docs if doc.metadata.get('slug', '') in mentioned_slugs]
-
-            unique_filtered_source_documents = []
-            unique_filtered_slugs = []
-
-            for doc in filtered_source_documents:
-                if doc.metadata.get('slug', '') not in unique_filtered_slugs:
-                    unique_filtered_source_documents.append(doc)
-                    unique_filtered_slugs.append(doc.metadata.get('slug', ''))
+            if property['slug'] in result['answer'] and property['slug'] not in slugs:
+                properties.append(property)
+                page_contents.append(item.page_content)
+                slugs.append(property['slug'])
 
 
-            return {
-                "query": query,
-                "result": llm_res.content,
-                "source_documents": unique_filtered_source_documents,
-                "slugs": unique_filtered_slugs
-            }
+        for i in range(len(chat_history)):
+            documents = chat_history[i]['source_documents']
+
+            for j in range(len(documents)):
+                if documents[j]['slug'] in result['answer']:
+                    properties.append(documents[j])
+                    page_contents.append(chat_history[i]['page_contents'][j])
+                    slugs.append(documents[j]['slug'])
 
         return {
             "query": query,
-            "result": "Xin lỗi, tôi không thể tìm thấy thông tin phù hợp với yêu cầu của bạn.",
-            "source_documents": [],
-            "slugs": []
+            "result": result['answer'],
+            "source_documents": properties,
+            "slugs": slugs,
+            "page_contents": page_contents
         }
     
     def classify_question(self, message: str):

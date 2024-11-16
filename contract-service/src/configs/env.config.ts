@@ -27,6 +27,7 @@ const EnvSchema = z.object({
     FIREBASE_MESSAGING_SENDER_ID: z.string(),
     FIREBASE_APP_ID: z.string(),
     FIREBASE_MEASUREMENT_ID: z.string(),
+    HOLESKY_PRIVATE_KEY: z.string(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

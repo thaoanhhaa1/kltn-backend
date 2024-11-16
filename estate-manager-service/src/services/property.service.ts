@@ -221,3 +221,9 @@ export const updatePropertyTypeInPropertiesService = async (typeId: PropertyType
 export const getPropertiesCbbService = (userId: IUserId) => {
     return getPropertiesCbb(userId);
 };
+
+export const getAllService = async () => {
+    const properties = await getNotPendingProperties();
+
+    return properties.map(convertToDTO);
+};

@@ -20,6 +20,7 @@ import {
 import {
     createTransaction,
     getOverdueTransactions,
+    getTransactionByContractIdAndTitle,
     getTransactionsUnPaid,
 } from '../repositories/transaction.repository';
 import { dateAfter } from '../utils/dateAfter';
@@ -53,23 +54,30 @@ class TaskService {
             const currentMonth = new Date().getMonth() + 1;
 
             contracts.forEach((contract) => {
-                const startDate = contract.startDate.getDate();
+                getTransactionByContractIdAndTitle(
+                    contract.contractId,
+                    `Thanh toán tiền thuê tháng ${currentMonth}`,
+                ).then((transaction) => {
+                    if (transaction) return;
 
-                if (startDate === currentDate) {
-                    queries.push(
-                        createTransaction({
-                            amount: contract.monthlyRent,
-                            contractId: contract.contractId,
-                            status: 'PENDING',
-                            title: `Thanh toán tiền thuê tháng ${currentMonth}`,
-                            description: `Thanh toán tiền thuê tháng ${currentMonth} cho hợp đồng **${contract.contractId}**`,
-                            fromId: contract.renterId,
-                            toId: contract.ownerId,
-                            endDate: dateAfter(14, true),
-                            type: 'RENT',
-                        }),
-                    );
-                }
+                    const startDate = contract.startDate.getDate();
+
+                    if (startDate === currentDate) {
+                        queries.push(
+                            createTransaction({
+                                amount: contract.monthlyRent,
+                                contractId: contract.contractId,
+                                status: 'PENDING',
+                                title: `Thanh toán tiền thuê tháng ${currentMonth}`,
+                                description: `Thanh toán tiền thuê tháng ${currentMonth} cho hợp đồng **${contract.contractId}**`,
+                                fromId: contract.renterId,
+                                toId: contract.ownerId,
+                                endDate: dateAfter(14, true),
+                                type: 'RENT',
+                            }),
+                        );
+                    }
+                });
             });
 
             await Promise.all([getCoinPriceService(), getGasPriceInfuraService()]);

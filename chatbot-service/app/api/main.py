@@ -4,8 +4,7 @@ from app.services.chat_service import create_item, get_chats_by_user_id
 from app.repositories.qdrant_repository import QdrantRepository
 from app.services.rabbitmq_service import RabbitMQ
 from app.utils.document import to_document
-from app.utils.splitter import split_document
-from app.utils.embedding import from_documents
+from app.utils.embedding import from_document
 from app.middlewares.auth_middleware import JWTMiddleware
 from app.models.chat_model import Chat
 import os
@@ -52,21 +51,22 @@ async def generate_response(request: Request):
         chat_history.append({
             "human": chat["request"],
             "ai": chat["response"],
-            "source_documents": chat["source_documents"]
+            "source_documents": chat["source_documents"],
+            "page_contents": chat["page_contents"]
         })
 
     response = rag_service.generate_response(collection_name=property_collection, query=query, chat_history=chat_history)
-    source_documents=[document.metadata for document in response["source_documents"]]
+    # source_documents=[document.metadata for document in response["source_documents"]]
 
     chat_res = Chat(
         user_id=user_id, 
         request=query, 
         response=response["result"], 
-        source_documents=source_documents
+        source_documents=response["source_documents"],
+        page_contents=response["page_contents"]
     )
     create_item(item=chat_res)
 
-    response["source_documents"] = source_documents
     return {"response": response}
 
 @app.delete("/api/v1/chat-service/{collection_name}/{document_id}")
@@ -102,16 +102,17 @@ def property_callback(message):
 
             attributes[attr["type"]].append(attr["name"])
 
-        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nLoại nhà: {data_dict['type']["name"]}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['price']}""";
+        content = f"""Tiêu đề: {data_dict['title']}\nMô tả: {data_dict['description']}\nLoại nhà: {data_dict['type']["name"]}\nĐịa chỉ: {data_dict['address']["street"]}, {data_dict['address']["ward"]}, {data_dict['address']["district"]}, {data_dict['address']["city"]}\nChủ nhà: {data_dict['owner']['name']}\nEmail: {data_dict['owner']['email']}\nSố điện thoại: {data_dict['owner']['phoneNumber']}\n{conditions}\n{"\n".join(f"{k}: {', '.join(v)}" for k, v in attributes.items())}\nGiá: {data_dict['price']} (Slug: {data_dict['slug']})""";
 
         property_doc = to_document(data=data_dict, content=content, field_names=[
             "id", "title", "description", "latitude", "longitude", "address", "attributes",
             "images", "rentalConditions", "price", "owner", "slug", "type"
         ])
 
-        property_split_docs = split_document(property_doc)
-        embeddings = from_documents(property_split_docs)
-        qdrant_repo.insert_documents(collection_name=property_collection, documents=property_split_docs, embeddings=embeddings)
+        # property_split_docs = split_document(property_doc)
+        embeddings = from_document(doc=property_doc)
+
+        qdrant_repo.insert_documents(collection_name=property_collection, documents=[property_doc], embeddings=[embeddings])
 
 
 

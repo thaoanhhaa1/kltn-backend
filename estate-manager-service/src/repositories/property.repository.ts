@@ -300,11 +300,13 @@ export const updateProperty = async (propertyId: IPropertyId, property: IUpdateP
             rentalConditions: conditions,
             attributes: {
                 deleteMany: {},
-                createMany: {
-                    data: attributeIds.map((attributeId) => ({
-                        attributeId,
-                    })),
-                },
+                ...(attributeIds.length && {
+                    createMany: {
+                        data: attributeIds.map((attributeId) => ({
+                            attributeId,
+                        })),
+                    },
+                }),
             },
         },
         include: propertyInclude,
@@ -638,5 +640,11 @@ export const getPropertiesCbb = (userId: IUserId) => {
             deposit: true,
             minDuration: true,
         },
+    });
+};
+
+export const getAll = () => {
+    return prisma.property.findMany({
+        include: propertyInclude,
     });
 };
