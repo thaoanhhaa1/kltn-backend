@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from app.services.rag_service import RagService
-from app.services.chat_service import create_item, get_chats_by_user_id
+from app.services.chat_service import create_item, get_chats_by_user_id, get_chats_by_user_id_and_pagination
 from app.repositories.qdrant_repository import QdrantRepository
 from app.services.rabbitmq_service import RabbitMQ
 from app.utils.document import to_document
@@ -11,6 +11,7 @@ import os
 import dotenv
 import json
 import threading
+from uuid import uuid4
 
 dotenv.load_dotenv()
 
@@ -25,6 +26,33 @@ rabbitmq_service = RabbitMQ()
 qdrant_repo.create_collection(collection_name=property_collection)
 
 app.add_middleware(JWTMiddleware)
+
+@app.get("/api/v1/chat-service/chats")
+async def get_chats(request: Request):
+    user = request.state.user
+    user_id = (user["id"])
+    # get `top_k` in query params
+    top_k = int(request.query_params.get("top_k", 5))
+    skip = int(request.query_params.get("skip", 0))
+    is_pagination = request.query_params.get("pagination", False)
+
+    if is_pagination:
+        chats = get_chats_by_user_id_and_pagination(user_id=user_id, top_k=top_k, skip=skip)
+    else:
+        chats = get_chats_by_user_id(user_id=user_id)
+
+    chat_history = []
+
+    for chat in chats:
+        chat_history.append({
+            "_id": str(chat["_id"]),
+            "query": chat["request"],
+            "result": chat["response"],
+            "source_documents": chat["source_documents"],
+            "page_contents": chat["page_contents"]
+        })
+
+    return chat_history
 
 @app.post("/api/v1/chat-service/generate")
 async def generate_response(request: Request):
@@ -49,6 +77,8 @@ async def generate_response(request: Request):
 
     for chat in chats:
         chat_history.append({
+            # uuid for _id
+            "_id": str(uuid4()),
             "human": chat["request"],
             "ai": chat["response"],
             "source_documents": chat["source_documents"],

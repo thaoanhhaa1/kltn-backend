@@ -265,7 +265,7 @@ class RagService:
             documents = chat_history[i]['source_documents']
 
             for j in range(len(documents)):
-                if documents[j]['slug'] in result['answer']:
+                if documents[j]['slug'] in result['answer'] and documents[j]['slug'] not in slugs:
                     properties.append(documents[j])
                     page_contents.append(chat_history[i]['page_contents'][j])
                     slugs.append(documents[j]['slug'])
