@@ -28,4 +28,8 @@ def list_items():
     return list(collection.find())
 
 def get_chats_by_user_id(user_id: str, top_k: int = 5):
-    return list(collection.find({"user_id": user_id}).sort("updated_at", -1).limit(top_k))
+    # return list(collection.find({"user_id": user_id}).sort("updated_at", -1).limit(top_k))
+    return list(collection.find({"user_id": user_id}).sort("updated_at", -1))
+
+def get_chats_by_user_id_and_pagination(user_id: str, top_k: int = 20, skip: int = 0):
+    return list(collection.find({"user_id": user_id}).sort("updated_at", -1).skip(skip).limit(top_k))

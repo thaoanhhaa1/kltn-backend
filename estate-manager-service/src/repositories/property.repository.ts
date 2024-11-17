@@ -631,6 +631,9 @@ export const getPropertiesCbb = (userId: IUserId) => {
                 },
             },
             deleted: false,
+            status: {
+                in: ['ACTIVE', 'UNAVAILABLE'],
+            },
         },
         select: {
             propertyId: true,

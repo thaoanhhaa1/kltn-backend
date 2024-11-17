@@ -211,15 +211,6 @@ export const rejectReportByRenterService = async (reportChildId: ReportChildId, 
     })
         .then(() => console.log('Notification created'))
         .catch((err) => console.log(err));
-    createNotificationQueue({
-        title: `Báo cáo về **${reportChild.report.title}**`,
-        body: `Báo cáo **${reportChild.report.title}** của hợp đồng **${reportChild.report.contractId}** cần được giải quyết`,
-        type: 'REPORT',
-        docId: String(reportChild.reportId),
-        toRole: 'admin',
-    })
-        .then(() => console.log('Notification created'))
-        .catch((err) => console.log(err));
 
     return childReport;
 };

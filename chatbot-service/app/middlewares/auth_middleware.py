@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 class JWTMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         token = request.headers.get("Authorization")
+
         if token:
             try:
                 token = token.replace("Bearer ", "")

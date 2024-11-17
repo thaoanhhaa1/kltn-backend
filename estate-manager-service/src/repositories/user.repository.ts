@@ -268,6 +268,10 @@ export const getRenterCbb = () => {
             userTypes: {
                 has: 'renter',
             },
+            walletAddress: {
+                not: null,
+            },
+            isVerified: true,
         },
         select: {
             userId: true,
