@@ -161,7 +161,12 @@ class RabbitMQ {
 
         const channel = this.channels[queue];
 
-        const replyQueue = (await this.assertQueue(channel, '', { exclusive: true })) as amqp.Replies.AssertQueue;
+        const replyQueue = (await this.assertQueue(channel, '', {
+            exclusive: true,
+            autoDelete: true,
+            expires: 60000,
+            messageTtl: 60000,
+        })) as amqp.Replies.AssertQueue;
         const correlationId = uuidv4();
 
         return new Promise((resolve, reject) => {
@@ -170,6 +175,8 @@ class RabbitMQ {
                 (msg) => {
                     if (msg?.properties.correlationId === correlationId) {
                         resolve(msg.content.toString());
+                        // end `replyQueue` queue
+                        channel.deleteQueue(replyQueue.queue);
                     }
                 },
                 { noAck: true },
