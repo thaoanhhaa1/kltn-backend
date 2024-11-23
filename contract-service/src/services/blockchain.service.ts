@@ -1,6 +1,7 @@
 import RentalContractABI from '../../contractRental/build/contracts/RentalContract.json'; // ABI của hợp đồng
 import envConfig from '../configs/env.config';
 import web3 from '../configs/web3.config';
+import { STATUS } from '../constants/smartContract';
 import { IContract, IContractId } from '../interfaces/contract';
 import { IUserId } from '../interfaces/user';
 import { getCompensationTransaction } from '../repositories/transaction.repository';
@@ -122,8 +123,8 @@ export const payMonthlyRentSmartContractService = async ({
 
     const rentalStatus = parseInt(rental.status, 10);
 
-    if (rentalStatus === 0 || rentalStatus === 3)
-        throw new CustomError(400, 'Chưa đến thời gian thanh toán hoặc hợp đồng đã kết thúc.');
+    if ([STATUS.NOT_CREATED, STATUS.ENDED, STATUS.CANCELLED].includes(rentalStatus))
+        throw new CustomError(400, 'Hợp đồng không tồn tại hoặc đã kết thúc.');
 
     const monthlyRentInWei = await convertVNDToWei(Number(rental.monthlyRent));
 

@@ -29,7 +29,7 @@ export const createContractExtensionRequest = async (req: AuthenticatedRequest, 
 
         const result = await createContractExtensionRequestService(safeParse.data);
 
-        return res.status(201).json(result);
+        res.status(201).json(result);
     } catch (error) {
         next(error);
     }

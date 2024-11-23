@@ -56,7 +56,10 @@ export const createContractExtensionRequestService = async ({ userId, ...rest }:
 
     createNotificationQueue({
         title: rest.type === 'EXTEND_CONTRACT' ? 'Yêu cầu gia hạn hợp đồng' : 'Yêu cầu gia hạn thanh toán',
-        body: `Người thuê **${user.name}** đã gửi yêu cầu gia hạn hợp đồng **${contract.contractId}**`,
+        body:
+            rest.type === 'EXTEND_CONTRACT'
+                ? `Người thuê **${user.name}** đã gửi yêu cầu gia hạn hợp đồng **${contract.contractId}**`
+                : `Người thuê **${user.name}** đã gửi yêu cầu gia hạn hoá đơn thanh toán **${transaction?.id || ''}**`,
         type: 'CONTRACT_DETAIL',
         docId: contract.contractId,
         from: userId,
