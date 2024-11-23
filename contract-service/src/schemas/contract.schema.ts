@@ -4,42 +4,42 @@ import { z } from 'zod';
 export const createContractReq = z
     .object({
         ownerId: z.string({
-            required_error: 'Owner User ID is required',
+            required_error: 'ID chủ nhà là bắt buộc',
         }),
         renterId: z.string({
-            required_error: 'Renter User ID is required',
+            required_error: 'ID người thuê là bắt buộc',
         }),
         propertyId: z.string({
-            required_error: 'Property ID is required',
+            required_error: 'ID bất động sản là bắt buộc',
         }),
         startDate: z
             .string({
-                required_error: 'Start date is required',
+                required_error: 'Ngày bắt đầu là bắt buộc',
             })
             .transform((dateStr) => new Date(dateStr)), // Chuyển đổi chuỗi thành Date
         endDate: z
             .string({
-                required_error: 'End date is required',
+                required_error: 'Ngày kết thúc là bắt buộc',
             })
             .transform((dateStr) => new Date(dateStr)),
         monthlyRent: z.number({
-            required_error: 'Monthly rent is required',
+            required_error: 'Giá thuê hàng tháng là bắt buộc',
         }),
         depositAmount: z.number({
-            required_error: 'Deposit amount is required',
+            required_error: 'Số tiền đặt cọc là bắt buộc',
         }),
         contractTerms: z.string({
-            required_error: 'Contract terms are required',
+            required_error: 'Điều khoản hợp đồng là bắt buộc',
         }),
         signature: z.string({
-            required_error: 'Signature is required',
+            required_error: 'Chữ ký là bắt buộc',
         }),
     })
     .refine((data) => data.endDate > data.startDate, {
-        message: 'End date must be after start date',
+        message: 'Ngày kết thúc phải lớn hơn ngày bắt đầu',
     })
     .refine((data) => data.monthlyRent > 0, {
-        message: 'Monthly rent must be greater than 0',
+        message: 'Giá thuê hàng tháng phải lớn hơn 0',
     });
 
 export type CreateContractReq = z.infer<typeof createContractReq>;

@@ -84,8 +84,8 @@ export const createProperty = async (req: AuthenticatedRequest, res: Response, n
         findUserByIdService(req.user!.id)
             .then((user) =>
                 createNotificationService({
-                    body: `Tài sản **${property.title}** của **${user?.name}** đang chờ duyệt`,
-                    title: 'Tài sản mới',
+                    body: `Bất động sản **${property.title}** của **${user?.name}** đang chờ duyệt`,
+                    title: 'Bất động sản mới',
                     type: 'ADMIN_PROPERTY',
                     from: req.user!.id,
                     toRole: 'admin',
