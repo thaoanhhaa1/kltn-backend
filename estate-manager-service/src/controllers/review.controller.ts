@@ -133,12 +133,13 @@ export const deleteReviewById = async (req: AuthenticatedRequest, res: Response,
         const reviewId = req.params.reviewId;
         const replyId = req.query.replyId as string | undefined;
 
-        await deleteReviewByIdService({ id: reviewId, userId, replyId });
+        const review = await deleteReviewByIdService({ id: reviewId, userId, replyId });
 
         const result: ResponseType = {
             message: 'Xóa đánh giá thành công',
             statusCode: 204,
             success: true,
+            data: review,
         };
 
         res.status(200).json(result);
