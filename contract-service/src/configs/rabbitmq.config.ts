@@ -177,6 +177,8 @@ class RabbitMQ {
                         resolve(msg.content.toString());
                         // end `replyQueue` queue
                         channel.deleteQueue(replyQueue.queue);
+                        // end consume
+                        if (msg.fields?.consumerTag) channel.cancel(msg.fields.consumerTag);
                     }
                 },
                 { noAck: true },

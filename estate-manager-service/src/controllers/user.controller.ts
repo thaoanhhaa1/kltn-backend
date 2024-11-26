@@ -126,19 +126,19 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         const avatar = req.file;
         let avatarUrl: string | undefined;
 
-        if (avatar)
-            avatarUrl = await uploadFile({
-                file: avatar,
-                folder: 'user-service',
-            });
-
         const safeParse = updateSchema.safeParse(req.body);
 
         if (!safeParse.success)
             throw convertZodIssueToEntryErrors({
                 issue: safeParse.error.issues,
-                message: 'Invalid input',
+                message: 'Dữ liệu không hợp lệ',
                 status: 400,
+            });
+
+        if (avatar)
+            avatarUrl = await uploadFile({
+                file: avatar,
+                folder: 'user-service',
             });
 
         const updatedUser = await updateUserService(userId, {

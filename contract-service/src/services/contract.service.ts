@@ -283,7 +283,7 @@ export const depositService = async ({
             rentalStartDate: convertDateToDB(contract.startDate),
         });
 
-        if (contractInRange) throw new CustomError(400, 'Căn hộ đã được thuê trong khoảng thời gian này');
+        if (contractInRange) throw new CustomError(400, 'Bất động sản đã được thuê trong khoảng thời gian này');
 
         verifyMessageSignedService({
             address: renter.walletAddress,

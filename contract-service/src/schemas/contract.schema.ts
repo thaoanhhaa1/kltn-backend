@@ -22,9 +22,11 @@ export const createContractReq = z
                 required_error: 'Ngày kết thúc là bắt buộc',
             })
             .transform((dateStr) => new Date(dateStr)),
-        monthlyRent: z.number({
-            required_error: 'Giá thuê hàng tháng là bắt buộc',
-        }),
+        monthlyRent: z
+            .number({
+                required_error: 'Giá thuê hàng tháng là bắt buộc',
+            })
+            .min(1, 'Giá thuê hàng tháng phải lớn hơn 0'),
         depositAmount: z.number({
             required_error: 'Số tiền đặt cọc là bắt buộc',
         }),
@@ -37,9 +39,7 @@ export const createContractReq = z
     })
     .refine((data) => data.endDate > data.startDate, {
         message: 'Ngày kết thúc phải lớn hơn ngày bắt đầu',
-    })
-    .refine((data) => data.monthlyRent > 0, {
-        message: 'Giá thuê hàng tháng phải lớn hơn 0',
+        path: ['endDate'],
     });
 
 export type CreateContractReq = z.infer<typeof createContractReq>;
