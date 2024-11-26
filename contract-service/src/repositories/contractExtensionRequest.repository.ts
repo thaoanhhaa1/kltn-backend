@@ -1,4 +1,4 @@
-import { ContractExtensionRequestStatus } from '@prisma/client';
+import { ContractExtensionRequestStatus, ContractExtensionRequestType } from '@prisma/client';
 import { subHours } from 'date-fns';
 import prisma from '../prisma/prismaClient';
 import getDateBefore from '../utils/getDateBefore';
@@ -35,11 +35,15 @@ export const getContractExtensionRequestByContractId = (contractId: string) => {
     });
 };
 
-export const getContractExtensionRequestPendingByContractId = (contractId: string) => {
+export const getContractExtensionRequestPendingByContractId = (
+    contractId: string,
+    type: ContractExtensionRequestType,
+) => {
     return prisma.contractExtensionRequest.findFirst({
         where: {
             contractId,
             status: ContractExtensionRequestStatus.PENDING,
+            type,
         },
         orderBy: {
             createdAt: 'desc',

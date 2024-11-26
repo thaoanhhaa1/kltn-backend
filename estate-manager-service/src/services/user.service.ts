@@ -56,8 +56,10 @@ export const updateUserService = async (userId: IUserId, user: IUpdateUserParams
         if (findUser && findUser.userId !== userId) throw new CustomError(400, 'Số điện thoại đã được sử dụng');
     }
 
+    const userData = await findUserById(userId);
+
     const userBaseEmbed: UserBaseEmbed = {
-        avatar: user.avatar ?? null,
+        avatar: userData?.avatar ?? user.avatar ?? null,
         name: user.name,
         userId,
     };

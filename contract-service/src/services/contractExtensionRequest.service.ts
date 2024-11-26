@@ -20,7 +20,7 @@ import { createNotificationQueue } from './rabbitmq.service';
 
 export const createContractExtensionRequestService = async ({ userId, ...rest }: ICreateContractExtensionRequest) => {
     const [extensionRequest, user, contract, transaction] = await Promise.all([
-        getContractExtensionRequestPendingByContractId(rest.contractId),
+        getContractExtensionRequestPendingByContractId(rest.contractId, rest.type),
         findUserById(userId),
         findContractById(rest.contractId),
         rest.transactionId ? getTransactionById(rest.transactionId) : Promise.resolve(null),
