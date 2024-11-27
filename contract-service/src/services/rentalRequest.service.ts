@@ -159,6 +159,20 @@ export const generateContractService = async ({ ownerId, propertyId, renterId, r
         if (!property) throw new CustomError(404, 'Bất động sản không tồn tại');
         if (!rentalRequest) throw new CustomError(404, 'Yêu cầu thuê không tồn tại');
 
+        const contract = await getContractInRange({
+            propertyId: propertyId,
+            rentalEndDate: convertDateToDB(renterDetail.rentalEndDate),
+            rentalStartDate: convertDateToDB(renterDetail.rentalStartDate),
+        });
+
+        if (contract)
+            throw new CustomError(
+                400,
+                `Bất động sản đã có hợp đồng trong thời gian ${convertDateToString(
+                    new Date(contract.startDate),
+                )} - ${convertDateToString(new Date(contract.endDateActual))}`,
+            );
+
         const date = new Date();
 
         return {
