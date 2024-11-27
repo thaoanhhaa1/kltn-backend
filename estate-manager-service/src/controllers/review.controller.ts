@@ -16,6 +16,10 @@ export const createReview = async (req: AuthenticatedRequest, res: Response, nex
     try {
         const userId = req.user!.id;
         const files = req.files as Express.Multer.File[] | undefined;
+        console.log('createReview');
+        files?.forEach((file) => console.log(file.originalname));
+        console.log('end createReview');
+
         const imageUrls: Array<string> = req.body.imageUrls || [];
 
         if (files) imageUrls.push(...files.map((file) => file.originalname));
