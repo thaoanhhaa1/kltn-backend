@@ -302,7 +302,15 @@ export const depositService = async ({
         const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
         const fee = feeEth * ethVnd;
 
-        const isStartRent = isAfter(new Date(), contract.startDate) || isSameDay(new Date(), contract.startDate);
+        const vietnamDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+
+        const isStartRent = isAfter(vietnamDate, contract.startDate) || isSameDay(vietnamDate, contract.startDate);
+
+        console.log('Deposit service');
+        console.log('Start Date: ', contract.startDate);
+        console.log('Vietnam Date: ', vietnamDate);
+        console.log('isAfter(vietnamDate, contract.startDate): ', isAfter(vietnamDate, contract.startDate));
+        console.log('isSameDay(vietnamDate, contract.startDate): ', isSameDay(vietnamDate, contract.startDate));
 
         const [, transactionResult] = await prisma.$transaction([
             paymentTransaction({
