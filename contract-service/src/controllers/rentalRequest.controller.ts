@@ -16,6 +16,7 @@ import {
 import { findUserByIdService } from '../services/user.service';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
+import { getPendingRentalRequestsByOwnerService } from './../services/rentalRequest.service';
 
 export const createRentalRequest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -196,6 +197,20 @@ export const generateContract = async (req: AuthenticatedRequest, res: Response,
             renterId,
             requestId,
         });
+
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPendingRentalRequestsByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const skip = Number(req.query.skip || 0);
+        const take = Number(req.query.take || 10);
+
+        const result = await getPendingRentalRequestsByOwnerService(userId, { skip, take });
 
         res.json(result);
     } catch (error) {

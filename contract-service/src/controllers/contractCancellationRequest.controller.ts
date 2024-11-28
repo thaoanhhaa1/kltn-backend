@@ -4,6 +4,7 @@ import { createContractCancellationRequestSchema } from '../schemas/contractCanc
 import { getContractByIdService } from '../services/contract.service';
 import {
     createCancellationRequestService,
+    getCancelRequestByOwnerService,
     getHandledCancelRequestByContractIdService,
     getNotHandledCancelRequestByContractIdService,
     updateStatusRequestService,
@@ -133,6 +134,26 @@ export const getNotHandledCancelRequestByContractId = async (
         if (!contractId) throw new CustomError(400, 'Mã hợp đồng không được để trống');
 
         return res.json(await getNotHandledCancelRequestByContractIdService({ contractId, userId }));
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getCancelRequestByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const take = Number(req.query.take) || 10;
+        const skip = Number(req.query.skip) || 0;
+
+        const result = await getCancelRequestByOwnerService({
+            userId,
+            pagination: {
+                skip,
+                take,
+            },
+        });
+
+        res.json(result);
     } catch (error) {
         next(error);
     }

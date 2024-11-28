@@ -8,9 +8,11 @@ import {
 import { IUserId } from '../interfaces/user';
 import { getContractInRange } from '../repositories/contract.repository';
 import {
+    countPendingRentalRequestsByOwner,
     countRentalRequestsByOwner,
     countRentalRequestsByRenter,
     createRentalRequest,
+    getPendingRentalRequestsByOwner,
     getRentalRequestAndPropertyById,
     getRentalRequestById,
     getRentalRequestByOwner,
@@ -207,4 +209,21 @@ export const getRentalRequestAndPropertyByIdService = async (requestId: number) 
     if (!rentalRequest) throw new CustomError(404, 'Yêu cầu thuê không tồn tại');
 
     return rentalRequest;
+};
+
+export const getPendingRentalRequestsByOwnerService = async (ownerId: IUserId, pagination: IPagination) => {
+    const [rentalRequests, count] = await Promise.all([
+        getPendingRentalRequestsByOwner(ownerId, pagination),
+        countPendingRentalRequestsByOwner(ownerId),
+    ]);
+
+    const result: IPaginationResponse<IRentalRequest> = {
+        data: rentalRequests,
+        pageInfo: getPageInfo({
+            ...pagination,
+            count,
+        }),
+    };
+
+    return result;
 };

@@ -296,3 +296,29 @@ export const countRentalRequestByStatus = (
             status;
     `;
 };
+
+export const getPendingRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
+    return prisma.rentalRequest.findMany({
+        where: {
+            ownerId,
+            status: 'PENDING',
+        },
+        include: {
+            property: true,
+        },
+        skip,
+        take,
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+};
+
+export const countPendingRentalRequestsByOwner = (ownerId: IUserId) => {
+    return prisma.rentalRequest.count({
+        where: {
+            ownerId,
+            status: 'PENDING',
+        },
+    });
+};
