@@ -2,6 +2,7 @@ import { ContractCancellationRequestStatus } from '@prisma/client';
 import { IContractId } from '../interfaces/contract';
 import { ContractCancellationRequestId } from '../interfaces/contractCancellationRequest';
 import { IGetContractCancellationRateByMonthForOwner } from '../interfaces/dashboard';
+import { IPagination } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { CreateContractCancellationRequest } from '../schemas/contractCancellationRequest.schema';
@@ -177,4 +178,57 @@ export const getContractCancellationRateByMonthForOwner = (
             AND EXTRACT(YEAR FROM ccr.updated_at) = ${year}
         GROUP BY EXTRACT(MONTH FROM ccr.updated_at), EXTRACT(YEAR FROM ccr.updated_at)
     `;
+};
+
+export const getCancelRequestByOwner = (userId: IUserId, { skip, take }: IPagination) => {
+    return prisma.contractCancellationRequest.findMany({
+        where: {
+            status: 'PENDING',
+            contract: {
+                OR: [
+                    {
+                        ownerId: userId,
+                    },
+                    {
+                        renterId: userId,
+                    },
+                ],
+            },
+            deleted: false,
+        },
+        include: {
+            userRequest: {
+                select: {
+                    avatar: true,
+                    name: true,
+                    email: true,
+                    userId: true,
+                },
+            },
+        },
+        orderBy: {
+            requestedAt: 'desc',
+        },
+        skip,
+        take,
+    });
+};
+
+export const countCancelRequestByOwner = (userId: IUserId) => {
+    return prisma.contractCancellationRequest.count({
+        where: {
+            status: 'PENDING',
+            contract: {
+                OR: [
+                    {
+                        ownerId: userId,
+                    },
+                    {
+                        renterId: userId,
+                    },
+                ],
+            },
+            deleted: false,
+        },
+    });
 };

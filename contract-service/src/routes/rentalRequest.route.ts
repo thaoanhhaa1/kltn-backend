@@ -2,6 +2,7 @@ import express from 'express';
 import {
     createRentalRequest,
     generateContract,
+    getPendingRentalRequestsByOwner,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
@@ -19,6 +20,7 @@ router.post('/', authMiddleware, roleMiddleware('renter'), createRentalRequest);
 
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getRentalRequestsByRenter);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getRentalRequestsByOwner);
+router.get('/owner/pending', authMiddleware, roleMiddleware('owner'), getPendingRentalRequestsByOwner);
 router.get('/renter/:slug', authMiddleware, roleMiddleware('renter'), getRentalRequestByRenter);
 router.get('/owner/:slug', authMiddleware, roleMiddleware('owner'), getRentalRequestByOwner);
 

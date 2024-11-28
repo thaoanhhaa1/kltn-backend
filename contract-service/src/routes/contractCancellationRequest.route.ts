@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     createCancellationRequest,
+    getCancelRequestByOwner,
     getHandledCancelRequestByContractId,
     getNotHandledCancelRequestByContractId,
     updateCancellationRequestStatus,
@@ -21,6 +22,7 @@ router.get(
     getHandledCancelRequestByContractId,
 );
 
+router.get('/not-handled/user', authMiddleware, hasAnyRoleMiddleware(['renter', 'owner']), getCancelRequestByOwner);
 router.get(
     '/not-handled/:contractId',
     authMiddleware,

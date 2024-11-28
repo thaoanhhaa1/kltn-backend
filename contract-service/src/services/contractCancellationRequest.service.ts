@@ -1,14 +1,17 @@
-import { ContractCancellationRequestStatus } from '@prisma/client';
+import { ContractCancellationRequest, ContractCancellationRequestStatus } from '@prisma/client';
 import { isSameDay } from 'date-fns';
 import { IContractId } from '../interfaces/contract';
 import { ICancellationRequest } from '../interfaces/contractCancellationRequest';
+import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { findContractById, findContractByIdAndUser, updateStatusContract } from '../repositories/contract.repository';
 import {
+    countCancelRequestByOwner,
     createCancellationRequest,
     getCancelRequestByContractId,
     getCancelRequestById,
+    getCancelRequestByOwner,
     getHandledCancelRequestByContractId,
     getNotHandledCancelRequestByContractId,
     updateCancelRequestStatus,
@@ -19,6 +22,7 @@ import { CreateContractCancellationRequest } from '../schemas/contractCancellati
 import { convertDateToDB } from '../utils/convertDate';
 import CustomError from '../utils/error.util';
 import getContractStatusByCancelStatus from '../utils/getContractStatusByCancelStatus.util';
+import getPageInfo from '../utils/getPageInfo';
 import {
     convertGasToEthService,
     transferToSmartContractService,
@@ -261,4 +265,27 @@ export const getNotHandledCancelRequestByContractIdService = async ({
         console.error('Error getting not handled cancel request by contract id:', error);
         throw error;
     }
+};
+
+export const getCancelRequestByOwnerService = async ({
+    userId,
+    pagination,
+}: {
+    userId: IUserId;
+    pagination: IPagination;
+}) => {
+    const [requests, count] = await Promise.all([
+        getCancelRequestByOwner(userId, pagination),
+        countCancelRequestByOwner(userId),
+    ]);
+
+    const res: IPaginationResponse<ContractCancellationRequest> = {
+        data: requests,
+        pageInfo: getPageInfo({
+            ...pagination,
+            count,
+        }),
+    };
+
+    return res;
 };
