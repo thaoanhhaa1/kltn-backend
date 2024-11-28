@@ -161,8 +161,8 @@ export const generateContractService = async ({ ownerId, propertyId, renterId, r
 
         const contract = await getContractInRange({
             propertyId: propertyId,
-            rentalEndDate: convertDateToDB(renterDetail.rentalEndDate),
-            rentalStartDate: convertDateToDB(renterDetail.rentalStartDate),
+            rentalEndDate: convertDateToDB(rentalRequest.rentalEndDate),
+            rentalStartDate: convertDateToDB(rentalRequest.rentalStartDate),
         });
 
         if (contract)
