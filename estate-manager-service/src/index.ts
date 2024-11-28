@@ -114,6 +114,7 @@ rabbitMQ.connect().then(() => {
                     return user;
                 }
                 case SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_SLUG: {
+                    console.log('SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_BY_SLUG', data);
                     const property = await getPropertyBySlugService(data);
 
                     return property;
