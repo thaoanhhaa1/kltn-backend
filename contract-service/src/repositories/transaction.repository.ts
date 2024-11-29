@@ -102,18 +102,19 @@ export const getTransactionsByUser = ({ type, userId }: IGetTransactionsByUserId
         orderBy: {
             updatedAt: 'desc',
         },
-        select: {
-            id: true,
-            amount: true,
-            amountEth: true,
-            fee: true,
-            feeEth: true,
-            transactionHash: true,
-            title: true,
-            description: true,
-            updatedAt: true,
-            fromId: true,
-            toId: true,
+        include: {
+            from: {
+                select: {
+                    userId: true,
+                    name: true,
+                },
+            },
+            to: {
+                select: {
+                    userId: true,
+                    name: true,
+                },
+            },
         },
         skip,
         take,
