@@ -467,7 +467,7 @@ export const getContractDetailService = async (params: IGetContractDetail): Prom
 
         return {
             ...contract,
-            property: JSON.parse(property),
+            property,
         };
     } catch (error) {
         console.error('Error fetching contract details:', error);
