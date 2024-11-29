@@ -35,6 +35,8 @@ model User {
   cancellationRequests ContractCancellationRequest[]
   ownedReports         Report[]                      @relation("OwnerReport")
   rentedReports        Report[]                      @relation("RenterReport")
+  fromTransactions     Transaction[]                 @relation("FromTransaction")
+  toTransactions       Transaction[]                 @relation("ToTransaction")
 
   @@map("`user`")
 }
@@ -152,6 +154,8 @@ model Transaction {
   updatedAt       DateTime          @updatedAt @map("updated_at")
   contract        Contract          @relation("ContractTransactions", fields: [contractId], references: [contractId])
   reports         ReportChild[]
+  from            User?             @relation("FromTransaction", fields: [fromId], references: [userId])
+  to              User?             @relation("ToTransaction", fields: [toId], references: [userId])
 
   @@map("`transaction`")
 }
