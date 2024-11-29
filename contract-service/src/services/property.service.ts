@@ -38,3 +38,15 @@ export const getPropertyByIdService = async (propertyId: string) => {
 
     return JSON.parse(res);
 };
+
+export const getPropertyDetailByIdService = async (propertyId: string) => {
+    const property = await RabbitMQ.getInstance().sendSyncMessage({
+        queue: SYNC_MESSAGE_QUEUE_CONTRACT.name,
+        message: {
+            type: SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL,
+            data: propertyId,
+        },
+    });
+
+    return JSON.parse(property);
+};

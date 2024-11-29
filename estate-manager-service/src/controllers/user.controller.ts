@@ -44,7 +44,7 @@ export const otpToUser = async (req: Request, res: Response, next: NextFunction)
             throw new EntryError(400, 'Bad request', [
                 {
                     field: 'email',
-                    error: 'Email not found',
+                    error: 'Không tồn tại tài khoản với email này',
                 },
             ]);
 
@@ -55,9 +55,9 @@ export const otpToUser = async (req: Request, res: Response, next: NextFunction)
             locals: {
                 appLink: envConfig.FE_URL,
                 OTP: otpCode,
-                title: 'OTP Verification',
+                title: 'Mã xác thực OTP',
             },
-            subject: 'OTP Verification',
+            subject: 'Mã xác thực OTP',
             template: 'verifyEmail',
         });
         await Redis.getInstance().getClient().set(`otp:${email}`, otpCode, {

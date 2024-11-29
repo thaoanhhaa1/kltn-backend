@@ -108,6 +108,7 @@ model Contract {
   property                Property                      @relation("PropertyContracts", fields: [propertyId], references: [propertyId])
   cancellationRequests    ContractCancellationRequest[]
   extensionRequests       ContractExtensionRequest[]
+  propertyJson            Json                          @map("property_json")
 
   @@map("`contract`")
 }
