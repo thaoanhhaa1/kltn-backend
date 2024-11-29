@@ -11,6 +11,7 @@ import { otpSchema } from '../schemas/otp.schema';
 import { forgotPasswordSchema, updatePasswordSchema, updateSchema } from '../schemas/user.schema';
 import { verifyIDCard } from '../services/fpt.service';
 import {
+    activeUserService,
     blockUserService,
     forgotPasswordService,
     getAllOwnersCbbService,
@@ -323,6 +324,26 @@ export const blockUser = async (req: AuthenticatedRequest, res: Response, next: 
     try {
         const { id } = req.body;
         const user = await blockUserService(id);
+
+        RabbitMQ.getInstance().publishInQueue({
+            exchange: USER_QUEUE.exchange,
+            name: USER_QUEUE.name,
+            message: {
+                data: user,
+                type: USER_QUEUE.type.UPDATED,
+            },
+        });
+
+        res.json(user);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const activeUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.body;
+        const user = await activeUserService(id);
 
         RabbitMQ.getInstance().publishInQueue({
             exchange: USER_QUEUE.exchange,
