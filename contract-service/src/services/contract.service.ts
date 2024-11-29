@@ -134,7 +134,7 @@ export const createContractAndApprovalRequestService = async (
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
                       contractTerms,
-                      propertyJson: JSON.stringify(property),
+                      propertyJson: property,
                   }),
                   ownerUpdateRentalRequestStatus(updatedRequest),
               ])
@@ -146,7 +146,7 @@ export const createContractAndApprovalRequestService = async (
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
                       contractTerms,
-                      propertyJson: JSON.stringify(property),
+                      propertyJson: property,
                   }),
               ]));
 
@@ -199,7 +199,6 @@ export const createContractService = async (contract: CreateContractReq): Promis
         const [owner, renter, property] = await Promise.all([
             findUserById(contract.ownerId),
             findUserById(contract.renterId),
-
             getPropertyDetailByIdService(contract.propertyId),
         ]);
 
@@ -239,7 +238,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             contractId: contractId,
             transactionHash: receipt.transactionHash,
             contractTerms,
-            propertyJson: JSON.stringify(property),
+            propertyJson: property,
         });
 
         createTransaction({
@@ -467,7 +466,7 @@ export const getContractDetailService = async (params: IGetContractDetail): Prom
 
         return {
             ...contract,
-            property,
+            property: property.owner ? property : JSON.parse(property),
         };
     } catch (error) {
         console.error('Error fetching contract details:', error);
