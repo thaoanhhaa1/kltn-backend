@@ -7,6 +7,7 @@ import notificationRoute from './notification.route';
 import property from './property.route';
 import propertyInteraction from './propertyInteraction.route';
 import propertyTypeRoute from './propertyType.route';
+import rejectReasonRoute from './rejectReason.route';
 import rentalRequest from './rentalRequest.route';
 import reviewRoute from './review.route';
 import userRoute from './user.route';
@@ -24,5 +25,6 @@ router.use('/notifications', notificationRoute);
 router.use('/conversations', conversationRoute);
 router.use('/reviews', reviewRoute);
 router.use('/dashboard', dashboardRoute);
+router.use('/reject-reasons', rejectReasonRoute);
 
 export default router;

@@ -72,7 +72,7 @@ import {
     verifyMessageSignedService,
 } from './blockchain.service';
 import { getCoinPriceService } from './coingecko.service';
-import { getPropertyByIdService } from './property.service';
+import { getPropertyByIdService, getPropertyDetailByIdService } from './property.service';
 import { createNotificationQueue } from './rabbitmq.service';
 import { findUserDetailByUserIdService } from './user.service';
 
@@ -81,7 +81,11 @@ export const createContractAndApprovalRequestService = async (
     updatedRequest?: IOwnerUpdateRentalRequestStatus,
 ) => {
     try {
-        const [owner, renter] = await Promise.all([findUserById(contract.ownerId), findUserById(contract.renterId)]);
+        const [owner, renter, property] = await Promise.all([
+            findUserById(contract.ownerId),
+            findUserById(contract.renterId),
+            getPropertyDetailByIdService(contract.propertyId),
+        ]);
 
         if (!owner || !owner.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy chủ nhà hoặc chủ nhà chưa có địa chỉ ví.');
@@ -89,6 +93,10 @@ export const createContractAndApprovalRequestService = async (
 
         if (!renter || !renter.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
+        }
+
+        if (!property) {
+            throw new CustomError(400, 'Không tìm thấy bất động sản');
         }
 
         verifyMessageSignedService({
@@ -126,6 +134,7 @@ export const createContractAndApprovalRequestService = async (
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
                       contractTerms,
+                      propertyJson: JSON.stringify(property),
                   }),
                   ownerUpdateRentalRequestStatus(updatedRequest),
               ])
@@ -137,6 +146,7 @@ export const createContractAndApprovalRequestService = async (
                       contractId: contractId,
                       transactionHash: receipt.transactionHash,
                       contractTerms,
+                      propertyJson: JSON.stringify(property),
                   }),
               ]));
 
@@ -186,7 +196,12 @@ export const createContractAndApprovalRequestService = async (
 // Hàm để tạo hợp đồng
 export const createContractService = async (contract: CreateContractReq): Promise<PrismaContract> => {
     try {
-        const [owner, renter] = await Promise.all([findUserById(contract.ownerId), findUserById(contract.renterId)]);
+        const [owner, renter, property] = await Promise.all([
+            findUserById(contract.ownerId),
+            findUserById(contract.renterId),
+
+            getPropertyDetailByIdService(contract.propertyId),
+        ]);
 
         if (!owner || !owner.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy chủ nhà hoặc chủ nhà chưa có địa chỉ ví.');
@@ -194,6 +209,10 @@ export const createContractService = async (contract: CreateContractReq): Promis
 
         if (!renter || !renter.walletAddress) {
             throw new CustomError(400, 'Không tìm thấy người thuê hoặc người thuê chưa có địa chỉ ví.');
+        }
+
+        if (!property) {
+            throw new CustomError(400, 'Không tìm thấy bất động sản');
         }
 
         const contractId = v4();
@@ -220,6 +239,7 @@ export const createContractService = async (contract: CreateContractReq): Promis
             contractId: contractId,
             transactionHash: receipt.transactionHash,
             contractTerms,
+            propertyJson: JSON.stringify(property),
         });
 
         createTransaction({
@@ -443,13 +463,7 @@ export const getContractDetailService = async (params: IGetContractDetail): Prom
 
         if (!contract) throw new CustomError(404, 'Không tìm thấy hợp đồng');
 
-        const property = await RabbitMQ.getInstance().sendSyncMessage({
-            queue: SYNC_MESSAGE_QUEUE_CONTRACT.name,
-            message: {
-                type: SYNC_MESSAGE_QUEUE_CONTRACT.type.GET_PROPERTY_DETAIL,
-                data: contract.propertyId,
-            },
-        });
+        const property = contract.propertyJson;
 
         return {
             ...contract,

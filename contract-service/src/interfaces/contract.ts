@@ -69,6 +69,7 @@ export interface IGetContractDetail {
 
 export interface ICreateContract extends IContract {
     transactionHash: string;
+    propertyJson: string;
 }
 
 export interface IGenerateContract {

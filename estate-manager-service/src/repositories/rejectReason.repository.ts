@@ -9,3 +9,14 @@ export const addRejectReason = (rejectReason: ICreateRejectReason) => {
         })),
     });
 };
+
+export const getRejectReasonsByPropertyId = (propertyId: string) => {
+    return prisma.rejectReason.findMany({
+        where: {
+            propertyId,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+};

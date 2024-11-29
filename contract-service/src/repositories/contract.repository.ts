@@ -28,6 +28,7 @@ export const createContract = (contract: ICreateContract) => {
             contractTerms: contract.contractTerms,
             status: Status.WAITING,
             transactionHashContract: contract.transactionHash,
+            propertyJson: contract.propertyJson,
         },
     });
 };
