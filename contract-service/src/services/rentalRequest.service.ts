@@ -1,6 +1,8 @@
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import {
     IGenerateContract,
+    IGetRentalRequestsByOwner,
+    IGetRentalRequestsByRenter,
     IOwnerUpdateRentalRequestStatus,
     IRentalRequest,
     IRenterUpdateRentalRequestStatus,
@@ -19,6 +21,7 @@ import {
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
     getRentalRequestsByRenter,
+    getRenterRequestByOwner,
     ownerUpdateRentalRequestStatus,
     renterUpdateRentalRequestStatus,
 } from '../repositories/rentalRequest.repository';
@@ -65,16 +68,17 @@ export const createRentalRequestService = async ({ rentalEndDate, rentalStartDat
     });
 };
 
-export const getRentalRequestsByRenterService = async (renterId: IUserId, pagination: IPagination) => {
+export const getRentalRequestsByRenterService = async (data: IGetRentalRequestsByRenter) => {
     const [rentalRequests, count] = await Promise.all([
-        getRentalRequestsByRenter(renterId, pagination),
-        countRentalRequestsByRenter(renterId),
+        getRentalRequestsByRenter(data),
+        countRentalRequestsByRenter(data),
     ]);
 
     const result: IPaginationResponse<IRentalRequest> = {
         data: rentalRequests,
         pageInfo: getPageInfo({
-            ...pagination,
+            skip: data.skip,
+            take: data.take,
             count,
         }),
     };
@@ -82,17 +86,23 @@ export const getRentalRequestsByRenterService = async (renterId: IUserId, pagina
     return result;
 };
 
-export const getRentalRequestsByOwnerService = async (ownerId: IUserId, pagination: IPagination) => {
+export const getRentalRequestsByOwnerService = async (data: IGetRentalRequestsByOwner) => {
+    const rentalStartDate = data.rentalStartDate ? convertDateToDB(data.rentalStartDate) : undefined;
+    const rentalEndDate = data.rentalEndDate ? convertDateToDB(data.rentalEndDate) : undefined;
+
+    const newData = { ...data, rentalStartDate, rentalEndDate };
+
     const [rentalRequests, count] = await Promise.all([
-        getRentalRequestsByOwner(ownerId, pagination),
-        countRentalRequestsByOwner(ownerId),
+        getRentalRequestsByOwner(newData),
+        countRentalRequestsByOwner(newData),
     ]);
 
     const result: IPaginationResponse<IRentalRequest> = {
         data: rentalRequests,
         pageInfo: getPageInfo({
-            ...pagination,
             count,
+            skip: data.skip,
+            take: data.take,
         }),
     };
 
@@ -226,4 +236,8 @@ export const getPendingRentalRequestsByOwnerService = async (ownerId: IUserId, p
     };
 
     return result;
+};
+
+export const getRenterRequestByOwnerService = (ownerId: IUserId) => {
+    return getRenterRequestByOwner(ownerId);
 };

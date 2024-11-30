@@ -1,3 +1,4 @@
+import { RentalRequestStatus } from '@prisma/client';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { createRentalRequestSchema } from '../schemas/rentalRequest.schema';
@@ -10,6 +11,7 @@ import {
     getRentalRequestByRenterService,
     getRentalRequestsByOwnerService,
     getRentalRequestsByRenterService,
+    getRenterRequestByOwnerService,
     ownerUpdateRentalRequestStatusService,
     renterUpdateRentalRequestStatusService,
 } from '../services/rentalRequest.service';
@@ -62,10 +64,13 @@ export const getRentalRequestsByRenter = async (req: AuthenticatedRequest, res: 
         const userId = req.user!.id;
         const take = Number(req.query.take || 10);
         const skip = Number(req.query.skip || 0);
+        const status = req.query.status as RentalRequestStatus;
 
-        const rentalRequests = await getRentalRequestsByRenterService(userId, {
+        const rentalRequests = await getRentalRequestsByRenterService({
+            renterId: userId,
             skip,
             take,
+            status,
         });
 
         res.json(rentalRequests);
@@ -79,10 +84,25 @@ export const getRentalRequestsByOwner = async (req: AuthenticatedRequest, res: R
         const userId = req.user!.id;
         const take = Number(req.query.take || 10);
         const skip = Number(req.query.skip || 0);
+        const propertyId = req.query.propertyId as string;
+        const rentalPrice = Number(req.query.rentalPrice);
+        const rentalDeposit = Number(req.query.rentalDeposit);
+        const rentalStartDate = req.query.rentalStartDate as string;
+        const rentalEndDate = req.query.rentalEndDate as string;
+        const status = req.query.status as RentalRequestStatus;
+        const renterId = req.query.renterId as string;
 
-        const rentalRequests = await getRentalRequestsByOwnerService(userId, {
+        const rentalRequests = await getRentalRequestsByOwnerService({
+            ownerId: userId,
             skip,
             take,
+            propertyId,
+            rentalPrice,
+            rentalDeposit,
+            rentalStartDate,
+            rentalEndDate,
+            status,
+            renterId,
         });
 
         res.json(rentalRequests);
@@ -213,6 +233,18 @@ export const getPendingRentalRequestsByOwner = async (req: AuthenticatedRequest,
         const result = await getPendingRentalRequestsByOwnerService(userId, { skip, take });
 
         res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getRenterRequestByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const rentalRequest = await getRenterRequestByOwnerService(userId);
+
+        res.json(rentalRequest);
     } catch (error) {
         next(error);
     }
