@@ -7,6 +7,10 @@ import {
     getContractDetail,
     getContractsByOwner,
     getContractsByRenter,
+    getPropertiesByOwner,
+    getPropertiesByRenter,
+    getUsersByOwner,
+    getUsersByRenter,
     payMonthlyRent,
 } from '../controllers/contract.controller';
 import { getTransactionsByContractId } from '../controllers/transaction.controller';
@@ -27,7 +31,11 @@ router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);
 router.post('/generate', authMiddleware, roleMiddleware('owner'), generateContract);
 router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndApprovalRequest);
 
+router.get('/owner/property/cbb', authMiddleware, roleMiddleware('owner'), getPropertiesByOwner);
+router.get('/owner/user/cbb', authMiddleware, roleMiddleware('owner'), getUsersByOwner);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
+router.get('/renter/property/cbb', authMiddleware, roleMiddleware('renter'), getPropertiesByRenter);
+router.get('/renter/user/cbb', authMiddleware, roleMiddleware('renter'), getUsersByRenter);
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getContractsByRenter);
 router.get(
     '/:contractId/transactions',

@@ -1,6 +1,7 @@
-import { Contract, Transaction } from '@prisma/client';
+import { Contract, Status, Transaction } from '@prisma/client';
 import { IUserId } from './user';
 import { ContractCancellationRequestId } from './contractCancellationRequest';
+import { IPagination } from './pagination';
 
 export type IContractId = Contract['contractId'];
 
@@ -81,3 +82,24 @@ export interface IGenerateContract {
     rentalDeposit: number;
     rentalPrice: number;
 }
+
+export type IGetContractsTable = IPagination & {
+    contractId?: IContractId;
+    title?: string;
+    startDate?: Date | string;
+    endDate?: Date | string;
+    monthlyRent?: number;
+    depositAmount?: number;
+    status?: Status;
+    propertyId?: string;
+};
+
+export type IGetContractsByOwner = IGetContractsTable & {
+    ownerId: IUserId;
+    renterId?: IUserId;
+};
+
+export type IGetContractsByRenter = IGetContractsTable & {
+    renterId: IUserId;
+    ownerId?: IUserId;
+};

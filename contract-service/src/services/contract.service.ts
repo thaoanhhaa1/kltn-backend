@@ -4,7 +4,7 @@ import { Contract, Contract as PrismaContract, PropertyStatus, RentalRequest } f
 import { isAfter, isSameDay } from 'date-fns';
 import { v4 } from 'uuid';
 import RabbitMQ from '../configs/rabbitmq.config';
-import { CONTRACT_QUEUE, SYNC_MESSAGE_QUEUE_CONTRACT } from '../constants/rabbitmq';
+import { CONTRACT_QUEUE } from '../constants/rabbitmq';
 import {
     ICancelSmartContractBeforeDeposit,
     IContractId,
@@ -13,10 +13,11 @@ import {
     IGenerateContract,
     IGetContractDetail,
     IGetContractInRange,
+    IGetContractsByOwner,
+    IGetContractsByRenter,
 } from '../interfaces/contract';
-import { IPagination, IPaginationResponse } from '../interfaces/pagination';
+import { IPaginationResponse } from '../interfaces/pagination';
 import { IOwnerUpdateRentalRequestStatus } from '../interfaces/rentalRequest';
-import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import {
     cancelContractBeforeDeposit,
@@ -32,6 +33,10 @@ import {
     getContractInRange,
     getContractsByOwner,
     getContractsByRenter,
+    getPropertiesByOwner,
+    getPropertiesByRenter,
+    getUsersByOwner,
+    getUsersByRenter,
     payMonthlyRent as payMonthlyRentInRepo,
     updateStatusContract,
 } from '../repositories/contract.repository';
@@ -474,18 +479,16 @@ export const getContractDetailService = async (params: IGetContractDetail): Prom
     }
 };
 
-export const getContractsByOwnerService = async (ownerId: IUserId, pagination: IPagination) => {
+export const getContractsByOwnerService = async (data: IGetContractsByOwner) => {
     try {
-        const [contracts, count] = await Promise.all([
-            getContractsByOwner(ownerId, pagination),
-            countContractsByOwner(ownerId),
-        ]);
+        const [contracts, count] = await Promise.all([getContractsByOwner(data), countContractsByOwner(data)]);
 
         const result: IPaginationResponse<PrismaContract> = {
             data: contracts,
             pageInfo: getPageInfo({
-                ...pagination,
                 count,
+                skip: data.skip,
+                take: data.take,
             }),
         };
 
@@ -496,18 +499,16 @@ export const getContractsByOwnerService = async (ownerId: IUserId, pagination: I
     }
 };
 
-export const getContractsByRenterService = async (renterId: IUserId, pagination: IPagination) => {
+export const getContractsByRenterService = async (data: IGetContractsByRenter) => {
     try {
-        const [contracts, count] = await Promise.all([
-            getContractsByRenter(renterId, pagination),
-            countContractsByRenter(renterId),
-        ]);
+        const [contracts, count] = await Promise.all([getContractsByRenter(data), countContractsByRenter(data)]);
 
         const result: IPaginationResponse<PrismaContract> = {
             data: contracts,
             pageInfo: getPageInfo({
-                ...pagination,
                 count,
+                skip: data.skip,
+                take: data.take,
             }),
         };
 
@@ -973,4 +974,20 @@ export const generateContractService = async ({ ownerId, propertyId, renterId, .
 
         throw error;
     }
+};
+
+export const getPropertiesByOwnerService = (ownerId: string) => {
+    return getPropertiesByOwner(ownerId);
+};
+
+export const getPropertiesByRenterService = (renterId: string) => {
+    return getPropertiesByRenter(renterId);
+};
+
+export const getUsersByOwnerService = (ownerId: string) => {
+    return getUsersByOwner(ownerId);
+};
+
+export const getUsersByRenterService = (renterId: string) => {
+    return getUsersByRenter(renterId);
 };
