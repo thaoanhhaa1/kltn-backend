@@ -99,7 +99,7 @@ export const updateCancellationRequestStatus = async (req: AuthenticatedRequest,
             .then(() => console.log('Notification sent'))
             .catch((err) => console.log(err));
 
-        return res.json(request);
+        res.json(request);
     } catch (error) {
         next(error);
     }

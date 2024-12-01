@@ -3,6 +3,7 @@ import { v4 } from 'uuid';
 import { IPagination } from '../interface/pagination';
 import {
     IDeleteProperty,
+    IGetNotDeletedProperties,
     IGetPropertiesWithOwnerId,
     IOwnerFilterProperties,
     IPropertyId,
@@ -151,10 +152,47 @@ export const countNotPendingProperties = () => {
     });
 };
 
-export const getNotDeletedProperties = async ({ skip, take }: IPagination): Promise<Array<IResRepositoryProperty>> => {
+export const getNotDeletedProperties = async ({
+    skip,
+    take,
+    city,
+    district,
+    ownerId,
+    ownerName,
+    propertyId,
+    status,
+    title,
+    ward,
+}: IGetNotDeletedProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
             deleted: false,
+            address: {
+                is: {
+                    ...(city && { city }),
+                    ...(district && { district }),
+                    ...(ward && { ward }),
+                },
+            },
+            owner: {
+                is: {
+                    ...(ownerName && {
+                        name: {
+                            contains: ownerName,
+                            mode: 'insensitive' as const,
+                        },
+                    }),
+                },
+            },
+            ...(title && {
+                title: {
+                    contains: title,
+                    mode: 'insensitive' as const,
+                },
+            }),
+            ...(propertyId && { propertyId }),
+            ...(status && { status }),
+            ...(ownerId && { owner: { is: { userId: ownerId } } }),
         },
         include: propertiesInclude,
         skip,
@@ -165,13 +203,45 @@ export const getNotDeletedProperties = async ({ skip, take }: IPagination): Prom
     });
 };
 
-export const countNotDeletedProperties = async () => {
+export const countNotDeletedProperties = async ({
+    city,
+    district,
+    ownerId,
+    ownerName,
+    propertyId,
+    status,
+    title,
+    ward,
+}: IGetNotDeletedProperties) => {
     return prisma.property.count({
         where: {
             deleted: false,
-            status: {
-                in: ['ACTIVE', 'UNAVAILABLE'],
+            address: {
+                is: {
+                    ...(city && { city }),
+                    ...(district && { district }),
+                    ...(ward && { ward }),
+                },
             },
+            owner: {
+                is: {
+                    ...(ownerName && {
+                        name: {
+                            contains: ownerName,
+                            mode: 'insensitive' as const,
+                        },
+                    }),
+                },
+            },
+            ...(title && {
+                title: {
+                    contains: title,
+                    mode: 'insensitive' as const,
+                },
+            }),
+            ...(propertyId && { propertyId }),
+            ...(status && { status }),
+            ...(ownerId && { owner: { is: { userId: ownerId } } }),
         },
     });
 };

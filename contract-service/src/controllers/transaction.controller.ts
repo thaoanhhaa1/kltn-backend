@@ -1,3 +1,4 @@
+import { TransactionStatus } from '@prisma/client';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
@@ -10,8 +11,12 @@ import CustomError from '../utils/error.util';
 export const getTransactionsByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
+        const status = req.query.status as TransactionStatus;
 
-        const transactions = await getTransactionsByRenterService(userId);
+        const transactions = await getTransactionsByRenterService({
+            status,
+            userId,
+        });
 
         res.status(200).json(transactions);
     } catch (error) {

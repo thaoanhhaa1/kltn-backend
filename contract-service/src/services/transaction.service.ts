@@ -1,5 +1,10 @@
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
-import { ICreateTransaction, IGetTransactionsByUserId, IHistoryTransaction } from '../interfaces/transaction';
+import {
+    ICreateTransaction,
+    IGetTransactionsByRenter,
+    IGetTransactionsByUserId,
+    IHistoryTransaction,
+} from '../interfaces/transaction';
 import { IUserId } from '../interfaces/user';
 import {
     countTransactionsByUser,
@@ -14,8 +19,8 @@ export const createTransactionService = (transaction: ICreateTransaction) => {
     return createTransaction(transaction);
 };
 
-export const getTransactionsByRenterService = (userId: IUserId) => {
-    return getTransactionsByRenter(userId);
+export const getTransactionsByRenterService = (data: IGetTransactionsByRenter) => {
+    return getTransactionsByRenter(data);
 };
 
 export const getTransactionsByUserIdService = async (params: IGetTransactionsByUserId, pagination: IPagination) => {
