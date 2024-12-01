@@ -10,6 +10,7 @@ import {
     ICreateTransaction,
     IGetExpenditureTransactionsByMonth,
     IGetIncomeTransactionsByMonth,
+    IGetTransactionsByRenter,
     IGetTransactionsByUserId,
     IPaymentTransaction,
 } from '../interfaces/transaction';
@@ -43,13 +44,14 @@ export const paymentTransaction = ({ id, ...rest }: IPaymentTransaction) => {
     });
 };
 
-export const getTransactionsByRenter = (userId: IUserId) => {
+export const getTransactionsByRenter = ({ status, userId }: IGetTransactionsByRenter) => {
     return prisma.transaction.findMany({
         where: {
             fromId: userId,
             type: {
                 in: ['RENT', 'DEPOSIT'],
             },
+            ...(status && { status }),
         },
         orderBy: {
             createdAt: 'desc',

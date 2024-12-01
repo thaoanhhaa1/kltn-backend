@@ -62,3 +62,14 @@ export interface IUpdateRating {
     rating: number;
     count: number;
 }
+
+export type IGetNotDeletedProperties = IPagination & {
+    propertyId?: IPropertyId;
+    title?: Property['title'];
+    ward?: Address['ward'];
+    district?: Address['district'];
+    city?: Address['city'];
+    ownerId?: IUserId;
+    ownerName?: User['name'];
+    status?: Property['status'];
+};

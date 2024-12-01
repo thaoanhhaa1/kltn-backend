@@ -42,6 +42,8 @@ const getTextByStatus = (status: ContractCancellationRequestStatus) => {
             return 'chấp nhận';
         case 'UNILATERAL_CANCELLATION':
             return 'đơn phương chấm dứt';
+        case 'CANCELLED':
+            return 'hủy';
         default:
             return '';
     }
@@ -177,10 +179,10 @@ export const updateStatusRequestService = async ({ requestId, userId, status }: 
     const isByRequestOwner = request.requestedBy === userId;
     if (['REJECTED', 'APPROVED'].includes(status) && userId && isByRequestOwner)
         throw new CustomError(400, `Bạn không thể ${getTextByStatus(status)} yêu cầu của mình`);
-    if (['CONTINUE', 'UNILATERAL_CANCELLATION'].includes(status) && userId && !isByRequestOwner)
+    if (['CONTINUE', 'UNILATERAL_CANCELLATION', 'CANCELLED'].includes(status) && userId && !isByRequestOwner)
         throw new CustomError(400, `Bạn không thể ${getTextByStatus(status)} yêu cầu của người khác`);
 
-    if (['REJECTED', 'CONTINUE', 'APPROVED', 'UNILATERAL_CANCELLATION'].includes(status)) {
+    if (['REJECTED', 'CONTINUE', 'APPROVED', 'UNILATERAL_CANCELLATION', 'CANCELLED'].includes(status)) {
         const queries = [
             updateCancelRequestStatus(requestId, status),
             updateStatusContract(

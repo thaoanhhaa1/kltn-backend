@@ -6,12 +6,54 @@ import {
     IFindContractByIdAndUser,
     IGetContractDetail,
     IGetContractInRange,
+    IGetContractsByOwner,
+    IGetContractsByRenter,
+    IGetContractsTable,
 } from '../interfaces/contract';
 import { IGetTenantDistributionByAreaForOwner } from '../interfaces/dashboard';
-import { IPagination } from '../interfaces/pagination';
-import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import getDateAfter from '../utils/getDateAfter';
+
+const getWhereFilterContracts = ({
+    contractId,
+    depositAmount,
+    endDate,
+    monthlyRent,
+    propertyId,
+    startDate,
+    status,
+    title,
+}: IGetContractsTable) => ({
+    ...(contractId && {
+        contractId,
+    }),
+    ...(depositAmount && {
+        depositAmount,
+    }),
+    ...(endDate && {
+        endDateActual: endDate,
+    }),
+    ...(monthlyRent && {
+        monthlyRent,
+    }),
+    ...(startDate && {
+        startDate,
+    }),
+    ...(status && {
+        status,
+    }),
+    ...(title && {
+        property: {
+            title: {
+                contains: title,
+                mode: 'insensitive',
+            },
+        },
+    }),
+    ...(propertyId && {
+        propertyId,
+    }),
+});
 
 export const createContract = (contract: ICreateContract) => {
     return prisma.contract.create({
@@ -140,10 +182,14 @@ export const getContractDetail = async ({ contractId, userId, isAdmin }: IGetCon
     });
 };
 
-export const getContractsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
+export const getContractsByOwner = ({ ownerId, renterId, ...rest }: IGetContractsByOwner) => {
     return prisma.contract.findMany({
         where: {
             ownerId,
+            ...(renterId && {
+                renterId,
+            }),
+            ...(getWhereFilterContracts(rest) as Prisma.ContractWhereInput),
         },
         include: {
             renter: {
@@ -162,23 +208,31 @@ export const getContractsByOwner = (ownerId: IUserId, { skip, take }: IPaginatio
         orderBy: {
             createdAt: 'desc',
         },
-        skip,
-        take,
+        skip: rest.skip,
+        take: rest.take,
     });
 };
 
-export const countContractsByOwner = (ownerId: IUserId) => {
+export const countContractsByOwner = ({ ownerId, renterId, ...rest }: IGetContractsByOwner) => {
     return prisma.contract.count({
         where: {
             ownerId,
+            ...(renterId && {
+                renterId,
+            }),
+            ...(getWhereFilterContracts(rest) as Prisma.ContractWhereInput),
         },
     });
 };
 
-export const getContractsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
+export const getContractsByRenter = ({ renterId, ownerId, ...rest }: IGetContractsByRenter) => {
     return prisma.contract.findMany({
         where: {
             renterId,
+            ...(ownerId && {
+                ownerId,
+            }),
+            ...(getWhereFilterContracts(rest) as Prisma.ContractWhereInput),
         },
         include: {
             owner: {
@@ -197,15 +251,19 @@ export const getContractsByRenter = (renterId: IUserId, { skip, take }: IPaginat
         orderBy: {
             createdAt: 'desc',
         },
-        skip,
-        take,
+        skip: rest.skip,
+        take: rest.take,
     });
 };
 
-export const countContractsByRenter = (renterId: IUserId) => {
+export const countContractsByRenter = ({ renterId, ownerId, ...rest }: IGetContractsByRenter) => {
     return prisma.contract.count({
         where: {
             renterId,
+            ...(ownerId && {
+                ownerId,
+            }),
+            ...(getWhereFilterContracts(rest) as Prisma.ContractWhereInput),
         },
     });
 };
@@ -452,4 +510,108 @@ export const getRemindEndContracts = () => {
             renterId: true,
         },
     });
+};
+
+export const getPropertiesByOwner = (ownerId: string) => {
+    return prisma.contract
+        .groupBy({
+            by: ['propertyId'],
+            where: {
+                ownerId,
+            },
+        })
+        .then((res) => {
+            const propertyIds = res.map((item) => item.propertyId);
+
+            return prisma.property.findMany({
+                where: {
+                    propertyId: {
+                        in: propertyIds,
+                    },
+                },
+                select: {
+                    propertyId: true,
+                    title: true,
+                    slug: true,
+                },
+            });
+        });
+};
+
+export const getPropertiesByRenter = (renterId: string) => {
+    return prisma.contract
+        .groupBy({
+            by: ['propertyId'],
+            where: {
+                renterId,
+            },
+        })
+        .then((res) => {
+            const propertyIds = res.map((item) => item.propertyId);
+
+            return prisma.property.findMany({
+                where: {
+                    propertyId: {
+                        in: propertyIds,
+                    },
+                },
+                select: {
+                    propertyId: true,
+                    title: true,
+                    slug: true,
+                },
+            });
+        });
+};
+
+export const getUsersByOwner = (ownerId: string) => {
+    return prisma.contract
+        .groupBy({
+            by: ['renterId'],
+            where: {
+                ownerId,
+            },
+        })
+        .then((res) => {
+            const userIds = res.map((item) => item.renterId);
+
+            return prisma.user.findMany({
+                where: {
+                    userId: {
+                        in: userIds,
+                    },
+                },
+                select: {
+                    userId: true,
+                    name: true,
+                    email: true,
+                },
+            });
+        });
+};
+
+export const getUsersByRenter = (renterId: string) => {
+    return prisma.contract
+        .groupBy({
+            by: ['ownerId'],
+            where: {
+                renterId,
+            },
+        })
+        .then((res) => {
+            const userIds = res.map((item) => item.ownerId);
+
+            return prisma.user.findMany({
+                where: {
+                    userId: {
+                        in: userIds,
+                    },
+                },
+                select: {
+                    userId: true,
+                    name: true,
+                    email: true,
+                },
+            });
+        });
 };

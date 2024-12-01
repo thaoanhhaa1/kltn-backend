@@ -7,6 +7,7 @@ import {
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
     getRentalRequestsByRenter,
+    getRenterRequestByOwner,
     ownerUpdateRentalRequestStatus,
     renterUpdateRentalRequestStatus,
 } from '../controllers/rentalRequest.controller';
@@ -19,6 +20,7 @@ router.post('/generate-contract', authMiddleware, roleMiddleware('owner'), gener
 router.post('/', authMiddleware, roleMiddleware('renter'), createRentalRequest);
 
 router.get('/renter', authMiddleware, roleMiddleware('renter'), getRentalRequestsByRenter);
+router.get('/owner/renter/cbb', authMiddleware, roleMiddleware('owner'), getRenterRequestByOwner);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getRentalRequestsByOwner);
 router.get('/owner/status/pending', authMiddleware, roleMiddleware('owner'), getPendingRentalRequestsByOwner);
 router.get('/renter/:slug', authMiddleware, roleMiddleware('renter'), getRentalRequestByRenter);

@@ -60,3 +60,8 @@ export interface IGetExpenditureTransactionsByMonth {
     month: number;
     expenditure: number;
 }
+
+export interface IGetTransactionsByRenter {
+    userId: IUserId;
+    status: TransactionStatus;
+}

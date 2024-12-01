@@ -1,10 +1,11 @@
 import { PropertyStatus } from '@prisma/client';
 import slug from 'slug';
 import { v4 } from 'uuid';
-import { IPagination, IPaginationResponse } from '../interface/pagination';
+import { IPaginationResponse } from '../interface/pagination';
 import {
     ICreateProperty,
     IDeleteProperty,
+    IGetNotDeletedProperties,
     IGetPropertiesWithOwnerId,
     IOwnerFilterProperties,
     IPropertyId,
@@ -19,6 +20,7 @@ import prisma from '../prisma/prismaClient';
 import {
     countNotDeletedProperties,
     countNotDeletedPropertiesByOwnerId,
+    countNotPendingProperties,
     createProperty,
     deletePropertyById,
     findPropertiesByTypeId,
@@ -74,13 +76,13 @@ export const getNotPendingPropertiesService = async () => {
 };
 
 export const countNotPendingPropertiesService = async () => {
-    const count = await countNotDeletedProperties();
+    const count = await countNotPendingProperties();
 
     return count;
 };
 
-export const getNotDeletedPropertiesService = async (params: IPagination) => {
-    const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties()]);
+export const getNotDeletedPropertiesService = async (params: IGetNotDeletedProperties) => {
+    const [properties, count] = await Promise.all([getNotDeletedProperties(params), countNotDeletedProperties(params)]);
 
     const result: IPaginationResponse<IResProperty> = {
         data: properties.map(convertToDTO),

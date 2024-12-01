@@ -12,10 +12,15 @@ import {
     getContractDetailService,
     getContractsByOwnerService,
     getContractsByRenterService,
+    getPropertiesByOwnerService,
+    getPropertiesByRenterService,
+    getUsersByOwnerService,
+    getUsersByRenterService,
     payMonthlyRentService,
 } from '../services/contract.service';
 import { createNotificationQueue } from '../services/rabbitmq.service';
 import { findUserByIdService } from '../services/user.service';
+import { convertDateToDB } from '../utils/convertDate';
 import convertZodIssueToEntryErrors from '../utils/convertZodIssueToEntryErrors.util';
 import CustomError from '../utils/error.util';
 
@@ -209,9 +214,20 @@ export const getContractsByOwner = async (req: AuthenticatedRequest, res: Respon
         const take = Number(req.query.take) || 10;
         const skip = Number(req.query.skip) || 0;
 
-        const contracts = await getContractsByOwnerService(userId, {
+        const startDate = req.query.startDate ? convertDateToDB(req.query.startDate as string) : undefined;
+        const endDate = req.query.endDate ? convertDateToDB(req.query.endDate as string) : undefined;
+        const monthlyRent = req.query.monthlyRent ? Number(req.query.monthlyRent) : undefined;
+        const depositAmount = req.query.depositAmount ? Number(req.query.depositAmount) : undefined;
+
+        const contracts = await getContractsByOwnerService({
+            ...req.query,
+            startDate,
+            endDate,
+            monthlyRent,
+            depositAmount,
             skip,
             take,
+            ownerId: userId,
         });
 
         res.status(200).json(contracts);
@@ -226,9 +242,20 @@ export const getContractsByRenter = async (req: AuthenticatedRequest, res: Respo
         const take = Number(req.query.take) || 10;
         const skip = Number(req.query.skip) || 0;
 
-        const contracts = await getContractsByRenterService(userId, {
+        const startDate = req.query.startDate ? convertDateToDB(req.query.startDate as string) : undefined;
+        const endDate = req.query.endDate ? convertDateToDB(req.query.endDate as string) : undefined;
+        const monthlyRent = req.query.monthlyRent ? Number(req.query.monthlyRent) : undefined;
+        const depositAmount = req.query.depositAmount ? Number(req.query.depositAmount) : undefined;
+
+        const contracts = await getContractsByRenterService({
+            ...req.query,
+            startDate,
+            endDate,
+            monthlyRent,
+            depositAmount,
             skip,
             take,
+            renterId: userId,
         });
 
         res.status(200).json(contracts);
@@ -288,6 +315,54 @@ export const generateContract = async (req: AuthenticatedRequest, res: Response,
         const result = await generateContractService(safeParse.data);
 
         res.status(201).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertiesByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const contracts = await getPropertiesByOwnerService(userId);
+
+        res.status(200).json(contracts);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertiesByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const contracts = await getPropertiesByRenterService(userId);
+
+        res.status(200).json(contracts);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getUsersByOwner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const users = await getUsersByOwnerService(userId);
+
+        res.status(200).json(users);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getUsersByRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const users = await getUsersByRenterService(userId);
+
+        res.status(200).json(users);
     } catch (error) {
         next(error);
     }

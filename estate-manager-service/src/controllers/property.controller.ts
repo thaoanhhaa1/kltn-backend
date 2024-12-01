@@ -209,10 +209,26 @@ export const getNotDeletedProperties = async (req: Request, res: Response, next:
     try {
         const take = Number(req.query.take || DEFAULT_PROPERTIES_TAKE);
         const skip = Number(req.query.skip || DEFAULT_PROPERTIES_SKIP);
+        const city = req.query.city as string;
+        const district = req.query.district as string;
+        const ownerId = req.query.ownerId as string;
+        const ownerName = req.query.ownerName as string;
+        const propertyId = req.query.propertyId as string;
+        const status = req.query.status as PropertyStatus;
+        const title = req.query.title as string;
+        const ward = req.query.ward as string;
 
         const properties = await getNotDeletedPropertiesService({
             skip,
             take,
+            city,
+            district,
+            ownerId,
+            ownerName,
+            propertyId,
+            status,
+            title,
+            ward,
         });
 
         res.status(200).json(properties);

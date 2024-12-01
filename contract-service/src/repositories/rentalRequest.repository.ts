@@ -6,7 +6,12 @@ import {
     IGetRentalRequestRating,
 } from '../interfaces/dashboard';
 import { IPagination } from '../interfaces/pagination';
-import { IOwnerUpdateRentalRequestStatus, IRenterUpdateRentalRequestStatus } from '../interfaces/rentalRequest';
+import {
+    IGetRentalRequestsByOwner,
+    IGetRentalRequestsByRenter,
+    IOwnerUpdateRentalRequestStatus,
+    IRenterUpdateRentalRequestStatus,
+} from '../interfaces/rentalRequest';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
 import { ICreateRentalRequest } from '../schemas/rentalRequest.schema';
@@ -55,13 +60,15 @@ export const createRentalRequest = async ({
     });
 };
 
-export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPagination) => {
+export const getRentalRequestsByRenter = ({ renterId, skip, take, status }: IGetRentalRequestsByRenter) => {
     return prisma.rentalRequest.findMany({
         where: {
             renterId,
-            status: {
-                not: 'CANCELLED',
-            },
+            ...((status && { status }) || {
+                status: {
+                    not: 'CANCELLED',
+                },
+            }),
         },
         skip,
         take,
@@ -74,27 +81,58 @@ export const getRentalRequestsByRenter = (renterId: IUserId, { skip, take }: IPa
     });
 };
 
-export const countRentalRequestsByRenter = (renterId: IUserId) => {
+export const countRentalRequestsByRenter = ({ renterId, status }: IGetRentalRequestsByRenter) => {
     return prisma.rentalRequest.count({
         where: {
             renterId,
-            status: {
-                not: 'CANCELLED',
-            },
+            ...((status && { status }) || {
+                status: {
+                    not: 'CANCELLED',
+                },
+            }),
         },
     });
 };
 
-export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagination) => {
+export const getRentalRequestsByOwner = ({
+    ownerId,
+    skip,
+    take,
+    propertyId,
+    rentalDeposit,
+    rentalEndDate,
+    rentalPrice,
+    rentalStartDate,
+    status,
+    renterId,
+}: IGetRentalRequestsByOwner) => {
     return prisma.rentalRequest.findMany({
         where: {
             ownerId,
-            status: {
-                not: 'CANCELLED',
-            },
+            ...((status && { status }) || {
+                status: {
+                    not: 'CANCELLED',
+                },
+            }),
+            ...(propertyId && { propertyId }),
+            ...(rentalDeposit && { rentalDeposit }),
+            ...(rentalEndDate && { rentalEndDate }),
+            ...(rentalPrice && { rentalPrice }),
+            ...(rentalStartDate && { rentalStartDate }),
+            ...(renterId && { renterId }),
         },
         include: {
-            property: true,
+            property: {
+                select: {
+                    title: true,
+                },
+            },
+            renter: {
+                select: {
+                    name: true,
+                    email: true,
+                },
+            },
         },
         skip,
         take,
@@ -104,13 +142,30 @@ export const getRentalRequestsByOwner = (ownerId: IUserId, { skip, take }: IPagi
     });
 };
 
-export const countRentalRequestsByOwner = (ownerId: IUserId) => {
+export const countRentalRequestsByOwner = ({
+    ownerId,
+    propertyId,
+    rentalDeposit,
+    rentalEndDate,
+    rentalPrice,
+    rentalStartDate,
+    status,
+    renterId,
+}: IGetRentalRequestsByOwner) => {
     return prisma.rentalRequest.count({
         where: {
             ownerId,
-            status: {
-                not: 'CANCELLED',
-            },
+            ...((status && { status }) || {
+                status: {
+                    not: 'CANCELLED',
+                },
+            }),
+            ...(propertyId && { propertyId }),
+            ...(rentalDeposit && { rentalDeposit }),
+            ...(rentalEndDate && { rentalEndDate }),
+            ...(rentalPrice && { rentalPrice }),
+            ...(rentalStartDate && { rentalStartDate }),
+            ...(renterId && { renterId }),
         },
     });
 };
@@ -321,4 +376,30 @@ export const countPendingRentalRequestsByOwner = (ownerId: IUserId) => {
             status: 'PENDING',
         },
     });
+};
+
+export const getRenterRequestByOwner = (ownerId: IUserId) => {
+    return prisma.rentalRequest
+        .groupBy({
+            by: ['renterId'],
+            where: {
+                ownerId,
+            },
+        })
+        .then((result) => {
+            const ids = result.map((item) => item.renterId);
+
+            return prisma.user.findMany({
+                where: {
+                    userId: {
+                        in: ids,
+                    },
+                },
+                select: {
+                    userId: true,
+                    name: true,
+                    email: true,
+                },
+            });
+        });
 };

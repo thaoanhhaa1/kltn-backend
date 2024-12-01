@@ -145,6 +145,10 @@ export const blockUserService = (userId: IUserId) => {
     return updateStatus(userId, 'BLOCKED');
 };
 
+export const activeUserService = (userId: IUserId) => {
+    return updateStatus(userId, 'ACTIVE');
+};
+
 export const getRenterCbbService = async () => {
     const users = await getRenterCbb();
 

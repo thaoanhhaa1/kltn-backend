@@ -33,3 +33,23 @@ export interface IGenerateContract {
     ownerId: string;
     propertyId: string;
 }
+
+export interface IGetRentalRequestsByRenter {
+    renterId: IUserId;
+    skip: number;
+    take: number;
+    status?: RentalRequestStatus;
+}
+
+export interface IGetRentalRequestsByOwner {
+    ownerId: IUserId;
+    skip: number;
+    take: number;
+    propertyId?: string;
+    rentalPrice?: number;
+    rentalDeposit?: number;
+    rentalStartDate?: Date | string;
+    rentalEndDate?: Date | string;
+    status?: RentalRequestStatus;
+    renterId?: string;
+}
