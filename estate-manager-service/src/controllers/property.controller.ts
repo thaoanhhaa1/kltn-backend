@@ -159,13 +159,12 @@ export const updateProperty = async (req: AuthenticatedRequest, res: Response, n
             },
         });
 
-        // [ ] Check
         findUserByIdService(req.user!.id)
             .then((user) =>
                 createNotificationService({
                     body: `Bất động sản **${property.title}** của **${user?.name}** đã được cập nhật`,
                     title: 'Bất động sản cập nhật',
-                    type: 'OWNER_PROPERTY',
+                    type: 'ADMIN_PROPERTY',
                     from: req.user!.id,
                     toRole: 'admin',
                     docId: property.propertyId,
