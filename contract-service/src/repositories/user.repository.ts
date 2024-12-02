@@ -21,9 +21,6 @@ export const findUserById = (userId: IUserId) => {
     return prisma.user.findFirst({
         where: {
             userId,
-            walletAddress: {
-                not: null,
-            },
         },
     });
 };
