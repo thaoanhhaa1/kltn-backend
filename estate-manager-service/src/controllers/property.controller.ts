@@ -28,6 +28,7 @@ import {
 } from '../services/property.service';
 import {
     getAllFavoritePropertyInteractionsService,
+    getAllPropertyInteractionService,
     getFavoritePropertyInteractionBySlugService,
 } from '../services/propertyInteraction.service';
 import { findUserByIdService } from '../services/user.service';
@@ -821,6 +822,142 @@ export const getPropertiesCbb = async (req: AuthenticatedRequest, res: Response,
         const properties = await getPropertiesCbbService(userId);
 
         res.status(200).json(properties);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const suggestSearch = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const query = req.query.query as string;
+
+        if (!query) return [];
+
+        const result = await elasticClient.search({
+            index: 'properties',
+            body: {
+                size: 5,
+                query: {
+                    multi_match: {
+                        query,
+                        fields: [
+                            'title^3',
+                            'description',
+                            'address.street',
+                            'address.district',
+                            'address.city',
+                            'type.name',
+                        ],
+                        type: 'bool_prefix',
+                        fuzziness: 'AUTO',
+                        operator: 'and',
+                    },
+                },
+                _source: ['title', 'slug', 'images'],
+            },
+        });
+
+        res.json(result.hits.hits.map((item: any) => item._source));
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const suggest = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const suggestProperties = await Redis.getInstance().getClient().get(`$suggestProperties:${userId}`);
+        console.log('🚀 ~ suggest ~ suggestProperties:', Boolean(suggestProperties));
+
+        if (suggestProperties) {
+            res.status(200).json(suggestProperties);
+            return;
+        }
+
+        const interactions = await getAllPropertyInteractionService(userId);
+        const lastInteraction = interactions.at(-1)?.property;
+
+        const favoriteIds = interactions
+            .filter((i) => i.interactionType === 'FAVORITED')
+            .map((i) => i.property.propertyId);
+
+        const viewedIds = interactions.filter((i) => i.interactionType === 'VIEWED').map((i) => i.property.propertyId);
+
+        const result = await elasticClient.search({
+            index: 'properties',
+            body: {
+                size: 10,
+                query: {
+                    bool: {
+                        must: {
+                            multi_match: {
+                                query: interactions.at(-1)?.property.title || '',
+                                fields: ['title^3', 'description', 'address.district^2', 'type.name^2'],
+                                type: 'best_fields',
+                                fuzziness: 'AUTO',
+                            },
+                        },
+                        should: [
+                            {
+                                terms: {
+                                    propertyId: favoriteIds,
+                                    boost: 2.0,
+                                },
+                            },
+                            {
+                                terms: {
+                                    propertyId: viewedIds,
+                                    boost: 1.5,
+                                },
+                            },
+                            {
+                                more_like_this: {
+                                    fields: ['type.name', 'address.district', 'description'],
+                                    like: [
+                                        {
+                                            _index: 'properties',
+                                            doc: {
+                                                // type: lastInteraction?.type.name,
+                                                'address.district': lastInteraction?.address?.district,
+                                                price: lastInteraction?.price,
+                                                description: lastInteraction?.description,
+                                            },
+                                        },
+                                    ],
+                                    min_term_freq: 1,
+                                    max_query_terms: 12,
+                                    boost: 1.2,
+                                },
+                            },
+                            // Price range similarity
+                            {
+                                range: {
+                                    price: {
+                                        gte: (lastInteraction?.price || 0) * 0.8,
+                                        lte: (lastInteraction?.price || 0) * 1.2,
+                                        boost: 1.1,
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const suggestions = result.hits.hits.map((item: any) => item._source);
+
+        Redis.getInstance()
+            .getClient()
+            .set(`$suggestProperties:${userId}`, JSON.stringify(suggestions), {
+                ex: 3600, // 1 hour
+                type: 'string',
+            })
+            .then(() => console.log('Suggest properties cached'))
+            .catch((error: any) => console.error('Error set redis:', error));
+
+        res.status(200).json(suggestions);
     } catch (error) {
         next(error);
     }

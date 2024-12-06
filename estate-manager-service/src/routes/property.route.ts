@@ -12,6 +12,8 @@ import {
     getPropertyBySlug,
     getPropertyStatus,
     searchProperties,
+    suggest,
+    suggestSearch,
     updatePropertiesStatus,
     updateProperty,
     updateVisiblePropertiesStatus,
@@ -34,6 +36,8 @@ router.get('/owner/cbb', authMiddleware, roleMiddleware('owner'), getPropertiesC
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getNotDeletedPropertiesByOwnerId);
 router.get('/status', getPropertyStatus);
 router.get('/count', countNotPendingProperties);
+router.get('/suggest-search', suggestSearch);
+router.get('/suggest', authMiddleware, roleMiddleware('renter'), suggest);
 router.get('/:propertyId', authMiddleware, hasAnyRoleMiddleware(['admin', 'owner']), getNotDeletedProperty);
 router.get('/', getNotPendingProperties);
 
