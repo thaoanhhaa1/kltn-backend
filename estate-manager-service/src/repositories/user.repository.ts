@@ -280,3 +280,11 @@ export const getRenterCbb = () => {
         },
     });
 };
+
+export const findUserByWalletAddress = (walletAddress: string) => {
+    return prisma.user.findFirst({
+        where: {
+            walletAddress,
+        },
+    });
+};
