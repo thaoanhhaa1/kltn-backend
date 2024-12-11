@@ -34,6 +34,12 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
         Object.keys(socketIds).forEach((key) => {
             if (socketIds[key] === userId) socketId.to(key).emit(event, data);
         });
+
+        if (data.toRole === 'admin') {
+            Object.keys(socketIds).forEach((key) => {
+                if (socketIds[key] === '66debd900e6c4120522fb548') socketId.to(key).emit(event, data);
+            });
+        }
     };
 
     RabbitMQ.getInstance().consumeQueue(INTERNAL_ESTATE_MANAGER_QUEUE.name, (msg) => {
@@ -46,6 +52,7 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
                 const userId = data.to;
 
                 userId && emitToUser(userId, 'create-notification', data);
+
                 break;
             default:
                 break;
