@@ -11,6 +11,7 @@ import {
     findPassword,
     findUserById,
     findUserByPhone,
+    findUserByWalletAddress,
     findUserDTOByEmail,
     forgotPassword,
     getAllOwnersCbb,
@@ -111,6 +112,10 @@ export const getAllOwnersCbbService = () => {
 
 export const updateWalletAddressService = async (userId: IUserId, wallet_address: string) => {
     try {
+        const user = await findUserByWalletAddress(wallet_address);
+
+        if (user) throw new CustomError(400, 'Ví đã được sử dụng');
+
         return await updateWalletAddress(userId, wallet_address);
     } catch (error) {
         throw new CustomError(400, 'Ví đã được sử dụng');
