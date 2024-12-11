@@ -51,7 +51,7 @@ const socketService = (socketId: Server<DefaultEventsMap, DefaultEventsMap, Defa
             case INTERNAL_ESTATE_MANAGER_QUEUE.type.CREATE_NOTIFICATION:
                 const userId = data.to;
 
-                userId && emitToUser(userId, 'create-notification', data);
+                (userId || data.toRole) && emitToUser(userId, 'create-notification', data);
 
                 break;
             default:
