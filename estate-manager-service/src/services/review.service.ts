@@ -2,7 +2,6 @@ import { v4 } from 'uuid';
 import elasticClient from '../configs/elastic.config';
 import { DeleteReviewService, UpdateReview } from '../interface/review';
 import { IUserId } from '../interface/user';
-import { createNotification } from '../repositories/notification.repository';
 import { getPropertyById, getRating, updateRating } from '../repositories/property.repository';
 import {
     createReview,
@@ -18,6 +17,7 @@ import { CreateReviewRequest } from '../schemas/review.schema';
 import CustomError from '../utils/error.util';
 import { IUpdateRating } from './../interface/property';
 import { getContractByIdService } from './contract.service';
+import { createNotificationService } from './notification.service';
 
 const updateRatingPromise = ({ count, propertyId, rating }: IUpdateRating) =>
     Promise.all([
@@ -103,7 +103,7 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
         .then(() => console.log('Update rating success'))
         .catch((err) => console.log(err));
 
-    createNotification({
+    createNotificationService({
         title: 'Đánh giá mới',
         body: `Bạn vừa nhận được một đánh giá mới từ **${contract.renter.name}** cho hợp đồng **${contract.contractId}**`,
         type: 'REVIEW',
