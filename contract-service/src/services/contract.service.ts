@@ -660,14 +660,23 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                 type: isRefund ? 'REFUND' : 'DEPOSIT',
                 amountEth: transaction.amountEth || 0,
                 transactionHash: receipt.transactionHash,
-                fee: Number(fee),
-                feeEth: Number(feeEth),
+            }),
+            createTransaction({
+                amount: Number(fee),
+                contractId: contract.contractId,
+                status: 'COMPLETED',
+                title: 'Phí hủy hợp đồng',
+                description: `Thanh toán phí hủy hợp đồng **${contract.contractId}**`,
+                fromId: request.requestedBy,
+                type: 'CANCEL_CONTRACT',
+                amountEth: Number(feeEth),
+                transactionHash: receipt.transactionHash,
             }),
             cancelTransactions([contractId]),
         ];
 
         if (indemnity) {
-            const fee = Number(feeIndemnity) * ethVnd;
+            const feeIndemnityVnd = Number(feeIndemnity) * ethVnd;
 
             queries.push(
                 createTransaction({
@@ -688,7 +697,7 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
 
             queries.push(
                 createTransaction({
-                    amount: fee,
+                    amount: feeIndemnityVnd,
                     amountEth: Number(feeIndemnity),
                     contractId: contract.contractId,
                     status: 'COMPLETED',
