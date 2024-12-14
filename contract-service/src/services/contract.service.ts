@@ -46,7 +46,11 @@ import {
 } from '../repositories/contractCancellationRequest.repository';
 import { cancelExtensionRequestWhenEndContract } from '../repositories/contractExtensionRequest.repository';
 import { updatePropertyStatus } from '../repositories/property.repository';
-import { ownerUpdateRentalRequestStatus } from '../repositories/rentalRequest.repository';
+import {
+    cancelRentalRequestByContractRange,
+    getRentalRequestByContractRange,
+    ownerUpdateRentalRequestStatus,
+} from '../repositories/rentalRequest.repository';
 import {
     cancelTransactions,
     cancelTransactionsWhenEndContract,
@@ -315,12 +319,17 @@ export const depositService = async ({
             signature,
         });
 
-        const [receipt, ethVnd] = await Promise.all([
+        const [receipt, ethVnd, rentalRequests] = await Promise.all([
             depositSmartContractService({
                 contractId,
                 renterAddress: renter.walletAddress,
             }),
             getCoinPriceService(),
+            getRentalRequestByContractRange({
+                propertyId: contract.propertyId,
+                contractEndDate: contract.endDate,
+                contractStartDate: contract.startDate,
+            }),
         ]);
 
         const feeEth = Number(await convertGasToEthService(Number(receipt.gasUsed)));
@@ -346,6 +355,15 @@ export const depositService = async ({
             }),
             depositInRepo(contractId),
             ...(isStartRent ? [updatePropertyStatus(contract.propertyId, 'UNAVAILABLE')] : []),
+            ...(rentalRequests.length > 0
+                ? [
+                      cancelRentalRequestByContractRange({
+                          propertyId: contract.propertyId,
+                          contractEndDate: contract.endDate,
+                          contractStartDate: contract.startDate,
+                      }),
+                  ]
+                : []),
         ]);
 
         if (isStartRent) {
@@ -398,6 +416,19 @@ export const depositService = async ({
             })
             .then(() => console.log('Transactions cancelled'))
             .catch((error) => console.error('Error cancelling transactions:', error));
+
+        rentalRequests.forEach((request) => {
+            createNotificationQueue({
+                title: 'Yêu cầu thuê nhà',
+                body: `Yêu cầu thuê nhà **${request.property.title}** của bạn đã bị **từ chối**`,
+                type: 'RENTER_RENTAL_REQUEST',
+                docId: String(request.requestId),
+                from: request.ownerId,
+                to: request.renterId,
+            })
+                .then(() => console.log('Notification created'))
+                .catch((error) => console.log('Notification error', error));
+        });
 
         return transactionResult as PrismaContract;
     } catch (error) {

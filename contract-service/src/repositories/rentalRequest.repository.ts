@@ -403,3 +403,79 @@ export const getRenterRequestByOwner = (ownerId: IUserId) => {
             });
         });
 };
+
+export const getRentalRequestByContractRange = ({
+    contractEndDate,
+    contractStartDate,
+    propertyId,
+}: {
+    contractStartDate: Date;
+    contractEndDate: Date;
+    propertyId: string;
+}) => {
+    return prisma.rentalRequest.findMany({
+        where: {
+            status: 'PENDING',
+            OR: [
+                {
+                    rentalStartDate: {
+                        lt: contractStartDate,
+                    },
+                    rentalEndDate: {
+                        gte: contractStartDate,
+                    },
+                },
+                {
+                    rentalStartDate: {
+                        gte: contractStartDate,
+                        lte: contractEndDate,
+                    },
+                },
+            ],
+            propertyId,
+        },
+        include: {
+            property: {
+                select: {
+                    title: true,
+                },
+            },
+        },
+    });
+};
+
+export const cancelRentalRequestByContractRange = ({
+    contractEndDate,
+    contractStartDate,
+    propertyId,
+}: {
+    contractStartDate: Date;
+    contractEndDate: Date;
+    propertyId: string;
+}) => {
+    return prisma.rentalRequest.updateMany({
+        where: {
+            status: 'PENDING',
+            OR: [
+                {
+                    rentalStartDate: {
+                        lt: contractStartDate,
+                    },
+                    rentalEndDate: {
+                        gte: contractStartDate,
+                    },
+                },
+                {
+                    rentalStartDate: {
+                        gte: contractStartDate,
+                        lte: contractEndDate,
+                    },
+                },
+            ],
+            propertyId,
+        },
+        data: {
+            status: 'REJECTED',
+        },
+    });
+};
