@@ -5,7 +5,12 @@ import { ICancellationRequest } from '../interfaces/contractCancellationRequest'
 import { IPagination, IPaginationResponse } from '../interfaces/pagination';
 import { IUserId } from '../interfaces/user';
 import prisma from '../prisma/prismaClient';
-import { findContractById, findContractByIdAndUser, updateStatusContract } from '../repositories/contract.repository';
+import {
+    findContractById,
+    findContractByIdAndUser,
+    getAvailableContractsBySlug,
+    updateStatusContract,
+} from '../repositories/contract.repository';
 import {
     countCancelRequestByOwner,
     createCancellationRequest,
@@ -290,4 +295,8 @@ export const getCancelRequestByOwnerService = async ({
     };
 
     return res;
+};
+
+export const getAvailableContractsBySlugService = (slug: string) => {
+    return getAvailableContractsBySlug(slug);
 };

@@ -11,6 +11,7 @@ import { IPaginationResponse } from '../interface/pagination';
 import { IOwnerFilterProperties, IResProperty } from '../interface/property';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { propertySchema } from '../schemas/property.schema';
+import { getAvailableContractService } from '../services/contract.service';
 import { createNotificationService, deleteNotificationsByDocIdService } from '../services/notification.service';
 import {
     countNotPendingPropertiesService,
@@ -623,6 +624,11 @@ export const countNotPendingProperties = async (_req: Request, res: Response, ne
 export const deleteProperty = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { propertyId } = req.params;
+
+        const contract = await getAvailableContractService(propertyId);
+
+        if (contract) throw new CustomError(400, `Bất động sản đang có hợp đồng`);
+
         const userId = req.user!.id;
         const userTypes = req.user!.userTypes as UserType[];
 

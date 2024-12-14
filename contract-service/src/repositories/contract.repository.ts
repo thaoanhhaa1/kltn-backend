@@ -615,3 +615,34 @@ export const getUsersByRenter = (renterId: string) => {
             });
         });
 };
+
+export const getAvailableContract = (propertyId: string) => {
+    return prisma.contract.findFirst({
+        where: {
+            propertyId,
+            status: {
+                notIn: ['ENDED', 'CANCELLED', 'OVERDUE'],
+            },
+        },
+    });
+};
+
+export const getAvailableContractsBySlug = (slug: string) => {
+    return prisma.contract.findMany({
+        where: {
+            property: {
+                slug,
+            },
+            status: {
+                notIn: ['ENDED', 'CANCELLED', 'OVERDUE', 'WAITING'],
+            },
+        },
+        select: {
+            startDate: true,
+            endDateActual: true,
+        },
+        orderBy: {
+            startDate: 'asc',
+        },
+    });
+};

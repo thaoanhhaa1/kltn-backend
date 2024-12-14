@@ -4,6 +4,7 @@ import envConfig from './configs/env.config';
 import RabbitMQ from './configs/rabbitmq.config';
 import { PROPERTY_QUEUE, SYNC_MESSAGE_QUEUE, USER_QUEUE } from './constants/rabbitmq';
 import errorHandler from './middlewares/error.middleware';
+import { getAvailableContract } from './repositories/contract.repository';
 import routes from './routes';
 import { getContractByIdService, getContractInRangeService } from './services/contract.service';
 import { createPropertyService, softDeletePropertyService, updatePropertyService } from './services/property.service';
@@ -116,6 +117,11 @@ rabbitMQ.connect().then(() => {
                 }
                 case SYNC_MESSAGE_QUEUE.type.GET_CONTRACT_BY_ID: {
                     const contract = await getContractByIdService(data);
+
+                    return contract;
+                }
+                case SYNC_MESSAGE_QUEUE.type.GET_AVAILABLE_CONTRACT: {
+                    const contract = await getAvailableContract(data);
 
                     return contract;
                 }

@@ -44,6 +44,7 @@ import { ResponseError } from '../types/error.type';
 import CustomError from '../utils/error.util';
 import getPageInfo from '../utils/getPageInfo';
 import { options } from '../utils/slug.util';
+import { getAvailableContractService } from './contract.service';
 
 const convertToDTO = (property: IResRepositoryProperty): IResProperty => {
     const { attributes, ...rest } = property;
@@ -151,6 +152,10 @@ export const deletePropertyService = async (deleteProperty: IDeleteProperty) => 
 };
 
 export const updatePropertyService = async (propertyId: string, property: IUpdateProperty) => {
+    const contract = await getAvailableContractService(propertyId);
+
+    if (contract) throw new CustomError(400, `Bất động sản ${contract.propertyJson.title} đang có hợp đồng`);
+
     const res = await updateProperty(propertyId, property);
 
     if (!res) throw new CustomError(404, 'Không tìm thấy bất động sản hoặc bất động sản đang cho thuê');
@@ -170,6 +175,16 @@ export const updatePropertyStatusService = async (params: IUpdatePropertyStatus)
 
 export const updatePropertiesStatusService = async (params: IUpdatePropertiesStatus) => {
     try {
+        if (params.status === 'INACTIVE') {
+            const contracts = await Promise.all(
+                params.properties.map((propertyId) => getAvailableContractService(propertyId)),
+            );
+
+            const contract = contracts.find((contract) => contract);
+
+            if (contract) throw new CustomError(400, `Bất động sản ${contract.propertyJson.title} đang có hợp đồng`);
+        }
+
         const queries = [updatePropertiesStatus(params)];
 
         if (params.reason && params.status === 'REJECTED')

@@ -18,6 +18,7 @@ import {
     getUsersByRenterService,
     payMonthlyRentService,
 } from '../services/contract.service';
+import { getAvailableContractsBySlugService } from '../services/contractCancellationRequest.service';
 import { createNotificationQueue } from '../services/rabbitmq.service';
 import { findUserByIdService } from '../services/user.service';
 import { convertDateToDB } from '../utils/convertDate';
@@ -363,6 +364,18 @@ export const getUsersByRenter = async (req: AuthenticatedRequest, res: Response,
         const users = await getUsersByRenterService(userId);
 
         res.status(200).json(users);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAvailableContractsBySlug = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const slug = req.params.slug;
+
+        const contracts = await getAvailableContractsBySlugService(slug);
+
+        res.status(200).json(contracts);
     } catch (error) {
         next(error);
     }

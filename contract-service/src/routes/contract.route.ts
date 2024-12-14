@@ -4,6 +4,7 @@ import {
     createContractAndApprovalRequest,
     deposit,
     generateContract,
+    getAvailableContractsBySlug,
     getContractDetail,
     getContractsByOwner,
     getContractsByRenter,
@@ -31,6 +32,7 @@ router.post('/pay', authMiddleware, roleMiddleware('renter'), payMonthlyRent);
 router.post('/generate', authMiddleware, roleMiddleware('owner'), generateContract);
 router.post('/', authMiddleware, roleMiddleware('owner'), createContractAndApprovalRequest);
 
+router.get('/property/:slug', getAvailableContractsBySlug);
 router.get('/owner/property/cbb', authMiddleware, roleMiddleware('owner'), getPropertiesByOwner);
 router.get('/owner/user/cbb', authMiddleware, roleMiddleware('owner'), getUsersByOwner);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getContractsByOwner);
