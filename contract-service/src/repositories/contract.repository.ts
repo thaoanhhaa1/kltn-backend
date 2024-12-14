@@ -615,3 +615,14 @@ export const getUsersByRenter = (renterId: string) => {
             });
         });
 };
+
+export const getAvailableContract = (propertyId: string) => {
+    return prisma.contract.findFirst({
+        where: {
+            propertyId,
+            status: {
+                notIn: ['ENDED', 'CANCELLED', 'OVERDUE'],
+            },
+        },
+    });
+};

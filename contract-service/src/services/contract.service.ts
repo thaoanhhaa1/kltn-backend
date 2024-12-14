@@ -704,6 +704,8 @@ export const endContractService = async ({ contractId, id: requestId }: IEndCont
                 transactionHash: receipt.transactionHash,
             }),
             cancelTransactions([contractId]),
+            cancelRequestWhenEndContract(contractId),
+            cancelExtensionRequestWhenEndContract(contractId),
         ];
 
         if (indemnity) {

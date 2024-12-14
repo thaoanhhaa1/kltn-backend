@@ -12,3 +12,15 @@ export const getContractByIdService = async (params: { contractId: string; userI
 
     return JSON.parse(result);
 };
+
+export const getAvailableContractService = async (propertyId: string) => {
+    const result = await RabbitMQ.getInstance().sendSyncMessage({
+        queue: SYNC_MESSAGE_QUEUE.name,
+        message: {
+            type: SYNC_MESSAGE_QUEUE.type.GET_AVAILABLE_CONTRACT,
+            data: propertyId,
+        },
+    });
+
+    return JSON.parse(result);
+};
