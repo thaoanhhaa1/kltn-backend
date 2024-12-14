@@ -1,6 +1,8 @@
 # Sử dụng hình ảnh Node.js chính thức làm cơ sở
 FROM node:18-alpine
 
+RUN apk add --no-cache openssl
+
 # Tạo thư mục làm việc trong container
 # WORKDIR /usr/src/app
 
