@@ -626,3 +626,23 @@ export const getAvailableContract = (propertyId: string) => {
         },
     });
 };
+
+export const getAvailableContractsBySlug = (slug: string) => {
+    return prisma.contract.findMany({
+        where: {
+            property: {
+                slug,
+            },
+            status: {
+                notIn: ['ENDED', 'CANCELLED', 'OVERDUE', 'WAITING'],
+            },
+        },
+        select: {
+            startDate: true,
+            endDateActual: true,
+        },
+        orderBy: {
+            startDate: 'asc',
+        },
+    });
+};
