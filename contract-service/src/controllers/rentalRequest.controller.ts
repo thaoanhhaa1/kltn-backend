@@ -67,12 +67,26 @@ export const getRentalRequestsByRenter = async (req: AuthenticatedRequest, res: 
         const take = Number(req.query.take || 10);
         const skip = Number(req.query.skip || 0);
         const status = req.query.status as RentalRequestStatus;
+        const propertyId = req.query.propertyId as string;
+        const ownerId = req.query.ownerId as string;
+        const amount = req.query.amount ? Number(req.query.amount) : undefined;
+        const deposit = req.query.deposit ? Number(req.query.deposit) : undefined;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+        const sort = req.query.sort as string;
 
         const rentalRequests = await getRentalRequestsByRenterService({
             renterId: userId,
             skip,
             take,
             status,
+            propertyId,
+            ownerId,
+            amount,
+            deposit,
+            startDate,
+            endDate,
+            sort,
         });
 
         res.json(rentalRequests);

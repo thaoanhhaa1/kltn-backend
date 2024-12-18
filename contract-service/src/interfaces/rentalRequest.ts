@@ -39,6 +39,13 @@ export interface IGetRentalRequestsByRenter {
     skip: number;
     take: number;
     status?: RentalRequestStatus;
+    propertyId?: string;
+    ownerId?: string;
+    amount?: number; // rental price
+    deposit?: number; // rental deposit
+    startDate?: string; // rental start date
+    endDate?: string; // rental
+    sort?: string;
 }
 
 export interface IGetRentalRequestsByOwner {
