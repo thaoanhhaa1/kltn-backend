@@ -60,7 +60,58 @@ export const createRentalRequest = async ({
     });
 };
 
-export const getRentalRequestsByRenter = ({ renterId, skip, take, status }: IGetRentalRequestsByRenter) => {
+const orderByRentalRequestsByRenter = (sort?: string): any => {
+    switch (sort) {
+        // price_asc
+        case 'price_asc':
+            return {
+                rentalPrice: 'asc',
+            };
+        // price_desc
+        case 'price_desc':
+            return {
+                rentalPrice: 'desc',
+            };
+        // deposit_asc
+        case 'deposit_asc':
+            return {
+                rentalDeposit: 'asc',
+            };
+        // deposit_desc
+        case 'deposit_desc':
+            return {
+                rentalDeposit: 'desc',
+            };
+        // start_date_asc
+        case 'start_date_asc':
+            return {
+                rentalStartDate: 'asc',
+            };
+        // start_date_desc
+        case 'start_date_desc':
+            return {
+                rentalStartDate: 'desc',
+            };
+        default:
+            return {
+                createdAt: 'desc',
+            };
+    }
+};
+
+export const getRentalRequestsByRenter = ({
+    renterId,
+    skip,
+    take,
+    status,
+    amount,
+    deposit,
+    endDate,
+    ownerId,
+    propertyId,
+    startDate,
+    sort,
+}: IGetRentalRequestsByRenter) => {
     return prisma.rentalRequest.findMany({
         where: {
             renterId,
@@ -69,19 +120,32 @@ export const getRentalRequestsByRenter = ({ renterId, skip, take, status }: IGet
                     not: 'CANCELLED',
                 },
             }),
+            ...(amount && { rentalPrice: amount }),
+            ...(deposit && { rentalDeposit: deposit }),
+            ...(startDate && { rentalStartDate: new Date(startDate) }),
+            ...(endDate && { rentalEndDate: new Date(endDate) }),
+            ...(ownerId && { ownerId }),
+            ...(propertyId && { propertyId }),
         },
         skip,
         take,
         include: {
             property: true,
         },
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByRentalRequestsByRenter(sort),
     });
 };
 
-export const countRentalRequestsByRenter = ({ renterId, status }: IGetRentalRequestsByRenter) => {
+export const countRentalRequestsByRenter = ({
+    renterId,
+    status,
+    amount,
+    deposit,
+    endDate,
+    ownerId,
+    propertyId,
+    startDate,
+}: IGetRentalRequestsByRenter) => {
     return prisma.rentalRequest.count({
         where: {
             renterId,
@@ -90,6 +154,12 @@ export const countRentalRequestsByRenter = ({ renterId, status }: IGetRentalRequ
                     not: 'CANCELLED',
                 },
             }),
+            ...(amount && { rentalPrice: amount }),
+            ...(deposit && { rentalDeposit: deposit }),
+            ...(startDate && { rentalStartDate: new Date(startDate) }),
+            ...(endDate && { rentalEndDate: new Date(endDate) }),
+            ...(ownerId && { ownerId }),
+            ...(propertyId && { propertyId }),
         },
     });
 };
@@ -476,6 +546,53 @@ export const cancelRentalRequestByContractRange = ({
         },
         data: {
             status: 'REJECTED',
+        },
+    });
+};
+
+export const getOwnerCbbForRenter = async (renterId: IUserId) => {
+    const res = await prisma.rentalRequest.groupBy({
+        where: {
+            renterId,
+        },
+        by: ['ownerId'],
+    });
+
+    const ownerIds = res.map((item) => item.ownerId);
+
+    return prisma.user.findMany({
+        where: {
+            userId: {
+                in: ownerIds,
+            },
+        },
+        select: {
+            userId: true,
+            name: true,
+            email: true,
+        },
+    });
+};
+
+export const getPropertyCbbForRenter = async (renterId: IUserId) => {
+    const res = await prisma.rentalRequest.groupBy({
+        where: {
+            renterId,
+        },
+        by: ['propertyId'],
+    });
+
+    const propertyIds = res.map((item) => item.propertyId);
+
+    return prisma.property.findMany({
+        where: {
+            propertyId: {
+                in: propertyIds,
+            },
+        },
+        select: {
+            propertyId: true,
+            title: true,
         },
     });
 };

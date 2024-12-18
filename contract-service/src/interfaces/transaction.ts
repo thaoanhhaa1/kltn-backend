@@ -64,4 +64,10 @@ export interface IGetExpenditureTransactionsByMonth {
 export interface IGetTransactionsByRenter {
     userId: IUserId;
     status: TransactionStatus;
+    contractId?: string;
+    propertyTitle?: string;
+    ownerName?: IUserId;
+    amount?: number;
+    endDate?: Date | string;
+    type?: TransactionType;
 }

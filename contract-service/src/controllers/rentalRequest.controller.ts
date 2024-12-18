@@ -6,6 +6,8 @@ import { createNotificationQueue } from '../services/rabbitmq.service';
 import {
     createRentalRequestService,
     generateContractService,
+    getOwnerCbbForRenterService,
+    getPropertyCbbForRenterService,
     getRentalRequestAndPropertyByIdService,
     getRentalRequestByOwnerService,
     getRentalRequestByRenterService,
@@ -65,12 +67,26 @@ export const getRentalRequestsByRenter = async (req: AuthenticatedRequest, res: 
         const take = Number(req.query.take || 10);
         const skip = Number(req.query.skip || 0);
         const status = req.query.status as RentalRequestStatus;
+        const propertyId = req.query.propertyId as string;
+        const ownerId = req.query.ownerId as string;
+        const amount = req.query.amount ? Number(req.query.amount) : undefined;
+        const deposit = req.query.deposit ? Number(req.query.deposit) : undefined;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+        const sort = req.query.sort as string;
 
         const rentalRequests = await getRentalRequestsByRenterService({
             renterId: userId,
             skip,
             take,
             status,
+            propertyId,
+            ownerId,
+            amount,
+            deposit,
+            startDate,
+            endDate,
+            sort,
         });
 
         res.json(rentalRequests);
@@ -243,6 +259,30 @@ export const getRenterRequestByOwner = async (req: AuthenticatedRequest, res: Re
         const userId = req.user!.id;
 
         const rentalRequest = await getRenterRequestByOwnerService(userId);
+
+        res.json(rentalRequest);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getOwnerCbbForRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const rentalRequest = await getOwnerCbbForRenterService(userId);
+
+        res.json(rentalRequest);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyCbbForRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const rentalRequest = await getPropertyCbbForRenterService(userId);
 
         res.json(rentalRequest);
     } catch (error) {

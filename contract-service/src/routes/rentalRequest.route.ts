@@ -2,7 +2,9 @@ import express from 'express';
 import {
     createRentalRequest,
     generateContract,
+    getOwnerCbbForRenter,
     getPendingRentalRequestsByOwner,
+    getPropertyCbbForRenter,
     getRentalRequestByOwner,
     getRentalRequestByRenter,
     getRentalRequestsByOwner,
@@ -23,6 +25,8 @@ router.get('/renter', authMiddleware, roleMiddleware('renter'), getRentalRequest
 router.get('/owner/renter/cbb', authMiddleware, roleMiddleware('owner'), getRenterRequestByOwner);
 router.get('/owner', authMiddleware, roleMiddleware('owner'), getRentalRequestsByOwner);
 router.get('/owner/status/pending', authMiddleware, roleMiddleware('owner'), getPendingRentalRequestsByOwner);
+router.get('/renter/property/cbb', authMiddleware, roleMiddleware('renter'), getPropertyCbbForRenter);
+router.get('/renter/owner/cbb', authMiddleware, roleMiddleware('renter'), getOwnerCbbForRenter);
 router.get('/renter/:slug', authMiddleware, roleMiddleware('renter'), getRentalRequestByRenter);
 router.get('/owner/:slug', authMiddleware, roleMiddleware('owner'), getRentalRequestByOwner);
 

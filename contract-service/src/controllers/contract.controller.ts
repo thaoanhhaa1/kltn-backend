@@ -242,6 +242,8 @@ export const getContractsByRenter = async (req: AuthenticatedRequest, res: Respo
         const userId = req.user!.id;
         const take = Number(req.query.take) || 10;
         const skip = Number(req.query.skip) || 0;
+        const field = req.query.field as string | undefined;
+        const order = (req.query.order || undefined) as 'asc' | 'desc' | undefined;
 
         const startDate = req.query.startDate ? convertDateToDB(req.query.startDate as string) : undefined;
         const endDate = req.query.endDate ? convertDateToDB(req.query.endDate as string) : undefined;
@@ -257,6 +259,8 @@ export const getContractsByRenter = async (req: AuthenticatedRequest, res: Respo
             skip,
             take,
             renterId: userId,
+            field,
+            order,
         });
 
         res.status(200).json(contracts);

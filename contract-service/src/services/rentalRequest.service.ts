@@ -14,7 +14,9 @@ import {
     countRentalRequestsByOwner,
     countRentalRequestsByRenter,
     createRentalRequest,
+    getOwnerCbbForRenter,
     getPendingRentalRequestsByOwner,
+    getPropertyCbbForRenter,
     getRentalRequestAndPropertyById,
     getRentalRequestById,
     getRentalRequestByOwner,
@@ -240,4 +242,12 @@ export const getPendingRentalRequestsByOwnerService = async (ownerId: IUserId, p
 
 export const getRenterRequestByOwnerService = (ownerId: IUserId) => {
     return getRenterRequestByOwner(ownerId);
+};
+
+export const getOwnerCbbForRenterService = (renterId: IUserId) => {
+    return getOwnerCbbForRenter(renterId);
+};
+
+export const getPropertyCbbForRenterService = (renterId: IUserId) => {
+    return getPropertyCbbForRenter(renterId);
 };
