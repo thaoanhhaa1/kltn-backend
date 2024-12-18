@@ -86,14 +86,16 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
             },
         });
 
-    if (review.parentId)
+    if (!reviewFind)
         getRating(review.propertyId)
             .then((property) => {
                 if (!property) return;
 
                 const count = property.ratingCount || 0;
                 const newRating = (property.rating * count + review.rating) / (count + 1);
+                console.log('🚀 ~ .then ~ newRating:', newRating);
                 const newRatingCount = count + 1;
+                console.log('🚀 ~ .then ~ newRatingCount:', newRatingCount);
 
                 return updateRatingPromise({
                     count: newRatingCount,
