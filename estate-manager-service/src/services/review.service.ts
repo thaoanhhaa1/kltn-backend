@@ -86,22 +86,23 @@ export const createReviewService = async (userId: IUserId, review: CreateReviewR
             },
         });
 
-    getRating(review.propertyId)
-        .then((property) => {
-            if (!property) return;
+    if (review.parentId)
+        getRating(review.propertyId)
+            .then((property) => {
+                if (!property) return;
 
-            const count = property.ratingCount || 0;
-            const newRating = (property.rating * count + review.rating) / (count + 1);
-            const newRatingCount = count + 1;
+                const count = property.ratingCount || 0;
+                const newRating = (property.rating * count + review.rating) / (count + 1);
+                const newRatingCount = count + 1;
 
-            return updateRatingPromise({
-                count: newRatingCount,
-                propertyId: review.propertyId,
-                rating: newRating,
-            });
-        })
-        .then(() => console.log('Update rating success'))
-        .catch((err) => console.log(err));
+                return updateRatingPromise({
+                    count: newRatingCount,
+                    propertyId: review.propertyId,
+                    rating: newRating,
+                });
+            })
+            .then(() => console.log('Update rating success'))
+            .catch((err) => console.log(err));
 
     createNotificationService({
         title: 'Đánh giá mới',
