@@ -1,4 +1,4 @@
-import { TransactionStatus } from '@prisma/client';
+import { TransactionStatus, TransactionType } from '@prisma/client';
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import {
@@ -12,10 +12,20 @@ export const getTransactionsByRenter = async (req: AuthenticatedRequest, res: Re
     try {
         const userId = req.user!.id;
         const status = req.query.status as TransactionStatus;
+        const contractId = req.query.contractId as string;
+        const propertyTitle = req.query.propertyId as string;
+        const ownerName = req.query.ownerId as string;
+        const amount = req.query.amount ? Number(req.query.amount) : undefined;
+        const type = req.query.type as TransactionType;
 
         const transactions = await getTransactionsByRenterService({
             status,
             userId,
+            contractId,
+            propertyTitle,
+            ownerName,
+            amount,
+            type,
         });
 
         res.status(200).json(transactions);

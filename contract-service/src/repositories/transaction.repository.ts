@@ -44,7 +44,16 @@ export const paymentTransaction = ({ id, ...rest }: IPaymentTransaction) => {
     });
 };
 
-export const getTransactionsByRenter = ({ status, userId }: IGetTransactionsByRenter) => {
+export const getTransactionsByRenter = ({
+    status,
+    userId,
+    amount,
+    contractId,
+    endDate,
+    ownerName,
+    propertyTitle,
+    type,
+}: IGetTransactionsByRenter) => {
     return prisma.transaction.findMany({
         where: {
             fromId: userId,
@@ -52,6 +61,16 @@ export const getTransactionsByRenter = ({ status, userId }: IGetTransactionsByRe
                 in: ['RENT', 'DEPOSIT'],
             },
             ...(status && { status }),
+            ...(amount && { amount }),
+            ...(contractId && { contractId }),
+            ...(endDate && { endDate }),
+            ...(ownerName && { toId: ownerName }),
+            ...(propertyTitle && {
+                contract: {
+                    propertyId: propertyTitle,
+                },
+            }),
+            ...(type && { type }),
         },
         orderBy: {
             createdAt: 'desc',
