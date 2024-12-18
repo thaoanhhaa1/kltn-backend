@@ -102,4 +102,6 @@ export type IGetContractsByOwner = IGetContractsTable & {
 export type IGetContractsByRenter = IGetContractsTable & {
     renterId: IUserId;
     ownerId?: IUserId;
+    field?: string;
+    order?: 'asc' | 'desc';
 };

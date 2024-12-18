@@ -225,7 +225,60 @@ export const countContractsByOwner = ({ ownerId, renterId, ...rest }: IGetContra
     });
 };
 
-export const getContractsByRenter = ({ renterId, ownerId, ...rest }: IGetContractsByRenter) => {
+const orderByContractsByRenter = (field?: string, order?: 'asc' | 'desc'): any => {
+    switch (field) {
+        case 'contractId':
+            return {
+                contractId: order,
+            };
+        case 'property':
+            return {
+                property: {
+                    title: order,
+                },
+            };
+        case 'startDate':
+            return {
+                startDate: order,
+            };
+        case 'monthlyRent':
+            return {
+                monthlyRent: order,
+            };
+        case 'depositAmount':
+            return {
+                depositAmount: order,
+            };
+        case 'status':
+            return {
+                status: order,
+            };
+        case 'createdAt':
+            return {
+                createdAt: order,
+            };
+        case 'updatedAt':
+            return {
+                updatedAt: order,
+            };
+        case 'endDateActual':
+            return {
+                endDateActual: order,
+            };
+        case 'owner':
+            return {
+                owner: {
+                    name: order,
+                },
+            };
+        default:
+            return {
+                createdAt: 'desc',
+            };
+    }
+};
+
+export const getContractsByRenter = ({ renterId, ownerId, order, field, ...rest }: IGetContractsByRenter) => {
     return prisma.contract.findMany({
         where: {
             renterId,
@@ -248,9 +301,7 @@ export const getContractsByRenter = ({ renterId, ownerId, ...rest }: IGetContrac
                 },
             },
         },
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByContractsByRenter(field, order),
         skip: rest.skip,
         take: rest.take,
     });

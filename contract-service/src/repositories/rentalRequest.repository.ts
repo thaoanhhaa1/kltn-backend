@@ -479,3 +479,50 @@ export const cancelRentalRequestByContractRange = ({
         },
     });
 };
+
+export const getOwnerCbbForRenter = async (renterId: IUserId) => {
+    const res = await prisma.rentalRequest.groupBy({
+        where: {
+            renterId,
+        },
+        by: ['ownerId'],
+    });
+
+    const ownerIds = res.map((item) => item.ownerId);
+
+    return prisma.user.findMany({
+        where: {
+            userId: {
+                in: ownerIds,
+            },
+        },
+        select: {
+            userId: true,
+            name: true,
+            email: true,
+        },
+    });
+};
+
+export const getPropertyCbbForRenter = async (renterId: IUserId) => {
+    const res = await prisma.rentalRequest.groupBy({
+        where: {
+            renterId,
+        },
+        by: ['propertyId'],
+    });
+
+    const propertyIds = res.map((item) => item.propertyId);
+
+    return prisma.property.findMany({
+        where: {
+            propertyId: {
+                in: propertyIds,
+            },
+        },
+        select: {
+            propertyId: true,
+            title: true,
+        },
+    });
+};

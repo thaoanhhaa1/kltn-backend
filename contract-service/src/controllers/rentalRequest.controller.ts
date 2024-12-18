@@ -6,6 +6,8 @@ import { createNotificationQueue } from '../services/rabbitmq.service';
 import {
     createRentalRequestService,
     generateContractService,
+    getOwnerCbbForRenterService,
+    getPropertyCbbForRenterService,
     getRentalRequestAndPropertyByIdService,
     getRentalRequestByOwnerService,
     getRentalRequestByRenterService,
@@ -243,6 +245,30 @@ export const getRenterRequestByOwner = async (req: AuthenticatedRequest, res: Re
         const userId = req.user!.id;
 
         const rentalRequest = await getRenterRequestByOwnerService(userId);
+
+        res.json(rentalRequest);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getOwnerCbbForRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const rentalRequest = await getOwnerCbbForRenterService(userId);
+
+        res.json(rentalRequest);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPropertyCbbForRenter = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+
+        const rentalRequest = await getPropertyCbbForRenterService(userId);
 
         res.json(rentalRequest);
     } catch (error) {
