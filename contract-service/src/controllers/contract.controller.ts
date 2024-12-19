@@ -219,6 +219,8 @@ export const getContractsByOwner = async (req: AuthenticatedRequest, res: Respon
         const endDate = req.query.endDate ? convertDateToDB(req.query.endDate as string) : undefined;
         const monthlyRent = req.query.monthlyRent ? Number(req.query.monthlyRent) : undefined;
         const depositAmount = req.query.depositAmount ? Number(req.query.depositAmount) : undefined;
+        const sortField = req.query.sortField as string;
+        const sortOrder = req.query.sortOrder as string;
 
         const contracts = await getContractsByOwnerService({
             ...req.query,
@@ -229,6 +231,8 @@ export const getContractsByOwner = async (req: AuthenticatedRequest, res: Respon
             skip,
             take,
             ownerId: userId,
+            sortField,
+            sortOrder,
         });
 
         res.status(200).json(contracts);

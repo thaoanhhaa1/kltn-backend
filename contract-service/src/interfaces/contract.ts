@@ -97,6 +97,8 @@ export type IGetContractsTable = IPagination & {
 export type IGetContractsByOwner = IGetContractsTable & {
     ownerId: IUserId;
     renterId?: IUserId;
+    sortField?: string;
+    sortOrder?: string;
 };
 
 export type IGetContractsByRenter = IGetContractsTable & {
