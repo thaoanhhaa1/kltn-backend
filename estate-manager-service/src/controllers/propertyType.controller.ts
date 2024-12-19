@@ -45,9 +45,15 @@ export const getPropertyTypes = async (_req: Request, res: Response, next: NextF
     }
 };
 
-export const getPropertyTypeDetails = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const getPropertyTypeDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        const result = await getPropertyTypeDetailsService();
+        const id = req.query.id as string;
+        const name = req.query.name as string;
+
+        const result = await getPropertyTypeDetailsService({
+            id,
+            name,
+        });
 
         res.status(200).json(result);
     } catch (error) {

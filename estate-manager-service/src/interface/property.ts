@@ -55,6 +55,8 @@ export interface IOwnerFilterProperties {
     city?: Address['city'];
     district?: Address['district'];
     ward?: Address['ward'];
+    sortField?: string;
+    sortOrder?: string;
 }
 
 export interface IUpdateRating {
@@ -72,4 +74,6 @@ export type IGetNotDeletedProperties = IPagination & {
     ownerId?: IUserId;
     ownerName?: User['name'];
     status?: Property['status'];
+    sortField?: string;
+    sortOrder?: string;
 };

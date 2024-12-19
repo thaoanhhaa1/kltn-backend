@@ -1,6 +1,5 @@
 import { PropertyStatus, UserPropertyEmbed } from '@prisma/client';
 import { v4 } from 'uuid';
-import { IPagination } from '../interface/pagination';
 import {
     IDeleteProperty,
     IGetNotDeletedProperties,
@@ -163,6 +162,8 @@ export const getNotDeletedProperties = async ({
     status,
     title,
     ward,
+    sortField,
+    sortOrder,
 }: IGetNotDeletedProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
@@ -197,9 +198,7 @@ export const getNotDeletedProperties = async ({
         include: propertiesInclude,
         skip,
         take,
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByNotDeletedPropertiesByOwnerId(sortField, sortOrder),
     });
 };
 
@@ -246,10 +245,71 @@ export const countNotDeletedProperties = async ({
     });
 };
 
+const orderByNotDeletedPropertiesByOwnerId = (sortField?: string, sortOrder?: string): any => {
+    const order = sortOrder === 'ascend' ? 'asc' : 'desc';
+
+    switch (sortField) {
+        case 'title':
+            return {
+                title: order,
+            };
+        case 'street':
+            return {
+                address: {
+                    street: order,
+                },
+            };
+        case 'ward':
+            return {
+                address: {
+                    ward: order,
+                },
+            };
+        case 'district':
+            return {
+                address: {
+                    district: order,
+                },
+            };
+        case 'city':
+            return {
+                address: {
+                    city: order,
+                },
+            };
+        case 'deposit':
+            return {
+                deposit: order,
+            };
+        case 'price':
+            return {
+                price: order,
+            };
+        case 'status':
+            return {
+                status: order,
+            };
+        case 'createdAt':
+            return {
+                createdAt: order,
+            };
+        case 'updatedAt':
+            return {
+                updatedAt: order,
+            };
+        default:
+            return {
+                createdAt: 'desc',
+            };
+    }
+};
+
 export const getNotDeletedPropertiesByOwnerId = async ({
     skip,
     take,
     ownerId,
+    sortField,
+    sortOrder,
     ...filter
 }: IGetPropertiesWithOwnerId & IOwnerFilterProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
@@ -263,9 +323,7 @@ export const getNotDeletedPropertiesByOwnerId = async ({
             ...ownerFilterPropertiesWhere(filter),
         },
         include: propertiesInclude,
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByNotDeletedPropertiesByOwnerId(sortField, sortOrder),
         skip,
         take,
     });

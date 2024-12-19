@@ -35,9 +35,17 @@ export const createAttribute = async (req: Request, res: Response, next: NextFun
     }
 };
 
-export const getAllAttributes = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllAttributes = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const attributes = await getAllAttributesService();
+        const id = req.query.id as string;
+        const type = req.query.type as string;
+        const name = req.query.name as string;
+
+        const attributes = await getAllAttributesService({
+            id,
+            type,
+            name,
+        });
         res.json(attributes);
     } catch (error) {
         next(error);

@@ -15,3 +15,9 @@ export type Attribute = z.infer<typeof attributeSchema>;
 export type ICreateAttributeReq = Omit<Attribute, 'attributeId' | 'createdAt' | 'updatedAt' | 'deleted'>;
 
 export type IUpdateAttributeReq = Partial<Omit<Attribute, 'attributeId' | 'createdAt' | 'updatedAt'>>;
+
+export interface IGetAllAttributes {
+    id?: string;
+    type?: string;
+    name?: string;
+}

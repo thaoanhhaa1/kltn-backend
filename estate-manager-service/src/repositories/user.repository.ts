@@ -1,6 +1,5 @@
 import { UserStatus } from '@prisma/client';
-import { IPagination } from '../interface/pagination';
-import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyUser } from '../interface/user';
+import { IForgotPasswordParams, IGetUsersByAdmin, IUpdateUserParams, IUserId, IVerifyUser } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { RegisterInput } from '../schemas/auth.schema';
 
@@ -45,7 +44,41 @@ export const createUser = async ({ email, name, password, userType }: Omit<Regis
     });
 };
 
-export const getUsers = async ({ skip, take }: IPagination) => {
+const orderByUsers = (sortField?: string, sortOrder?: string): any => {
+    const order = sortOrder === 'ascend' ? 'asc' : 'desc';
+
+    switch (sortField) {
+        case 'name':
+            return { name: order };
+        case 'email':
+            return { email: order };
+        case 'phoneNumber':
+            return { phoneNumber: order };
+        case 'userTypes':
+            return { userTypes: order };
+        case 'status':
+            return { status: order };
+        case 'createdAt':
+            return { createdAt: order };
+        case 'updatedAt':
+            return { updatedAt: order };
+        default:
+            return { createdAt: 'desc' };
+    }
+};
+
+export const getUsers = async ({
+    skip,
+    take,
+    email,
+    name,
+    phoneNumber,
+    status,
+    type,
+    userId,
+    sortField,
+    sortOrder,
+}: IGetUsersByAdmin) => {
     return await prisma.user.findMany({
         where: {
             NOT: {
@@ -53,14 +86,21 @@ export const getUsers = async ({ skip, take }: IPagination) => {
                     has: 'admin',
                 },
             },
+            ...(email && { email: { contains: email, mode: 'insensitive' } }),
+            ...(name && { name: { contains: name, mode: 'insensitive' } }),
+            ...(phoneNumber && { phoneNumber: { contains: phoneNumber, mode: 'insensitive' } }),
+            ...(status && { status }),
+            ...(type && { userTypes: { has: type } }),
+            ...(userId && { userId }),
         },
         select: adminSelect,
         take,
         skip,
+        orderBy: orderByUsers(sortField, sortOrder),
     });
 };
 
-export const countUsers = () => {
+export const countUsers = ({ email, name, phoneNumber, status, type, userId }: IGetUsersByAdmin) => {
     return prisma.user.count({
         where: {
             NOT: {
@@ -68,6 +108,12 @@ export const countUsers = () => {
                     has: 'admin',
                 },
             },
+            ...(email && { email: { contains: email, mode: 'insensitive' } }),
+            ...(name && { name: { contains: name, mode: 'insensitive' } }),
+            ...(phoneNumber && { phoneNumber: { contains: phoneNumber, mode: 'insensitive' } }),
+            ...(status && { status }),
+            ...(type && { userTypes: { has: type } }),
+            ...(userId && { userId }),
         },
     });
 };

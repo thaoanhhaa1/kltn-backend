@@ -164,6 +164,63 @@ export const countRentalRequestsByRenter = ({
     });
 };
 
+const orderByRentalRequestsByOwner = (sortField?: string, sortOrder?: string): any => {
+    const order = sortOrder === 'ascend' ? 'asc' : 'desc';
+
+    switch (sortField) {
+        case 'title':
+            return {
+                property: {
+                    title: order,
+                },
+            };
+        case 'name':
+            return {
+                renter: {
+                    name: order,
+                },
+            };
+        case 'email':
+            return {
+                renter: {
+                    email: order,
+                },
+            };
+        case 'rentalPrice':
+            return {
+                rentalPrice: order,
+            };
+        case 'rentalDeposit':
+            return {
+                rentalDeposit: order,
+            };
+        case 'rentalStartDate':
+            return {
+                rentalStartDate: order,
+            };
+        case 'rentalEndDate':
+            return {
+                rentalEndDate: order,
+            };
+        case 'status':
+            return {
+                status: order,
+            };
+        case 'createdAt':
+            return {
+                createdAt: order,
+            };
+        case 'updatedAt':
+            return {
+                updatedAt: order,
+            };
+        default:
+            return {
+                createdAt: 'desc',
+            };
+    }
+};
+
 export const getRentalRequestsByOwner = ({
     ownerId,
     skip,
@@ -175,6 +232,8 @@ export const getRentalRequestsByOwner = ({
     rentalStartDate,
     status,
     renterId,
+    sortField,
+    sortOrder,
 }: IGetRentalRequestsByOwner) => {
     return prisma.rentalRequest.findMany({
         where: {
@@ -206,9 +265,7 @@ export const getRentalRequestsByOwner = ({
         },
         skip,
         take,
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByRentalRequestsByOwner(sortField, sortOrder),
     });
 };
 

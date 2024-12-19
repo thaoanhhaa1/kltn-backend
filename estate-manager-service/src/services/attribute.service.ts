@@ -7,15 +7,15 @@ import {
     updateAttribute,
 } from '../repositories/attribute.repository';
 import { countAttributes } from '../repositories/propertyAttribute.repository';
-import { ICreateAttributeReq, IUpdateAttributeReq } from '../schemas/attribute.schema';
+import { ICreateAttributeReq, IGetAllAttributes, IUpdateAttributeReq } from '../schemas/attribute.schema';
 import CustomError from '../utils/error.util';
 
 export const createAttributeService = async (attribute: ICreateAttributeReq) => {
     return createAttribute(attribute);
 };
 
-export const getAllAttributesService = async () => {
-    return getAllAttributes();
+export const getAllAttributesService = async (params: IGetAllAttributes) => {
+    return getAllAttributes(params);
 };
 
 export const getAllAttributesCbbService = async () => {

@@ -182,7 +182,62 @@ export const getContractDetail = async ({ contractId, userId, isAdmin }: IGetCon
     });
 };
 
-export const getContractsByOwner = ({ ownerId, renterId, ...rest }: IGetContractsByOwner) => {
+const orderByContractsByOwner = (sortField?: string, sortOrder?: string): any => {
+    const order = sortOrder === 'ascend' ? 'asc' : 'desc';
+
+    switch (sortField) {
+        case 'contractId':
+            return {
+                contractId: order,
+            };
+        case 'title':
+            return {
+                property: {
+                    title: order,
+                },
+            };
+        case 'name':
+            return {
+                renter: {
+                    name: order,
+                },
+            };
+        case 'startDate':
+            return {
+                startDate: order,
+            };
+        case 'endDateActual':
+            return {
+                endDateActual: order,
+            };
+        case 'monthlyRent':
+            return {
+                monthlyRent: order,
+            };
+        case 'depositAmount':
+            return {
+                depositAmount: order,
+            };
+        case 'createdAt':
+            return {
+                createdAt: order,
+            };
+        case 'updatedAt':
+            return {
+                updatedAt: order,
+            };
+        case 'status':
+            return {
+                status: order,
+            };
+        default:
+            return {
+                createdAt: 'desc',
+            };
+    }
+};
+
+export const getContractsByOwner = ({ ownerId, renterId, sortOrder, sortField, ...rest }: IGetContractsByOwner) => {
     return prisma.contract.findMany({
         where: {
             ownerId,
@@ -205,9 +260,7 @@ export const getContractsByOwner = ({ ownerId, renterId, ...rest }: IGetContract
                 },
             },
         },
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByContractsByOwner(sortField, sortOrder),
         skip: rest.skip,
         take: rest.take,
     });

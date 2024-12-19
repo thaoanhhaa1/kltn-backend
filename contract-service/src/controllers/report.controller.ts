@@ -312,6 +312,12 @@ export const getReportByOwner = async (req: AuthenticatedRequest, res: Response,
         const take = Number(req.query.take) || 10;
         const status = req.query.status as ReportFilterStatus;
         const sort = req.query.sort as ReportSort;
+        const contractId = req.query.contractId as string;
+        const renterId = req.query.renterId as string;
+        const title = req.query.title as string;
+        const type = req.query.type as ReportType;
+        const priority = req.query.priority as string;
+        const resolvedAt = req.query.resolvedAt as string;
 
         const result = await getReportByOwnerService({
             ownerId: userId,
@@ -319,6 +325,12 @@ export const getReportByOwner = async (req: AuthenticatedRequest, res: Response,
             take,
             sort,
             status,
+            contractId,
+            renterId,
+            title,
+            type,
+            priority,
+            resolvedAt,
         });
 
         res.status(200).json(result);

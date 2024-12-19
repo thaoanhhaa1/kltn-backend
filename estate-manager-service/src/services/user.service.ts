@@ -1,7 +1,6 @@
 import { UserBaseEmbed } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { IPagination } from '../interface/pagination';
-import { IForgotPasswordParams, IUpdateUserParams, IUserId, IVerifyRequest } from '../interface/user';
+import { IForgotPasswordParams, IGetUsersByAdmin, IUpdateUserParams, IUserId, IVerifyRequest } from '../interface/user';
 import prisma from '../prisma/prismaClient';
 import { updateUserInfoInConversation } from '../repositories/conversation.repository';
 import { updateUserInfoInProperty } from '../repositories/property.repository';
@@ -35,8 +34,8 @@ export const isExistingUser = async (email: string) => {
     return Boolean(await findUserDTOByEmail(email));
 };
 
-export const getUsersService = async (params: IPagination) => {
-    const [users, count] = await Promise.all([getUsers(params), countUsers()]);
+export const getUsersService = async (params: IGetUsersByAdmin) => {
+    const [users, count] = await Promise.all([getUsers(params), countUsers(params)]);
 
     const current = params.skip / params.take + 1;
 

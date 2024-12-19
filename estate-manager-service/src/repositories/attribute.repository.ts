@@ -1,5 +1,5 @@
 import prisma from '../prisma/prismaClient';
-import { ICreateAttributeReq, IUpdateAttributeReq } from '../schemas/attribute.schema';
+import { ICreateAttributeReq, IGetAllAttributes, IUpdateAttributeReq } from '../schemas/attribute.schema';
 
 export const createAttribute = async (attribute: ICreateAttributeReq) => {
     return prisma.attribute.create({
@@ -7,9 +7,14 @@ export const createAttribute = async (attribute: ICreateAttributeReq) => {
     });
 };
 
-export const getAllAttributes = async () => {
+export const getAllAttributes = async ({ id, name, type }: IGetAllAttributes) => {
     return prisma.attribute.findMany({
-        where: { deleted: false },
+        where: {
+            deleted: false,
+            ...(id && { id }),
+            ...(name && { name: { contains: name, mode: 'insensitive' } }),
+            ...(type && { type }),
+        },
         orderBy: {
             createdAt: 'desc',
         },
