@@ -11,3 +11,8 @@ export const propertyTypeSchema = z.object({
 export type PropertyTypeInput = z.infer<typeof propertyTypeSchema>;
 
 export type IPropertyTypeDTO = Pick<PropertyType, 'id' | 'name'>;
+
+export interface IGetPropertyTypeDetails {
+    id?: PropertyTypeId;
+    name?: string;
+}

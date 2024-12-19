@@ -1,5 +1,10 @@
 import prisma from '../prisma/prismaClient';
-import { IPropertyTypeDTO, PropertyTypeId, PropertyTypeInput } from '../schemas/propertyType.schema';
+import {
+    IGetPropertyTypeDetails,
+    IPropertyTypeDTO,
+    PropertyTypeId,
+    PropertyTypeInput,
+} from '../schemas/propertyType.schema';
 
 export const createPropertyType = (data: PropertyTypeInput) => {
     return prisma.propertyType.create({
@@ -19,10 +24,17 @@ export const getPropertyTypes = (): Promise<Array<IPropertyTypeDTO>> => {
     });
 };
 
-export const getPropertyTypeDetails = () => {
+export const getPropertyTypeDetails = ({ id, name }: IGetPropertyTypeDetails) => {
     return prisma.propertyType.findMany({
         where: {
             deleted: false,
+            ...(id && { id }),
+            ...(name && {
+                name: {
+                    contains: name,
+                    mode: 'insensitive',
+                },
+            }),
         },
     });
 };

@@ -6,7 +6,7 @@ import {
     softDeletePropertyType,
     updatePropertyType,
 } from '../repositories/propertyType.repository';
-import { PropertyTypeId, PropertyTypeInput } from '../schemas/propertyType.schema';
+import { IGetPropertyTypeDetails, PropertyTypeId, PropertyTypeInput } from '../schemas/propertyType.schema';
 import CustomError from '../utils/error.util';
 
 export const createPropertyTypeService = (data: PropertyTypeInput) => {
@@ -17,8 +17,8 @@ export const getPropertyTypesService = () => {
     return getPropertyTypes();
 };
 
-export const getPropertyTypeDetailsService = () => {
-    return getPropertyTypeDetails();
+export const getPropertyTypeDetailsService = (params: IGetPropertyTypeDetails) => {
+    return getPropertyTypeDetails(params);
 };
 
 export const updatePropertyTypeService = (id: PropertyTypeId, data: PropertyTypeInput) => {
