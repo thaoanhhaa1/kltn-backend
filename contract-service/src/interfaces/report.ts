@@ -47,11 +47,23 @@ export type IGetReportByOwnerId = IPagination & {
     ownerId: string;
     statuses?: ReportStatus[];
     sort?: Object;
+    contractId?: string;
+    renterId?: string;
+    title?: string;
+    type?: ReportType;
+    priority?: string;
+    resolvedAt?: string;
 };
 
 export type IGetReportByOwnerReq = Omit<IGetReportByOwnerId, 'sort' | 'statuses'> & {
     status: ReportFilterStatus;
     sort: ReportSort;
+    contractId?: string;
+    renterId?: string;
+    title?: string;
+    type?: ReportType;
+    priority?: string;
+    resolvedAt?: string;
 };
 
 export type IGetReportByAdmin = IPagination & {

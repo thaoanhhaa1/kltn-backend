@@ -189,6 +189,11 @@ export const countReportByRenter = ({ renterId }: IGetReportByRenterId) => {
 
 export const getReportByOwner = ({
     ownerId,
+    contractId,
+    priority,
+    renterId,
+    title,
+    type,
     sort = {
         createdAt: 'desc',
     },
@@ -196,9 +201,28 @@ export const getReportByOwner = ({
     return prisma.report.findMany({
         where: {
             ownerId,
+            ...(contractId && { contractId }),
+            ...(priority && { propertyId: priority }),
+            ...(renterId && { renterId }),
+            ...(title && {
+                title: {
+                    contains: title,
+                    mode: 'insensitive',
+                },
+            }),
+            ...(type && { type }),
         },
         orderBy: sort,
-        select: reportsSelect,
+        include: {
+            renter: {
+                select: {
+                    userId: true,
+                    name: true,
+                    email: true,
+                },
+            },
+            reportChild: true,
+        },
     });
 };
 

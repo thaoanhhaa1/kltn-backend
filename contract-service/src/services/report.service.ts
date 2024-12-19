@@ -570,13 +570,12 @@ export const getReportByRenterService = async (data: IGetReportByRenterReq) => {
     return result.map(getReportDTO);
 };
 
-export const getReportByOwnerService = async ({ sort, status, ...data }: IGetReportByOwnerReq) => {
+export const getReportByOwnerService = async ({ sort, status, resolvedAt, ...data }: IGetReportByOwnerReq) => {
     const orderBy = sortQuery(sort);
     const result = await getReportByOwner({
         ...data,
         sort: orderBy,
     });
-    console.log('🚀 ~ getReportByOwnerService ~ result:', result);
 
     const statuses = filterStatusQuery(status);
 
@@ -588,6 +587,11 @@ export const getReportByOwnerService = async ({ sort, status, ...data }: IGetRep
                 return item.priority === 'high' && statuses.includes(item.reportChild.at(-1)!.status);
 
             return statuses.includes(item.reportChild.at(-1)!.status);
+        })
+        .filter((item) => {
+            if (!resolvedAt) return true;
+
+            return String(item.reportChild.at(0)!.resolvedAt.toISOString()).substring(0, 10) === resolvedAt;
         })
         .map(getReportDTO);
 };
