@@ -1,3 +1,4 @@
+import { UserStatus, UserType } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 import sendEmail from '../configs/email.config';
 import envConfig from '../configs/env.config';
@@ -108,10 +109,26 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     try {
         const take = Number(req.query.take) || 10;
         const skip = Number(req.query.skip) || 0;
+        const userId = req.query.userId as string;
+        const name = req.query.name as string;
+        const email = req.query.email as string;
+        const phoneNumber = req.query.phoneNumber as string;
+        const type = req.query.type as UserType;
+        const status = req.query.status as UserStatus;
+        const sortField = req.query.sortField as string;
+        const sortOrder = req.query.sortOrder as string;
 
         const users = await getUsersService({
             skip,
             take,
+            userId,
+            name,
+            email,
+            phoneNumber,
+            type,
+            status,
+            sortField,
+            sortOrder,
         });
 
         res.json(users);
