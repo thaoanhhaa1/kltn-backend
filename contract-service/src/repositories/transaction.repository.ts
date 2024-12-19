@@ -75,6 +75,20 @@ export const getTransactionsByRenter = ({
         orderBy: {
             createdAt: 'desc',
         },
+        include: {
+            from: {
+                select: {
+                    userId: true,
+                    name: true,
+                },
+            },
+            to: {
+                select: {
+                    userId: true,
+                    name: true,
+                },
+            },
+        },
     });
 };
 
