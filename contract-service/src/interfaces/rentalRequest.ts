@@ -59,4 +59,6 @@ export interface IGetRentalRequestsByOwner {
     rentalEndDate?: Date | string;
     status?: RentalRequestStatus;
     renterId?: string;
+    sortField?: string;
+    sortOrder?: string;
 }

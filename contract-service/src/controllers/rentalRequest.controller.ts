@@ -107,6 +107,8 @@ export const getRentalRequestsByOwner = async (req: AuthenticatedRequest, res: R
         const rentalEndDate = req.query.rentalEndDate as string;
         const status = req.query.status as RentalRequestStatus;
         const renterId = req.query.renterId as string;
+        const sortField = req.query.sortField as string;
+        const sortOrder = req.query.sortOrder as string;
 
         const rentalRequests = await getRentalRequestsByOwnerService({
             ownerId: userId,
@@ -119,6 +121,8 @@ export const getRentalRequestsByOwner = async (req: AuthenticatedRequest, res: R
             rentalEndDate,
             status,
             renterId,
+            sortField,
+            sortOrder,
         });
 
         res.json(rentalRequests);
