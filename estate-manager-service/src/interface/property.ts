@@ -55,6 +55,8 @@ export interface IOwnerFilterProperties {
     city?: Address['city'];
     district?: Address['district'];
     ward?: Address['ward'];
+    sortField?: string;
+    sortOrder?: string;
 }
 
 export interface IUpdateRating {

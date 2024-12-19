@@ -258,7 +258,9 @@ export const getNotDeletedPropertiesByOwnerId = async (
     try {
         const take = Number(req.query.take || DEFAULT_PROPERTIES_TAKE);
         const skip = Number(req.query.skip || DEFAULT_PROPERTIES_SKIP);
-        const owner_id = req.user!.id;
+        const ownerId = req.user!.id;
+        const sortField = req.query.sortField as string;
+        const sortOrder = req.query.sortOrder as string;
 
         const filter: IOwnerFilterProperties = req.query;
 
@@ -270,7 +272,9 @@ export const getNotDeletedPropertiesByOwnerId = async (
             depositTo: filter.depositTo && Number(filter.depositTo),
             skip,
             take,
-            ownerId: owner_id,
+            ownerId,
+            sortField,
+            sortOrder,
         });
 
         res.status(200).json(properties);
