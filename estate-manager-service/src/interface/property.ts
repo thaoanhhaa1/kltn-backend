@@ -74,4 +74,6 @@ export type IGetNotDeletedProperties = IPagination & {
     ownerId?: IUserId;
     ownerName?: User['name'];
     status?: Property['status'];
+    sortField?: string;
+    sortOrder?: string;
 };

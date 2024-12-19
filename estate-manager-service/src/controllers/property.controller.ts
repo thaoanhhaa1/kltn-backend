@@ -218,6 +218,8 @@ export const getNotDeletedProperties = async (req: Request, res: Response, next:
         const status = req.query.status as PropertyStatus;
         const title = req.query.title as string;
         const ward = req.query.ward as string;
+        const sortField = req.query.sortField as string;
+        const sortOrder = req.query.sortOrder as string;
 
         const properties = await getNotDeletedPropertiesService({
             skip,
@@ -230,6 +232,8 @@ export const getNotDeletedProperties = async (req: Request, res: Response, next:
             status,
             title,
             ward,
+            sortField,
+            sortOrder,
         });
 
         res.status(200).json(properties);

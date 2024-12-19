@@ -162,6 +162,8 @@ export const getNotDeletedProperties = async ({
     status,
     title,
     ward,
+    sortField,
+    sortOrder,
 }: IGetNotDeletedProperties): Promise<Array<IResRepositoryProperty>> => {
     return prisma.property.findMany({
         where: {
@@ -196,9 +198,7 @@ export const getNotDeletedProperties = async ({
         include: propertiesInclude,
         skip,
         take,
-        orderBy: {
-            createdAt: 'desc',
-        },
+        orderBy: orderByNotDeletedPropertiesByOwnerId(sortField, sortOrder),
     });
 };
 
