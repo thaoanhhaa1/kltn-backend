@@ -87,6 +87,26 @@ module.exports = {
                 }),
             network_id: '17000',
         },
+        hoodi: {
+            provider: () =>
+                new HDWalletProvider({
+                    mnemonic: {
+                        phrase: MNEMONIC,
+                    },
+                    providerOrUrl: INFURA_RPC,
+                }),
+            network_id: '560048',
+        },
+        sepolia: {
+            provider: () =>
+                new HDWalletProvider({
+                    mnemonic: {
+                        phrase: MNEMONIC,
+                    },
+                    providerOrUrl: INFURA_RPC,
+                }),
+            network_id: '11155111', // Sepolia network ID
+        },
         //
         // An additional network, but with some advanced options…
         // advanced: {

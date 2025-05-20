@@ -23,7 +23,7 @@ RUN npm run build
 # RUN yarn build
 
 # Mở cổng mà ứng dụng sẽ chạy
-EXPOSE 3000
+EXPOSE 4000
 
 # Chạy ứng dụng
 CMD ["npm", "start"]
